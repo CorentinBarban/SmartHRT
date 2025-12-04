@@ -198,6 +198,12 @@ input_number:
 
 template:
   - sensor:
+      # removed from sensor:platform:template (syntx will be removed 2026.6)
+      - name: "Phone nxt alarm"
+        unique_id: "phone_nxt_alarm"
+        icon: mdi:alarm
+        state: >
+          {{ states(states('input_text.phone_alarm_selector')) }}
       - name: "interior_temperature"
         unique_id: interior_temperature
         state: "{{ states(states.input_text.sensor_interior_temperature.state) }}"
@@ -324,14 +330,6 @@ sensor:
     state_characteristic: mean
     max_age:
       hours: 4
-  - platform: template
-    sensors:
-      phone_nxt_alarm:
-        friendly_name: "Phone nxt alarm"
-        unique_id: "phone_nxt_alarm"
-        icon_template: mdi:alarm
-        value_template: >
-          {{ states(states('input_text.phone_alarm_selector')) }}
 
 script:
   calculate_recovery_time:
