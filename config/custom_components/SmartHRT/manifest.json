@@ -1,0 +1,12 @@
+{
+    "domain": "smarthrt",
+    "name": "SmartHRT",
+    "codeowners": [],
+    "config_flow": true,
+    "documentation": "https://github.com/jmcollin78/tuto_hacs",
+    "integration_type": "device",
+    "iot_class": "calculated",
+    "issue_tracker": "https://github.com/jmcollin78/tuto_hacs/issues",
+    "quality_scale": "silver",
+    "version": "0.0.1"
+}

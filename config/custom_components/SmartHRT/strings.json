@@ -1,0 +1,57 @@
+{
+    "title": "SmartHRT",
+    "config": {
+        "flow_title": "SmartHRT configuration",
+        "step": {
+            "user": {
+                "title": "Identification",
+                "description": "Configure your SmartHRT integration",
+                "data": {
+                    "name": "Name"
+                },
+                "data_description": {
+                    "name": "Integration name"
+                }
+            },
+            "sensors": {
+                "title": "Sensors configuration",
+                "description": "Configure sensors and heating parameters",
+                "data": {
+                    "target_hour": "Target hour",
+                    "sensor_interior_temperature": "Interior temperature sensor",
+                    "phone_alarm_selector": "Phone alarm sensor",
+                    "tsp": "Set Point"
+                },
+                "data_description": {
+                    "target_hour": "Wake up time (e.g. 6:00)",
+                    "sensor_interior_temperature": "Room temperature sensor (e.g. sensor.room_temperature)",
+                    "phone_alarm_selector": "Phone next alarm sensor (e.g. sensor.nexus_next_alarm)",
+                    "tsp": "Target temperature (13-26°C)"
+                }
+            }
+        }
+    },
+    "options": {
+        "flow_title": "SmartHRT options",
+        "step": {
+            "init": {
+                "title": "SmartHRT Configuration",
+                "description": "Modify your smart heating configuration",
+                "data": {
+                    "name": "Name",
+                    "target_hour": "Target hour",
+                    "sensor_interior_temperature": "Interior temperature sensor",
+                    "phone_alarm_selector": "Phone alarm sensor",
+                    "tsp": "Set Point"
+                },
+                "data_description": {
+                    "name": "Integration name",
+                    "target_hour": "Wake up time (e.g. 6:00)",
+                    "sensor_interior_temperature": "Room temperature sensor (e.g. sensor.room_temperature)",
+                    "phone_alarm_selector": "Phone next alarm sensor (e.g. sensor.nexus_next_alarm)",
+                    "tsp": "Target temperature (13-26°C)"
+                }
+            }
+        }
+    }
+}
