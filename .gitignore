@@ -7,4 +7,3 @@ config/.storage/
 *.db
 config/secrets.yaml
 config/.ha_run.lock
-.devcontainer/config/home-assistant*
