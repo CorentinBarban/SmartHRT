@@ -1,0 +1,268 @@
+2026-01-16 21:48:13.802 WARNING (SyncWorker_0) [homeassistant.loader] We found a custom integration smarthrt which has not been tested by Home Assistant. This component might cause stability problems, be sure to disable it if you experience issues with Home Assistant
+2026-01-16 21:48:13.819 WARNING (SyncWorker_0) [homeassistant.loader] We found a custom integration smarthrt which has not been tested by Home Assistant. This component might cause stability problems, be sure to disable it if you experience issues with Home Assistant
+2026-01-16 21:48:15.797 WARNING (MainThread) [asyncio] Executing <Task pending name='Task-1' coro=<setup_and_run_hass() running at /venvs/SmartHRT/lib/python3.13/site-packages/homeassistant/runner.py:256> wait_for=<_GatheringFuture pending cb=[Task.task_wakeup()] created at /usr/local/lib/python3.13/asyncio/tasks.py:765> cb=[_run_until_complete_cb() at /usr/local/lib/python3.13/asyncio/base_events.py:181] created at /usr/local/lib/python3.13/asyncio/tasks.py:748> took 0.229 seconds
+2026-01-16 21:48:15.801 WARNING (MainThread) [aiohttp_fast_zlib] zlib_ng and isal are not available, falling back to zlib, performance will be degraded.
+2026-01-16 21:48:16.036 INFO (MainThread) [homeassistant.setup] Setup of domain system_log took 0.32 seconds
+2026-01-16 21:48:16.038 INFO (MainThread) [homeassistant.setup] Setup of domain http took 0.29 seconds
+2026-01-16 21:48:16.039 INFO (MainThread) [homeassistant.setup] Setup of domain logger took 0.25 seconds
+2026-01-16 21:48:16.041 INFO (MainThread) [homeassistant.setup] Setting up websocket_api
+2026-01-16 21:48:16.042 INFO (MainThread) [homeassistant.setup] Setup of domain websocket_api took 0.00 seconds
+2026-01-16 21:48:16.055 INFO (MainThread) [homeassistant.setup] Setting up network
+2026-01-16 21:48:16.063 INFO (MainThread) [homeassistant.setup] Setup of domain network took 0.01 seconds
+2026-01-16 21:48:16.064 INFO (MainThread) [homeassistant.bootstrap] Setting up stage labs: {'labs'}; already set up: {}
+Dependencies: {}; already set up: {}
+2026-01-16 21:48:16.065 INFO (MainThread) [homeassistant.setup] Setting up labs
+2026-01-16 21:48:16.081 INFO (MainThread) [homeassistant.setup] Setup of domain labs took 0.02 seconds
+2026-01-16 21:48:16.081 INFO (MainThread) [homeassistant.bootstrap] Setting up stage frontend: {'frontend'}; already set up: {}
+Dependencies: {'lovelace', 'api', 'device_automation', 'onboarding', 'search', 'config', 'auth', 'diagnostics', 'file_upload', 'repairs'}; already set up: {'system_log', 'websocket_api', 'http'}
+2026-01-16 21:48:16.085 INFO (MainThread) [homeassistant.setup] Setting up api
+2026-01-16 21:48:16.098 INFO (MainThread) [homeassistant.setup] Setup of domain api took 0.01 seconds
+2026-01-16 21:48:16.100 INFO (MainThread) [homeassistant.setup] Setting up auth
+2026-01-16 21:48:16.102 INFO (MainThread) [homeassistant.setup] Setup of domain auth took 0.00 seconds
+2026-01-16 21:48:16.112 INFO (MainThread) [homeassistant.setup] Setting up config
+2026-01-16 21:48:16.130 INFO (MainThread) [homeassistant.setup] Setup of domain config took 0.02 seconds
+2026-01-16 21:48:16.136 INFO (MainThread) [homeassistant.setup] Setting up device_automation
+2026-01-16 21:48:16.139 INFO (MainThread) [homeassistant.setup] Setup of domain device_automation took 0.00 seconds
+2026-01-16 21:48:16.159 INFO (MainThread) [homeassistant.setup] Setting up diagnostics
+2026-01-16 21:48:16.164 INFO (MainThread) [homeassistant.setup] Setup of domain diagnostics took 0.01 seconds
+2026-01-16 21:48:16.167 INFO (MainThread) [homeassistant.setup] Setting up file_upload
+2026-01-16 21:48:16.172 INFO (MainThread) [homeassistant.setup] Setup of domain file_upload took 0.01 seconds
+2026-01-16 21:48:16.182 INFO (MainThread) [homeassistant.setup] Setting up onboarding
+2026-01-16 21:48:16.184 INFO (MainThread) [homeassistant.setup] Setup of domain onboarding took 0.00 seconds
+2026-01-16 21:48:16.186 INFO (MainThread) [homeassistant.setup] Setting up lovelace
+2026-01-16 21:48:16.197 INFO (MainThread) [homeassistant.setup] Setting up repairs
+2026-01-16 21:48:16.199 INFO (MainThread) [homeassistant.setup] Setup of domain repairs took 0.00 seconds
+2026-01-16 21:48:16.201 INFO (MainThread) [homeassistant.setup] Setting up search
+2026-01-16 21:48:16.203 INFO (MainThread) [homeassistant.setup] Setup of domain search took 0.00 seconds
+2026-01-16 21:48:16.216 WARNING (MainThread) [asyncio] Executing <Task pending name='Task-1' coro=<setup_and_run_hass() running at /venvs/SmartHRT/lib/python3.13/site-packages/homeassistant/runner.py:256> wait_for=<_GatheringFuture pending cb=[Task.task_wakeup()] created at /usr/local/lib/python3.13/asyncio/tasks.py:765> cb=[_run_until_complete_cb() at /usr/local/lib/python3.13/asyncio/base_events.py:181] created at /usr/local/lib/python3.13/asyncio/tasks.py:748> took 0.142 seconds
+2026-01-16 21:48:16.222 INFO (MainThread) [homeassistant.setup] Setup of domain lovelace took 0.04 seconds
+2026-01-16 21:48:16.235 INFO (MainThread) [homeassistant.setup] Setting up frontend
+2026-01-16 21:48:16.271 INFO (MainThread) [homeassistant.setup] Setup of domain frontend took 0.04 seconds
+2026-01-16 21:48:16.286 INFO (MainThread) [homeassistant.bootstrap] Setting up stage recorder: {'recorder'}; already set up: {}
+Dependencies: {}; already set up: {}
+2026-01-16 21:48:16.289 INFO (MainThread) [homeassistant.setup] Setting up recorder
+2026-01-16 21:48:16.308 INFO (MainThread) [asyncio] <Server sockets=(<asyncio.TransportSocket fd=9, family=2, type=1, proto=6, laddr=('0.0.0.0', 8123)>, <asyncio.TransportSocket fd=10, family=10, type=1, proto=6, laddr=('::', 8123, 0, 0)>)> is serving
+2026-01-16 21:48:16.311 INFO (MainThread) [homeassistant.components.http] Now listening on port 8123
+2026-01-16 21:48:16.315 INFO (MainThread) [homeassistant.setup] Setup of domain http took 0.04 seconds
+2026-01-16 21:48:16.787 WARNING (Recorder) [homeassistant.components.recorder.util] The system could not validate that the sqlite3 database at //workspaces/SmartHRT/.devcontainer/config/home-assistant_v2.db was shutdown cleanly
+2026-01-16 21:48:16.996 INFO (MainThread) [homeassistant.setup] Setup of domain recorder took 0.71 seconds
+2026-01-16 21:48:16.996 INFO (MainThread) [homeassistant.bootstrap] Nothing to set up in stage debugger: {'debugpy'}
+2026-01-16 21:48:16.996 INFO (MainThread) [homeassistant.bootstrap] Setting up stage zeroconf: {'zeroconf'}; already set up: {}
+Dependencies: {}; already set up: {'network', 'api', 'websocket_api', 'http'}
+2026-01-16 21:48:16.998 INFO (MainThread) [homeassistant.setup] Setting up zeroconf
+2026-01-16 21:48:17.010 INFO (MainThread) [homeassistant.components.zeroconf] Starting Zeroconf broadcast
+2026-01-16 21:48:17.011 INFO (MainThread) [homeassistant.setup] Setup of domain zeroconf took 0.01 seconds
+2026-01-16 21:48:17.011 INFO (MainThread) [homeassistant.bootstrap] Setting up stage 1: {'dhcp', 'cloud', 'bluetooth', 'usb', 'ssdp'}; already set up: {}
+Dependencies: {'ffmpeg', 'stt', 'backup', 'assist_pipeline', 'wake_word', 'web_rtc', 'tts', 'webhook', 'intent', 'conversation'}; already set up: {'network', 'auth', 'websocket_api', 'http', 'repairs'}
+2026-01-16 21:48:17.039 INFO (MainThread) [homeassistant.setup] Setting up webhook
+2026-01-16 21:48:17.043 INFO (MainThread) [homeassistant.setup] Setup of domain webhook took 0.00 seconds
+2026-01-16 21:48:17.060 INFO (MainThread) [homeassistant.setup] Setting up backup
+2026-01-16 21:48:17.090 INFO (MainThread) [homeassistant.setup] Setting up stt
+2026-01-16 21:48:17.093 INFO (MainThread) [homeassistant.setup] Setup of domain stt took 0.00 seconds
+2026-01-16 21:48:17.095 INFO (MainThread) [homeassistant.setup] Setting up wake_word
+2026-01-16 21:48:17.096 INFO (MainThread) [homeassistant.setup] Setup of domain wake_word took 0.00 seconds
+2026-01-16 21:48:17.096 INFO (MainThread) [homeassistant.setup] Setting up ffmpeg
+2026-01-16 21:48:17.107 ERROR (MainThread) [haffmpeg.core] FFmpeg fails [Errno 2] No such file or directory: 'ffmpeg'
+Traceback (most recent call last):
+  File "/venvs/SmartHRT/lib/python3.13/site-packages/haffmpeg/core.py", line 130, in open
+    self._proc = await asyncio.create_subprocess_exec(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "/usr/local/lib/python3.13/asyncio/subprocess.py", line 224, in create_subprocess_exec
+    transport, protocol = await loop.subprocess_exec(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        stderr=stderr, **kwds)
+        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/asyncio/base_events.py", line 1802, in subprocess_exec
+    transport = await self._make_subprocess_transport(
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        protocol, popen_args, False, stdin, stdout, stderr,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        bufsize, **kwargs)
+        ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/asyncio/unix_events.py", line 213, in _make_subprocess_transport
+    transp = _UnixSubprocessTransport(self, protocol, args, shell,
+                                    stdin, stdout, stderr, bufsize,
+                                    waiter=waiter, extra=extra,
+                                    **kwargs)
+  File "/usr/local/lib/python3.13/asyncio/base_subprocess.py", line 40, in __init__
+    self._start(args=args, shell=shell, stdin=stdin, stdout=stdout,
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                stderr=stderr, bufsize=bufsize, **kwargs)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/asyncio/unix_events.py", line 855, in _start
+    self._proc = subprocess.Popen(
+                 ~~~~~~~~~~~~~~~~^
+        args, shell=shell, stdin=stdin, stdout=stdout, stderr=stderr,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        universal_newlines=False, bufsize=bufsize, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/subprocess.py", line 1039, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        pass_fds, cwd, env,
+                        ^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+                        gid, gids, uid, umask,
+                        ^^^^^^^^^^^^^^^^^^^^^^
+                        start_new_session, process_group)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.13/subprocess.py", line 1991, in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+FileNotFoundError: [Errno 2] No such file or directory: 'ffmpeg'
+2026-01-16 21:48:17.125 WARNING (MainThread) [haffmpeg.tools] Error starting FFmpeg.
+2026-01-16 21:48:17.125 INFO (MainThread) [homeassistant.setup] Setup of domain ffmpeg took 0.03 seconds
+2026-01-16 21:48:17.147 INFO (MainThread) [homeassistant.setup] Setup of domain backup took 0.09 seconds
+2026-01-16 21:48:17.149 INFO (MainThread) [homeassistant.setup] Setting up intent
+2026-01-16 21:48:17.153 INFO (MainThread) [homeassistant.setup] Setup of domain intent took 0.00 seconds
+2026-01-16 21:48:17.174 INFO (MainThread) [homeassistant.setup] Setting up dhcp
+2026-01-16 21:48:17.176 INFO (MainThread) [homeassistant.setup] Setup of domain dhcp took 0.00 seconds
+2026-01-16 21:48:17.187 INFO (MainThread) [homeassistant.setup] Setting up web_rtc
+2026-01-16 21:48:17.188 INFO (MainThread) [homeassistant.setup] Setup of domain web_rtc took 0.00 seconds
+2026-01-16 21:48:17.223 INFO (MainThread) [homeassistant.setup] Setting up usb
+2026-01-16 21:48:17.230 INFO (MainThread) [homeassistant.setup] Setup of domain usb took 0.01 seconds
+2026-01-16 21:48:17.248 INFO (SyncWorker_4) [homeassistant.util.package] Attempting install of bleak==2.0.0
+2026-01-16 21:48:17.310 INFO (MainThread) [homeassistant.setup] Setting up ssdp
+2026-01-16 21:48:17.340 INFO (MainThread) [homeassistant.setup] Setup of domain ssdp took 0.03 seconds
+2026-01-16 21:48:17.368 INFO (MainThread) [homeassistant.setup] Setting up tts
+2026-01-16 21:48:17.403 INFO (MainThread) [homeassistant.setup] Setup of domain tts took 0.03 seconds
+2026-01-16 21:48:17.504 INFO (MainThread) [homeassistant.setup] Setting up conversation
+2026-01-16 21:48:17.505 INFO (MainThread) [homeassistant.setup] Setup of domain conversation took 0.00 seconds
+2026-01-16 21:48:17.517 INFO (MainThread) [homeassistant.setup] Setting up event
+2026-01-16 21:48:17.520 INFO (MainThread) [homeassistant.setup] Setup of domain event took 0.00 seconds
+2026-01-16 21:48:17.520 INFO (MainThread) [homeassistant.components.event] Setting up backup.event
+2026-01-16 21:48:17.536 INFO (MainThread) [homeassistant.setup] Setting up sensor
+2026-01-16 21:48:17.536 INFO (MainThread) [homeassistant.setup] Setup of domain sensor took 0.00 seconds
+2026-01-16 21:48:17.539 INFO (MainThread) [homeassistant.components.sensor] Setting up backup.sensor
+2026-01-16 21:48:17.596 INFO (MainThread) [homeassistant.setup] Setting up assist_pipeline
+2026-01-16 21:48:17.602 INFO (MainThread) [homeassistant.setup] Setup of domain assist_pipeline took 0.01 seconds
+2026-01-16 21:48:17.906 INFO (SyncWorker_4) [homeassistant.util.package] Attempting install of bleak-retry-connector==4.4.3
+2026-01-16 21:48:18.248 ERROR (ImportExecutor_0) [homeassistant.components.camera.img_util] Error loading libturbojpeg; Camera snapshot performance will be sub-optimal
+Traceback (most recent call last):
+  File "/venvs/SmartHRT/lib/python3.13/site-packages/homeassistant/components/camera/img_util.py", line 93, in __init__
+    TurboJPEGSingleton.__instance = TurboJPEG()
+                                    ~~~~~~~~~^^
+  File "/venvs/SmartHRT/lib/python3.13/site-packages/turbojpeg.py", line 301, in __init__
+    self.__find_turbojpeg() if lib_path is None else lib_path)
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/venvs/SmartHRT/lib/python3.13/site-packages/turbojpeg.py", line 974, in __find_turbojpeg
+    raise RuntimeError(
+    ...<2 lines>...
+        'e.g. jpeg = TurboJPEG(lib_path)')
+RuntimeError: Unable to locate turbojpeg library automatically. You may specify the turbojpeg library path manually.
+e.g. jpeg = TurboJPEG(lib_path)
+2026-01-16 21:48:18.422 INFO (MainThread) [homeassistant.setup] Setting up cloud
+2026-01-16 21:48:18.437 INFO (MainThread) [homeassistant.setup] Setup of domain cloud took 0.01 seconds
+2026-01-16 21:48:18.614 INFO (MainThread) [homeassistant.setup] Setting up bluetooth
+2026-01-16 21:48:18.708 INFO (MainThread) [homeassistant.setup] Setup of domain bluetooth took 0.09 seconds
+2026-01-16 21:48:18.709 INFO (MainThread) [homeassistant.bootstrap] Setting up stage 2: {'sun', 'input_text', 'person', 'analytics', 'input_select', 'application_credentials', 'google_translate', 'system_health', 'hardware', 'input_number', 'scene', 'script', 'shopping_list', 'input_datetime', 'input_boolean', 'input_button', 'tag', 'radio_browser', 'counter', 'schedule', 'default_config', 'automation', 'zone', 'met', 'timer'}; already set up: {'backup', 'network', 'logger', 'frontend', 'labs'}
+Dependencies: {'logbook', 'my', 'camera', 'mobile_app', 'blueprint', 'history', 'usage_prediction', 'file', 'go2rtc', 'trace', 'image_upload', 'energy', 'homeassistant_alerts', 'media_source', 'stream'}; already set up: {'ffmpeg', 'cloud', 'frontend', 'onboarding', 'auth', 'usb', 'websocket_api', 'http', 'config', 'stt', 'dhcp', 'repairs', 'device_automation', 'search', 'file_upload', 'assist_pipeline', 'zeroconf', 'web_rtc', 'tts', 'intent', 'bluetooth', 'ssdp', 'system_log', 'backup', 'network', 'lovelace', 'api', 'wake_word', 'webhook', 'diagnostics', 'recorder', 'conversation'}
+2026-01-16 21:48:18.710 INFO (MainThread) [homeassistant.setup] Setting up scene
+2026-01-16 21:48:18.713 INFO (MainThread) [homeassistant.setup] Setup of domain scene took 0.00 seconds
+2026-01-16 21:48:18.714 INFO (MainThread) [homeassistant.setup] Setting up camera
+2026-01-16 21:48:18.726 INFO (MainThread) [homeassistant.setup] Setup of domain camera took 0.01 seconds
+2026-01-16 21:48:18.735 INFO (MainThread) [homeassistant.setup] Setting up image_upload
+2026-01-16 21:48:18.743 INFO (MainThread) [homeassistant.setup] Setup of domain image_upload took 0.01 seconds
+2026-01-16 21:48:18.747 INFO (MainThread) [homeassistant.setup] Setting up zone
+2026-01-16 21:48:18.754 INFO (MainThread) [homeassistant.setup] Setup of domain zone took 0.01 seconds
+2026-01-16 21:48:18.759 INFO (MainThread) [homeassistant.setup] Setting up person
+2026-01-16 21:48:18.766 INFO (MainThread) [homeassistant.setup] Setting up history
+2026-01-16 21:48:18.767 INFO (MainThread) [homeassistant.setup] Setup of domain history took 0.00 seconds
+2026-01-16 21:48:18.777 INFO (MainThread) [homeassistant.setup] Setting up input_select
+2026-01-16 21:48:18.784 INFO (MainThread) [homeassistant.setup] Setup of domain input_select took 0.01 seconds
+2026-01-16 21:48:18.815 INFO (MainThread) [homeassistant.setup] Setting up media_source
+2026-01-16 21:48:18.818 INFO (MainThread) [homeassistant.setup] Setup of domain media_source took 0.00 seconds
+2026-01-16 21:48:18.822 INFO (MainThread) [homeassistant.setup] Setting up stream
+2026-01-16 21:48:18.834 INFO (MainThread) [homeassistant.setup] Setting up logbook
+2026-01-16 21:48:18.919 INFO (MainThread) [homeassistant.setup] Setup of domain logbook took 0.08 seconds
+2026-01-16 21:48:18.921 INFO (MainThread) [homeassistant.setup] Setting up system_health
+2026-01-16 21:48:18.938 INFO (MainThread) [homeassistant.setup] Setup of domain system_health took 0.02 seconds
+2026-01-16 21:48:18.957 INFO (MainThread) [homeassistant.setup] Setting up input_number
+2026-01-16 21:48:18.967 INFO (MainThread) [homeassistant.setup] Setup of domain input_number took 0.01 seconds
+2026-01-16 21:48:18.984 INFO (MainThread) [homeassistant.setup] Setting up blueprint
+2026-01-16 21:48:18.990 INFO (MainThread) [homeassistant.setup] Setup of domain blueprint took 0.01 seconds
+2026-01-16 21:48:19.048 INFO (MainThread) [homeassistant.setup] Setting up trace
+2026-01-16 21:48:19.050 INFO (MainThread) [homeassistant.setup] Setup of domain trace took 0.00 seconds
+2026-01-16 21:48:19.084 INFO (MainThread) [homeassistant.setup] Setting up script
+2026-01-16 21:48:19.090 INFO (MainThread) [homeassistant.setup] Setup of domain script took 0.01 seconds
+2026-01-16 21:48:19.103 INFO (MainThread) [homeassistant.setup] Setting up input_boolean
+2026-01-16 21:48:19.112 INFO (MainThread) [homeassistant.setup] Setup of domain input_boolean took 0.01 seconds
+2026-01-16 21:48:19.116 INFO (MainThread) [homeassistant.setup] Setting up input_button
+2026-01-16 21:48:19.121 INFO (MainThread) [homeassistant.setup] Setup of domain input_button took 0.00 seconds
+2026-01-16 21:48:19.138 INFO (MainThread) [homeassistant.setup] Setting up automation
+2026-01-16 21:48:19.151 INFO (MainThread) [homeassistant.setup] Setup of domain automation took 0.01 seconds
+2026-01-16 21:48:19.156 INFO (MainThread) [homeassistant.setup] Setting up timer
+2026-01-16 21:48:19.161 INFO (MainThread) [homeassistant.setup] Setup of domain timer took 0.00 seconds
+2026-01-16 21:48:19.163 WARNING (MainThread) [asyncio] Executing <Task pending name='Task-1' coro=<setup_and_run_hass() running at /venvs/SmartHRT/lib/python3.13/site-packages/homeassistant/runner.py:256> wait_for=<_GatheringFuture pending cb=[Task.task_wakeup()] created at /usr/local/lib/python3.13/asyncio/tasks.py:765> cb=[_run_until_complete_cb() at /usr/local/lib/python3.13/asyncio/base_events.py:181] created at /usr/local/lib/python3.13/asyncio/tasks.py:748> took 0.454 seconds
+2026-01-16 21:48:19.172 INFO (MainThread) [homeassistant.components.scene] Setting up homeassistant.scene
+2026-01-16 21:48:19.178 INFO (MainThread) [homeassistant.setup] Setting up sun
+2026-01-16 21:48:19.179 INFO (MainThread) [homeassistant.setup] Setup of domain sun took 0.00 seconds
+2026-01-16 21:48:19.238 INFO (MainThread) [homeassistant.setup] Setting up binary_sensor
+2026-01-16 21:48:19.239 INFO (MainThread) [homeassistant.setup] Setup of domain binary_sensor took 0.00 seconds
+2026-01-16 21:48:19.244 INFO (MainThread) [homeassistant.components.binary_sensor] Setting up sun.binary_sensor
+2026-01-16 21:48:19.257 INFO (MainThread) [homeassistant.components.sensor] Setting up sun.sensor
+2026-01-16 21:48:19.273 INFO (MainThread) [homeassistant.setup] Setting up input_text
+2026-01-16 21:48:19.279 INFO (MainThread) [homeassistant.setup] Setup of domain input_text took 0.01 seconds
+2026-01-16 21:48:19.283 INFO (MainThread) [homeassistant.setup] Setting up file
+2026-01-16 21:48:19.286 INFO (MainThread) [homeassistant.setup] Setup of domain file took 0.00 seconds
+2026-01-16 21:48:19.287 INFO (MainThread) [homeassistant.setup] Setting up energy
+2026-01-16 21:48:19.292 INFO (MainThread) [homeassistant.setup] Setup of domain energy took 0.01 seconds
+2026-01-16 21:48:19.294 INFO (MainThread) [homeassistant.setup] Setting up application_credentials
+2026-01-16 21:48:19.309 INFO (MainThread) [homeassistant.setup] Setup of domain application_credentials took 0.02 seconds
+2026-01-16 21:48:19.311 INFO (MainThread) [homeassistant.setup] Setting up homeassistant_alerts
+2026-01-16 21:48:19.314 INFO (MainThread) [homeassistant.setup] Setup of domain homeassistant_alerts took 0.00 seconds
+2026-01-16 21:48:19.315 INFO (MainThread) [homeassistant.setup] Setting up google_translate
+2026-01-16 21:48:19.315 INFO (MainThread) [homeassistant.setup] Setup of domain google_translate took 0.00 seconds
+2026-01-16 21:48:19.327 INFO (MainThread) [homeassistant.setup] Setup of domain stream took 0.51 seconds
+2026-01-16 21:48:19.331 INFO (MainThread) [homeassistant.setup] Setting up hardware
+2026-01-16 21:48:19.335 INFO (MainThread) [homeassistant.setup] Setting up tag
+2026-01-16 21:48:19.373 INFO (MainThread) [homeassistant.setup] Setup of domain tag took 0.04 seconds
+2026-01-16 21:48:19.431 INFO (MainThread) [homeassistant.setup] Setting up usage_prediction
+2026-01-16 21:48:19.432 INFO (MainThread) [homeassistant.setup] Setup of domain usage_prediction took 0.00 seconds
+2026-01-16 21:48:19.432 INFO (MainThread) [homeassistant.setup] Setting up shopping_list
+2026-01-16 21:48:19.433 INFO (MainThread) [homeassistant.setup] Setup of domain shopping_list took 0.00 seconds
+2026-01-16 21:48:19.438 INFO (MainThread) [homeassistant.setup] Setting up input_datetime
+2026-01-16 21:48:19.440 INFO (MainThread) [homeassistant.setup] Setup of domain input_datetime took 0.00 seconds
+2026-01-16 21:48:19.451 INFO (MainThread) [homeassistant.setup] Setup of domain person took 0.69 seconds
+2026-01-16 21:48:19.457 INFO (MainThread) [homeassistant.setup] Setting up go2rtc
+2026-01-16 21:48:19.486 ERROR (MainThread) [homeassistant.components.go2rtc] Could not find go2rtc docker binary
+2026-01-16 21:48:19.486 ERROR (MainThread) [homeassistant.setup] Setup failed for 'go2rtc': Integration failed to initialize.
+2026-01-16 21:48:19.487 INFO (MainThread) [homeassistant.setup] Setup of domain go2rtc took 0.03 seconds
+2026-01-16 21:48:19.491 INFO (MainThread) [homeassistant.setup] Setup of domain hardware took 0.16 seconds
+2026-01-16 21:48:19.497 INFO (MainThread) [homeassistant.setup] Setting up radio_browser
+2026-01-16 21:48:19.499 INFO (MainThread) [homeassistant.setup] Setup of domain radio_browser took 0.00 seconds
+2026-01-16 21:48:19.512 INFO (MainThread) [homeassistant.setup] Setting up counter
+2026-01-16 21:48:19.518 INFO (MainThread) [homeassistant.setup] Setup of domain counter took 0.01 seconds
+2026-01-16 21:48:19.521 INFO (MainThread) [homeassistant.setup] Setting up schedule
+2026-01-16 21:48:19.532 INFO (MainThread) [homeassistant.setup] Setup of domain schedule took 0.01 seconds
+2026-01-16 21:48:19.537 INFO (MainThread) [homeassistant.setup] Setting up my
+2026-01-16 21:48:19.538 INFO (MainThread) [homeassistant.setup] Setup of domain my took 0.00 seconds
+2026-01-16 21:48:19.571 INFO (MainThread) [homeassistant.setup] Setting up met
+2026-01-16 21:48:19.571 INFO (MainThread) [homeassistant.setup] Setup of domain met took 0.00 seconds
+2026-01-16 21:48:19.591 INFO (MainThread) [homeassistant.components.sensor] Setting up energy.sensor
+2026-01-16 21:48:19.615 INFO (MainThread) [homeassistant.components.tts] Setting up google_translate.tts
+2026-01-16 21:48:19.638 INFO (MainThread) [homeassistant.setup] Setting up analytics
+2026-01-16 21:48:19.647 INFO (MainThread) [homeassistant.setup] Setup of domain analytics took 0.01 seconds
+2026-01-16 21:48:19.654 INFO (MainThread) [homeassistant.setup] Setting up todo
+2026-01-16 21:48:19.661 INFO (MainThread) [homeassistant.setup] Setup of domain todo took 0.01 seconds
+2026-01-16 21:48:19.665 INFO (MainThread) [homeassistant.components.todo] Setting up shopping_list.todo
+2026-01-16 21:48:19.727 INFO (MainThread) [homeassistant.setup] Setting up mobile_app
+2026-01-16 21:48:19.730 INFO (MainThread) [homeassistant.setup] Setting up notify
+2026-01-16 21:48:19.732 INFO (MainThread) [homeassistant.setup] Setup of domain notify took 0.00 seconds
+2026-01-16 21:48:19.743 INFO (MainThread) [homeassistant.setup] Setup of domain mobile_app took 0.02 seconds
+2026-01-16 21:48:19.750 INFO (MainThread) [homeassistant.components.notify] Setting up notify.mobile_app
+2026-01-16 21:48:19.756 ERROR (MainThread) [homeassistant.setup] Unable to set up dependencies of 'default_config'. Setup failed for dependencies: ['go2rtc']
+2026-01-16 21:48:19.757 ERROR (MainThread) [homeassistant.setup] Setup failed for 'default_config': Could not setup dependencies: go2rtc
+2026-01-16 21:48:19.922 INFO (MainThread) [homeassistant.setup] Setting up weather
+2026-01-16 21:48:19.923 INFO (MainThread) [homeassistant.setup] Setup of domain weather took 0.00 seconds
+2026-01-16 21:48:19.925 INFO (MainThread) [homeassistant.components.weather] Setting up met.weather
+2026-01-16 21:48:19.938 INFO (MainThread) [homeassistant.bootstrap] Home Assistant initialized in 6.19s
+2026-01-16 21:48:19.938 INFO (MainThread) [homeassistant.core] Starting Home Assistant 2026.1.1
+2026-01-16 21:48:21.049 WARNING (MainThread) [asyncio] Executing <Task pending name='Task-100' coro=<async_setup.<locals>._async_initialize() running at /venvs/SmartHRT/lib/python3.13/site-packages/homeassistant/components/dhcp/__init__.py:151> wait_for=<Future pending cb=[_chain_future.<locals>._call_check_cancel() at /usr/local/lib/python3.13/asyncio/futures.py:384, Task.task_wakeup()] created at /usr/local/lib/python3.13/asyncio/base_events.py:459> cb=[set.remove()] created at /venvs/SmartHRT/lib/python3.13/site-packages/homeassistant/util/async_.py:44> took 0.241 seconds
+2026-01-16 21:48:21.090 ERROR (SyncWorker_2) [aiodhcpwatcher] Cannot watch for dhcp packets without a functional packet filter: libpcap is not available. Cannot compile filter !
+2026-01-16 21:49:19.905 WARNING (MainThread) [asyncio] Executing <Task pending name='Task-199' coro=<RequestHandler._handle_request() running at /venvs/SmartHRT/lib/python3.13/site-packages/aiohttp/web_protocol.py:535> wait_for=<Future pending cb=[_UnixSelectorEventLoop._sock_add_cancellation_callback.<locals>.cb() at /usr/local/lib/python3.13/asyncio/unix_events.py:466, Task.task_wakeup()] created at /usr/local/lib/python3.13/asyncio/base_events.py:459> cb=[Task.task_wakeup()] created at /venvs/SmartHRT/lib/python3.13/site-packages/aiohttp/web_protocol.py:598> took 0.270 seconds
+2026-01-16 21:52:49.204 WARNING (MainThread) [homeassistant.components.http.ban] Login attempt or request with invalid authentication from localhost (127.0.0.1). Requested URL: '/api/websocket'. (Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36)
+2026-01-16 21:56:01.765 WARNING (MainThread) [homeassistant.components.http.ban] Login attempt or request with invalid authentication from localhost (127.0.0.1). Requested URL: '/api/websocket'. (Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36)

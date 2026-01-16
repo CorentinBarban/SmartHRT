@@ -1,90 +1,55 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
-	"name": "Smart Home Assistant Dev Container",
-	"build": {
-		"dockerfile": "Dockerfile"
-	},
-	"appPort": [
-		"9123:8123"
-	],
-	"postCreateCommand": "pip install --upgrade pip ; pip install -r requirements_test.txt",
+  "name": "cbarban/hass-SmartHRT",
 
-	"mounts": [
-		"source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
-	],
+  // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+  "image": "mcr.microsoft.com/devcontainers/python:3.13-bookworm",
+  "features": {
+    "ghcr.io/devcontainers-extra/features/exa:1": {}
+  },
 
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"ms-python.python",
-                "ms-python.pylint",
-                "ms-python.isort",
-                "ms-python.black-formatter",
-                "visualstudioexptteam.vscodeintellicode",
-                "redhat.vscode-yaml",
-                "github.vscode-pull-request-github",
-                "ryanluker.vscode-coverage-gutters",
-                "ferrierbenjamin.fold-unfold-all-icone",
-                "donjayamanne.githistory",
-                "waderyan.gitblame",
-                "keesschollaart.vscode-home-assistant",
-                "vscode.markdown-math",
-                "yzhang.markdown-all-in-one",
-                "github.vscode-github-actions",
-                "azuretools.vscode-docker",
-                "huizhou.githd",
-                "github.copilot",
-                "github.copilot-chat",
-                "ms-azuretools.vscode-docker",
-                "openai.chatgpt"
+  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  "forwardPorts": [8123],
+  "portsAttributes": {
+    "8123": {
+      "label": "Home Assistant",
+      "onAutoForward": "notify"
+    }
+  },
 
-			],
+  // Use 'postCreateCommand' to run commands after the container is created.
+  "postCreateCommand": "sudo chown vscode /venvs && pipx install uv && uv sync",
 
-			"settings": {
-                "files.eol": "\n",
-                "editor.tabSize": 4,
-                "terminal.integrated.profiles.linux": {
-                    "bash": {
-                        "path": "bash",
-                        "args": []
-                    }
-                },
-                "terminal.integrated.defaultProfile.linux": "bash",
-                // "terminal.integrated.shell.linux": "/bin/bash",
-                "python.pythonPath": "/usr/bin/python3",
-                "python.analysis.autoSearchPaths": true,
-                "pylint.lintOnChange": false,
-                "python.formatting.provider": "black",
-                "black-formatter.args": [
-                    "--line-length",
-                    "180"
-                ],
-                // "python.formatting.blackArgs": ["--line-length", "180"],
-                "black-formatter.path": ["/usr/local/py-utils/bin/black"],
-                // "python.formatting.blackPath": "/usr/local/py-utils/bin/black",
-                "editor.formatOnPaste": false,
-                "editor.formatOnSave": true,
-                "editor.formatOnType": true,
-                "files.trimTrailingWhitespace": true
-                // "python.experiments.optOutFrom": ["pythonTestAdapter"],
-                // "python.analysis.logLevel": "Trace"
-            }
-		}
-	}
+  // Configure tool-specific properties.
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "editorconfig.editorconfig",
+        "christian-kohler.path-intellisense",
+        "esbenp.prettier-vscode",
+        "redhat.vscode-yaml",
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "keesschollaart.vscode-home-assistant",
+        "tamasfe.even-better-toml"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/venvs/${localWorkspaceFolderBasename}/bin/python"
+      }
+    }
+  },
 
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
+  "remoteEnv": {
+    "UV_PRERELEASE": "allow",
+    "UV_PROJECT_ENVIRONMENT": "/venvs/${localWorkspaceFolderBasename}",
+    "UV_LINK_MODE": "copy"
+  },
 
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
+  // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+  // "remoteUser": "root",
 
-	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "pip3 install --user -r requirements.txt",
-
-	// Configure tool-specific properties.
-	// "customizations": {},
-
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
+  "mounts": [
+    "source=${localWorkspaceFolderBasename}-venvs,target=/venvs,type=volume,consistency=cached"
+  ]
 }

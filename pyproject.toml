@@ -1,0 +1,7 @@
+[project]
+name = "hass-template-climate"
+version = "0.0.0"
+description = ""
+readme = "README.md"
+requires-python = ">=3.13.2"
+dependencies = ["colorlog>=6.9.0", "homeassistant>=2026.1.1"]
