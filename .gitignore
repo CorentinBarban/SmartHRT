@@ -2,9 +2,9 @@ __pycache__/
 *.pyc
 config/deps/
 config/tts/
-config/home-assistant.log*
 config/.storage/
 .home-assistant.log*
 *.db
 config/secrets.yaml
 config/.ha_run.lock
+.devcontainer/config/home-assistant*
