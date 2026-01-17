@@ -1,9 +1,5 @@
 __pycache__/
-*.pyc
-config/deps/
-config/tts/
-config/.storage/
-.home-assistant.log*
-*.db
-config/secrets.yaml
-config/.ha_run.lock
+
+# Devcontainer config directory
+.devcontainer/config/
+!config/configuration.yaml

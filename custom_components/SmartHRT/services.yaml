@@ -1,0 +1,71 @@
+calculate_recovery_time:
+  name: Calculate Recovery Time
+  description: >
+    Calculates the heating recovery start time based on thermal parameters 
+    (RCth, RPth) and current temperatures.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: The config entry ID (optional, uses first available if not specified).
+      required: false
+      example: "abc123"
+      selector:
+        text:
+
+calculate_recovery_update_time:
+  name: Calculate Recovery Update Time
+  description: >
+    Calculates when the next recovery time update should occur.
+    This is used to schedule periodic recalculations before the heating starts.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: The config entry ID (optional, uses first available if not specified).
+      required: false
+      example: "abc123"
+      selector:
+        text:
+
+calculate_rcth_fast:
+  name: Calculate RCth Fast
+  description: >
+    Calculates the dynamic evolution of RCth (thermal time constant) 
+    before the heating recovery starts. This tracks temperature decay 
+    during the heating-off period.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: The config entry ID (optional, uses first available if not specified).
+      required: false
+      example: "abc123"
+      selector:
+        text:
+
+on_heating_stop:
+  name: On Heating Stop
+  description: >
+    Call this service when the heating stops. It records the current 
+    interior and exterior temperatures and timestamps for thermal 
+    constant calculations.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: The config entry ID (optional, uses first available if not specified).
+      required: false
+      example: "abc123"
+      selector:
+        text:
+
+on_recovery_start:
+  name: On Recovery Start
+  description: >
+    Call this service at the start of heating recovery. It records 
+    temperatures, calculates RCth, and enables RPth calculation mode.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: The config entry ID (optional, uses first available if not specified).
+      required: false
+      example: "abc123"
+      selector:
+        text:

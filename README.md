@@ -2,14 +2,19 @@
 
 Smart Heating Recovery Time calculation for Home Assistant
 
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![GitHub Release](https://img.shields.io/github/v/release/corentinBarban/smartHRT?include_prereleases)](https://github.com/corentinBarban/SmartHRT/releases)
+
 # Table of Contents
 
 1. [Concepts](#concepts)
 2. [Why there is a self-calibration script?](#why-there-is-a-self-calibration-script)
 3. [Interface](#interface)
 4. [Installation](#installation)
-5. [Testing and using the recovery optimization](#testing-and-using-the-recovery-optimization)
-6. [TODO](#todo)
+5. [Services](#services)
+6. [Testing and using the recovery optimization](#testing-and-using-the-recovery-optimization)
+7. [Architecture](#architecture)
+8. [TODO](#todo)
 
 ## Concepts
 
@@ -77,18 +82,64 @@ The "magic" of this program is to figure out and adjust $`RC_{th}`$ and $`RP_{th
 
 ### Download and install
 
-- Download [thermal_recovery_time.yaml](packages/thermal_recovery_time.yaml) and copy the file to your package folder
-- Restart Home Assistant
+#### Option 1: HACS (Recommended)
+
+1. Open HACS in Home Assistant
+2. Go to "Integrations"
+3. Click the three dots menu → "Custom repositories"
+4. Add `https://github.com/corentinBarban/SmartHRT` with category "Integration"
+5. Search for "SmartHRT" and install
+6. Restart Home Assistant
+7. Go to Settings → Devices & Services → Add Integration → SmartHRT
+
+#### Option 2: Manual Installation
+
+1. Download the `custom_components/SmartHRT` folder
+2. Copy it to your Home Assistant `config/custom_components/` directory
+3. Restart Home Assistant
+4. Go to Settings → Devices & Services → Add Integration → SmartHRT
+
+#### Dashboard Setup (Optional)
+
 - Download [dashboard_base.yaml](dashboard_base.yaml)
   - open the file with a text editor
   - in your Home Assistant dashboard, click on the 3 dots in the upper right corner and add a tab
   - on the new blank tab, click on edit > 3 dots in the upper right corner > select YAML edition
-  - copy and paste the content of `dashboard_base.yaml` -> save.
-- Add the calculated recovery time (`input_datetime.recoverystart_hour`) as a condition to start the radiators (amongst the other calendar rules) in your own automation
+  - copy and paste the content of `dashboard_base.yaml` → save
 
-e.g. I have this automation to manage my radiators
+## Services
 
-<img src="img/HeatingAutomationExample.png" alt="Alt Text" style="width:35%; height:auto;">
+SmartHRT exposes the following Home Assistant services for automation and manual control:
+
+| Service                                   | Description                                                                                                  |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `smarthrt.calculate_recovery_time`        | Calculates the heating recovery start time based on thermal parameters (RCth, RPth) and current temperatures |
+| `smarthrt.calculate_recovery_update_time` | Calculates when the next recovery time update should occur                                                   |
+| `smarthrt.calculate_rcth_fast`            | Calculates the dynamic evolution of RCth during the heating-off period                                       |
+| `smarthrt.on_heating_stop`                | Records temperatures and timestamps when heating stops                                                       |
+| `smarthrt.on_recovery_start`              | Records temperatures and calculates RCth when heating recovery starts                                        |
+
+### Example Automation
+
+```yaml
+automation:
+  - alias: "SmartHRT - Heating Stop"
+    trigger:
+      - platform: state
+        entity_id: climate.living_room
+        to: "off"
+    action:
+      - service: smarthrt.on_heating_stop
+
+  - alias: "SmartHRT - Recovery Start"
+    trigger:
+      - platform: time
+        at: sensor.smarthrt_recovery_start_hour
+    action:
+      - service: smarthrt.on_recovery_start
+      - service: climate.turn_on
+        entity_id: climate.living_room
+```
 
 ## Testing and using the recovery optimization
 
@@ -96,15 +147,74 @@ e.g. I have this automation to manage my radiators
 - Test the script for the calculation of `recovery time`
 - Check next morning if everything went well - The `Self Calibration` requires a few days to adapt `RCth`and `RPth`constants for better predictions; the first night may not be accurate. Following days should give better predictions with self calibration mode (further manual adjustments are always possible in advanced mode)
 
+## Architecture
+
+SmartHRT is built as a native Home Assistant custom integration with the following components:
+
+```
+custom_components/SmartHRT/
+├── __init__.py          # Integration setup and entry points
+├── coordinator.py       # Central coordinator with thermal logic
+├── config_flow.py       # Configuration UI flow
+├── const.py             # Constants and default values
+├── sensor.py            # Sensor entities (temperatures, coefficients)
+├── switch.py            # Switch entities (modes)
+├── number.py            # Number entities (TSP, relaxation factor)
+├── time.py              # Time entities (target hour)
+├── services.yaml        # Service definitions
+├── strings.json         # UI strings
+└── translations/        # Localization files
+```
+
+### Key Classes
+
+- **`SmartHRTCoordinator`**: Central coordinator managing all thermal calculations, sensor updates, and service handlers
+- **`SmartHRTData`**: Dataclass holding all state data (temperatures, coefficients, timestamps, modes)
+
+### Thermal Model
+
+The integration uses a first-order thermal model with two key parameters:
+
+- **RCth** (Thermal Time Constant): Combines insulation and thermal mass - determines how fast the room cools
+- **RPth** (Thermal Power Constant): Combines insulation and heating power - determines how fast the room heats
+
+Both parameters are automatically interpolated based on wind speed (between `WIND_LOW=10 km/h` and `WIND_HIGH=60 km/h`) to account for increased heat losses in windy conditions.
+
+### Adaptive Coefficient Update
+
+The self-calibration uses a **relaxation-based polynomial update**:
+
+1. After each heating cycle, measured RCth/RPth are compared to interpolated values
+2. Error is distributed to low-wind and high-wind coefficients using cubic polynomials
+3. Coefficients are smoothly updated using exponential moving average with the `relaxation_factor`
+
 # TODO
 
 - ADD readme for advanced use
-- DONE <s>ADD automatic wind correlation for `Rth` variations (important for old buildings with high infiltration rates, and high-rise buildings) </s>
+- ~~ADD automatic wind correlation for `Rth` variations (important for old buildings with high infiltration rates, and high-rise buildings)~~
 - ADD recovery optimization based on energy prices and periods (e.g. TEMPO in France)
-- DONE <s>ADD predicted exterior temperature (weather data) in the recovery time calculation (important for very cold mornings)</s>
+- ~~ADD predicted exterior temperature (weather data) in the recovery time calculation (important for very cold mornings)~~
 - ADD solar radiation effects (weather data) for a future diurnal recovery time calculation
-- ADD second order effects for vacation recovery calculation vs. typical weekly occupancy variations.
-- INTEGRATE all variables and parameters into a single entity to manage different rooms (important for castle owners)
+- ADD second order effects for vacation recovery calculation vs. typical weekly occupancy variations
+- ~~INTEGRATE all variables and parameters into a single entity to manage different rooms~~
+
+# Changelog
+
+## January 2026 - Native Integration
+
+- **NEW**: Complete rewrite as a native Home Assistant custom integration (HACS compatible)
+- **NEW**: Configuration via UI flow (no more YAML configuration required)
+- **NEW**: Exposed Home Assistant services for automation:
+  - `smarthrt.calculate_recovery_time`
+  - `smarthrt.calculate_recovery_update_time`
+  - `smarthrt.calculate_rcth_fast`
+  - `smarthrt.on_heating_stop`
+  - `smarthrt.on_recovery_start`
+- **NEW**: Centralized coordinator architecture with `SmartHRTData` dataclass
+- **NEW**: Real-time sensor updates via state change listeners
+- **NEW**: Debug logging support for troubleshooting
+- **IMPROVED**: Code simplified from ~964 to ~624 lines with better organization
+- **IMPROVED**: Factorized interpolation and coefficient update methods
 
 ## Feb 15 update
 

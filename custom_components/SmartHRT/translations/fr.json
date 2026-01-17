@@ -1,57 +1,109 @@
 {
-    "title": "SmartHRT",
-    "config": {
-        "flow_title": "SmartHRT configuration",
-        "step": {
-            "user": {
-                "title": "Identification",
-                "description": "Configurez votre intégration SmartHRT",
-                "data": {
-                    "name": "Nom"
-                },
-                "data_description": {
-                    "name": "Nom de l'intégration"
-                }
-            },
-            "sensors": {
-                "title": "Configuration des capteurs",
-                "description": "Configurez les capteurs et paramètres de chauffage",
-                "data": {
-                    "target_hour": "Heure cible",
-                    "sensor_interior_temperature": "Capteur de température intérieure",
-                    "phone_alarm_selector": "Capteur alarme téléphone",
-                    "tsp": "Consigne (Set Point)"
-                },
-                "data_description": {
-                    "target_hour": "Heure de réveil souhaitée (ex: 6:00)",
-                    "sensor_interior_temperature": "Capteur de température de la pièce (ex: sensor.room_temperature)",
-                    "phone_alarm_selector": "Capteur de la prochaine alarme du téléphone (ex: sensor.nexus_next_alarm)",
-                    "tsp": "Température de consigne souhaitée (13-26°C)"
-                }
-            }
+  "title": "SmartHRT",
+  "config": {
+    "flow_title": "SmartHRT configuration",
+    "step": {
+      "user": {
+        "title": "Identification",
+        "description": "Configurez votre intégration SmartHRT",
+        "data": {
+          "name": "Nom"
+        },
+        "data_description": {
+          "name": "Nom de l'intégration"
         }
-    },
-    "options": {
-        "flow_title": "SmartHRT options",
-        "step": {
-            "init": {
-                "title": "Configuration SmartHRT",
-                "description": "Modifiez la configuration de votre chauffage intelligent",
-                "data": {
-                    "name": "Nom",
-                    "target_hour": "Heure cible",
-                    "sensor_interior_temperature": "Capteur de température intérieure",
-                    "phone_alarm_selector": "Capteur alarme téléphone",
-                    "tsp": "Consigne (Set Point)"
-                },
-                "data_description": {
-                    "name": "Nom de l'intégration",
-                    "target_hour": "Heure de réveil souhaitée (ex: 6:00)",
-                    "sensor_interior_temperature": "Capteur de température de la pièce (ex: sensor.room_temperature)",
-                    "phone_alarm_selector": "Capteur de la prochaine alarme du téléphone (ex: sensor.nexus_next_alarm)",
-                    "tsp": "Température de consigne souhaitée (13-26°C)"
-                }
-            }
+      },
+      "sensors": {
+        "title": "Configuration des capteurs",
+        "description": "Configurez les capteurs et paramètres de chauffage",
+        "data": {
+          "target_hour": "Heure cible",
+          "sensor_interior_temperature": "Capteur de température intérieure",
+          "phone_alarm_selector": "Capteur alarme téléphone",
+          "tsp": "Consigne (Set Point)"
+        },
+        "data_description": {
+          "target_hour": "Heure de réveil souhaitée (ex: 6:00)",
+          "sensor_interior_temperature": "Capteur de température de la pièce (ex: sensor.room_temperature)",
+          "phone_alarm_selector": "Capteur de la prochaine alarme du téléphone (ex: sensor.nexus_next_alarm)",
+          "tsp": "Température de consigne souhaitée (13-26°C)"
         }
+      }
     }
+  },
+  "options": {
+    "flow_title": "SmartHRT options",
+    "step": {
+      "init": {
+        "title": "Configuration SmartHRT",
+        "description": "Modifiez la configuration de votre chauffage intelligent",
+        "data": {
+          "name": "Nom",
+          "target_hour": "Heure cible",
+          "sensor_interior_temperature": "Capteur de température intérieure",
+          "phone_alarm_selector": "Capteur alarme téléphone",
+          "tsp": "Consigne (Set Point)"
+        },
+        "data_description": {
+          "name": "Nom de l'intégration",
+          "target_hour": "Heure de réveil souhaitée (ex: 6:00)",
+          "sensor_interior_temperature": "Capteur de température de la pièce (ex: sensor.room_temperature)",
+          "phone_alarm_selector": "Capteur de la prochaine alarme du téléphone (ex: sensor.nexus_next_alarm)",
+          "tsp": "Température de consigne souhaitée (13-26°C)"
+        }
+      }
+    }
+  },
+  "services": {
+    "calculate_recovery_time": {
+      "name": "Calculer l'heure de relance",
+      "description": "Calcule l'heure de démarrage de la relance du chauffage en fonction des paramètres thermiques.",
+      "fields": {
+        "entry_id": {
+          "name": "ID de l'entrée",
+          "description": "L'ID de l'entrée de configuration (optionnel, utilise la première disponible si non spécifié)."
+        }
+      }
+    },
+    "calculate_recovery_update_time": {
+      "name": "Calculer l'heure de mise à jour",
+      "description": "Calcule quand la prochaine mise à jour du calcul de relance doit avoir lieu.",
+      "fields": {
+        "entry_id": {
+          "name": "ID de l'entrée",
+          "description": "L'ID de l'entrée de configuration (optionnel, utilise la première disponible si non spécifié)."
+        }
+      }
+    },
+    "calculate_rcth_fast": {
+      "name": "Calculer RCth dynamique",
+      "description": "Calcule l'évolution dynamique de RCth avant le démarrage de la relance.",
+      "fields": {
+        "entry_id": {
+          "name": "ID de l'entrée",
+          "description": "L'ID de l'entrée de configuration (optionnel, utilise la première disponible si non spécifié)."
+        }
+      }
+    },
+    "on_heating_stop": {
+      "name": "Arrêt du chauffage",
+      "description": "Déclenche les actions lors de l'arrêt du chauffage (enregistre les températures et horodatages pour les calculs).",
+      "fields": {
+        "entry_id": {
+          "name": "ID de l'entrée",
+          "description": "L'ID de l'entrée de configuration (optionnel, utilise la première disponible si non spécifié)."
+        }
+      }
+    },
+    "on_recovery_start": {
+      "name": "Début de la relance",
+      "description": "Déclenche les actions au début de la relance du chauffage (enregistre les températures et calcule RCth).",
+      "fields": {
+        "entry_id": {
+          "name": "ID de l'entrée",
+          "description": "L'ID de l'entrée de configuration (optionnel, utilise la première disponible si non spécifié)."
+        }
+      }
+    }
+  }
 }

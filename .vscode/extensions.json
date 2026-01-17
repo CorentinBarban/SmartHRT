@@ -8,6 +8,7 @@
     "ms-python.vscode-pylance",
     "ms-python.black-formatter",
     "keesschollaart.vscode-home-assistant",
-    "tamasfe.even-better-toml"
+    "tamasfe.even-better-toml",
+    "GitHub.copilot-chat"
   ]
 }

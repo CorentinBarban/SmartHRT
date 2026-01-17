@@ -1,10 +1,14 @@
-""" Les constantes pour l'intégration SmartHRT """
+"""Les constantes pour l'intégration SmartHRT"""
 
 from homeassistant.const import Platform
 
 DOMAIN = "smarthrt"
-PLATFORMS: list[Platform] = [Platform.SENSOR,
-                             Platform.NUMBER, Platform.TIME, Platform.SWITCH]
+PLATFORMS: list[Platform] = [
+    Platform.SENSOR,
+    Platform.NUMBER,
+    Platform.TIME,
+    Platform.SWITCH,
+]
 
 # Configuration keys
 CONF_NAME = "name"
@@ -38,3 +42,10 @@ DEVICE_MANUFACTURER = "SmartHRT"
 
 # Data keys for hass.data[DOMAIN][entry_id]
 DATA_COORDINATOR = "coordinator"
+
+# Service names
+SERVICE_CALCULATE_RECOVERY_TIME = "calculate_recovery_time"
+SERVICE_CALCULATE_RECOVERY_UPDATE_TIME = "calculate_recovery_update_time"
+SERVICE_CALCULATE_RCTH_FAST = "calculate_rcth_fast"
+SERVICE_ON_HEATING_STOP = "on_heating_stop"
+SERVICE_ON_RECOVERY_START = "on_recovery_start"
