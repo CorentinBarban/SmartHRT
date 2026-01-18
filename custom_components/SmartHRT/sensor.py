@@ -1,4 +1,5 @@
-""" Implements the SmartHRT sensors component """
+"""Implements the SmartHRT sensors component"""
+
 import logging
 
 from homeassistant.const import UnitOfTemperature, UnitOfSpeed, UnitOfTime
@@ -30,7 +31,9 @@ async def async_setup_entry(
 
     _LOGGER.debug("Calling sensor async_setup_entry entry=%s", entry)
 
-    coordinator: SmartHRTCoordinator = hass.data[DOMAIN][entry.entry_id][DATA_COORDINATOR]
+    coordinator: SmartHRTCoordinator = hass.data[DOMAIN][entry.entry_id][
+        DATA_COORDINATOR
+    ]
 
     entities = [
         SmartHRTInteriorTempSensor(coordinator, entry),
@@ -41,6 +44,15 @@ async def async_setup_entry(
         SmartHRTRCthSensor(coordinator, entry),
         SmartHRTRPthSensor(coordinator, entry),
         SmartHRTRCthFastSensor(coordinator, entry),
+        # Nouveaux sensors du YAML
+        SmartHRTWindSpeedForecastSensor(coordinator, entry),
+        SmartHRTTemperatureForecastSensor(coordinator, entry),
+        SmartHRTWindSpeedAvgSensor(coordinator, entry),
+        SmartHRTNightStateSensor(coordinator, entry),
+        SmartHRTPhoneAlarmSensor(coordinator, entry),
+        SmartHRTRecoveryCalcModeSensor(coordinator, entry),
+        SmartHRTRPCalcModeSensor(coordinator, entry),
+        SmartHRTStopLagDurationSensor(coordinator, entry),
     ]
 
     async_add_entities(entities, True)
@@ -49,7 +61,9 @@ async def async_setup_entry(
 class SmartHRTBaseSensor(SensorEntity):
     """Classe de base pour les sensors SmartHRT"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         """Initialisation de base"""
         self._coordinator = coordinator
         self._config_entry = config_entry
@@ -92,7 +106,9 @@ class SmartHRTBaseSensor(SensorEntity):
 class SmartHRTInteriorTempSensor(SmartHRTBaseSensor):
     """Sensor de température intérieure"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "Température intérieure"
         self._attr_unique_id = f"{self._device_id}_interior_temp"
@@ -121,7 +137,9 @@ class SmartHRTInteriorTempSensor(SmartHRTBaseSensor):
 class SmartHRTExteriorTempSensor(SmartHRTBaseSensor):
     """Sensor de température extérieure"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "Température extérieure"
         self._attr_unique_id = f"{self._device_id}_exterior_temp"
@@ -150,14 +168,20 @@ class SmartHRTExteriorTempSensor(SmartHRTBaseSensor):
 class SmartHRTWindSpeedSensor(SmartHRTBaseSensor):
     """Sensor de vitesse du vent"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "Vitesse du vent"
         self._attr_unique_id = f"{self._device_id}_wind_speed"
 
     @property
     def native_value(self) -> float | None:
-        return round(self._coordinator.data.wind_speed, 1) if self._coordinator.data.wind_speed else None
+        return (
+            round(self._coordinator.data.wind_speed, 1)
+            if self._coordinator.data.wind_speed
+            else None
+        )
 
     @property
     def icon(self) -> str | None:
@@ -179,7 +203,9 @@ class SmartHRTWindSpeedSensor(SmartHRTBaseSensor):
 class SmartHRTWindchillSensor(SmartHRTBaseSensor):
     """Sensor de température ressentie (windchill)"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "Température ressentie"
         self._attr_unique_id = f"{self._device_id}_windchill"
@@ -204,7 +230,9 @@ class SmartHRTWindchillSensor(SmartHRTBaseSensor):
 class SmartHRTRecoveryStartSensor(SmartHRTBaseSensor):
     """Sensor de l'heure de démarrage de la relance"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "Heure de relance"
         self._attr_unique_id = f"{self._device_id}_recovery_start"
@@ -234,7 +262,9 @@ class SmartHRTRecoveryStartSensor(SmartHRTBaseSensor):
 class SmartHRTRCthSensor(SmartHRTBaseSensor):
     """Sensor du coefficient RCth"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "RCth"
         self._attr_unique_id = f"{self._device_id}_rcth_sensor"
@@ -268,7 +298,9 @@ class SmartHRTRCthSensor(SmartHRTBaseSensor):
 class SmartHRTRPthSensor(SmartHRTBaseSensor):
     """Sensor du coefficient RPth"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "RPth"
         self._attr_unique_id = f"{self._device_id}_rpth_sensor"
@@ -302,7 +334,9 @@ class SmartHRTRPthSensor(SmartHRTBaseSensor):
 class SmartHRTRCthFastSensor(SmartHRTBaseSensor):
     """Sensor du coefficient RCth dynamique"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "RCth dynamique"
         self._attr_unique_id = f"{self._device_id}_rcth_fast"
@@ -322,3 +356,210 @@ class SmartHRTRCthFastSensor(SmartHRTBaseSensor):
     @property
     def native_unit_of_measurement(self) -> str | None:
         return UnitOfTime.HOURS
+
+
+class SmartHRTWindSpeedForecastSensor(SmartHRTBaseSensor):
+    """Sensor de prévision de vitesse du vent (moyenne sur 3h)"""
+
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "Prévision vent"
+        self._attr_unique_id = f"{self._device_id}_wind_forecast"
+
+    @property
+    def native_value(self) -> float | None:
+        return round(self._coordinator.data.wind_speed_forecast_avg, 1)
+
+    @property
+    def icon(self) -> str | None:
+        return "mdi:weather-windy"
+
+    @property
+    def device_class(self) -> SensorDeviceClass | None:
+        return SensorDeviceClass.WIND_SPEED
+
+    @property
+    def state_class(self) -> SensorStateClass | None:
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        return "km/h"
+
+
+class SmartHRTTemperatureForecastSensor(SmartHRTBaseSensor):
+    """Sensor de prévision de température (moyenne sur 3h)"""
+
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "Prévision température"
+        self._attr_unique_id = f"{self._device_id}_temp_forecast"
+
+    @property
+    def native_value(self) -> float | None:
+        return round(self._coordinator.data.temperature_forecast_avg, 1)
+
+    @property
+    def icon(self) -> str | None:
+        return "mdi:thermometer"
+
+    @property
+    def device_class(self) -> SensorDeviceClass | None:
+        return SensorDeviceClass.TEMPERATURE
+
+    @property
+    def state_class(self) -> SensorStateClass | None:
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        return UnitOfTemperature.CELSIUS
+
+
+class SmartHRTWindSpeedAvgSensor(SmartHRTBaseSensor):
+    """Sensor de vitesse du vent moyenne sur 4h"""
+
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "Vent moyen (4h)"
+        self._attr_unique_id = f"{self._device_id}_wind_avg"
+        self._attr_entity_registry_enabled_default = False
+
+    @property
+    def native_value(self) -> float | None:
+        return (
+            round(self._coordinator.data.wind_speed_avg, 2)
+            if self._coordinator.data.wind_speed_avg
+            else None
+        )
+
+    @property
+    def icon(self) -> str | None:
+        return "mdi:weather-windy"
+
+    @property
+    def device_class(self) -> SensorDeviceClass | None:
+        return SensorDeviceClass.WIND_SPEED
+
+    @property
+    def state_class(self) -> SensorStateClass | None:
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        return UnitOfSpeed.METERS_PER_SECOND
+
+
+class SmartHRTNightStateSensor(SmartHRTBaseSensor):
+    """Sensor indiquant si c'est la nuit (soleil sous l'horizon)"""
+
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "État nuit"
+        self._attr_unique_id = f"{self._device_id}_night_state"
+        self._attr_entity_registry_enabled_default = False
+
+    @property
+    def native_value(self) -> int:
+        # Vérifier l'état du soleil
+        sun_state = self._coordinator._hass.states.get("sun.sun")
+        if sun_state and sun_state.state == "below_horizon":
+            return 1
+        return 0
+
+    @property
+    def icon(self) -> str | None:
+        return (
+            "mdi:weather-night" if self.native_value == 1 else "mdi:white-balance-sunny"
+        )
+
+
+class SmartHRTPhoneAlarmSensor(SmartHRTBaseSensor):
+    """Sensor de l'alarme du téléphone"""
+
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "Alarme téléphone"
+        self._attr_unique_id = f"{self._device_id}_phone_alarm"
+
+    @property
+    def native_value(self) -> str | None:
+        return self._coordinator.data.phone_alarm
+
+    @property
+    def icon(self) -> str | None:
+        return "mdi:alarm"
+
+
+class SmartHRTRecoveryCalcModeSensor(SmartHRTBaseSensor):
+    """Sensor indiquant le mode calcul de relance"""
+
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "Mode calcul relance"
+        self._attr_unique_id = f"{self._device_id}_recovery_calc_mode"
+        self._attr_entity_registry_enabled_default = False
+
+    @property
+    def native_value(self) -> str:
+        return "on" if self._coordinator.data.recovery_calc_mode else "off"
+
+    @property
+    def icon(self) -> str | None:
+        return "mdi:clock-end"
+
+
+class SmartHRTRPCalcModeSensor(SmartHRTBaseSensor):
+    """Sensor indiquant le mode calcul RPth"""
+
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "Mode calcul RP"
+        self._attr_unique_id = f"{self._device_id}_rp_calc_mode"
+        self._attr_entity_registry_enabled_default = False
+
+    @property
+    def native_value(self) -> str:
+        return "on" if self._coordinator.data.rp_calc_mode else "off"
+
+    @property
+    def icon(self) -> str | None:
+        return "mdi:home-lightning-bolt-outline"
+
+
+class SmartHRTStopLagDurationSensor(SmartHRTBaseSensor):
+    """Sensor de la durée de lag avant baisse de température"""
+
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "Durée lag arrêt"
+        self._attr_unique_id = f"{self._device_id}_stop_lag_duration"
+        self._attr_entity_registry_enabled_default = False
+
+    @property
+    def native_value(self) -> float | None:
+        return round(self._coordinator.data.stop_lag_duration, 0)
+
+    @property
+    def icon(self) -> str | None:
+        return "mdi:timer-outline"
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        return "s"

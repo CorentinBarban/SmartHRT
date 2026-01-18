@@ -18,12 +18,14 @@
         "description": "Configurez les capteurs et paramètres de chauffage",
         "data": {
           "target_hour": "Heure cible",
+          "recoverycalc_hour": "Heure de coupure chauffage",
           "sensor_interior_temperature": "Capteur de température intérieure",
           "phone_alarm_selector": "Capteur alarme téléphone",
           "tsp": "Consigne (Set Point)"
         },
         "data_description": {
           "target_hour": "Heure de réveil souhaitée (ex: 6:00)",
+          "recoverycalc_hour": "Heure d'arrêt du chauffage le soir (ex: 23:00)",
           "sensor_interior_temperature": "Capteur de température de la pièce (ex: sensor.room_temperature)",
           "phone_alarm_selector": "Capteur de la prochaine alarme du téléphone (ex: sensor.nexus_next_alarm)",
           "tsp": "Température de consigne souhaitée (13-26°C)"
@@ -40,6 +42,7 @@
         "data": {
           "name": "Nom",
           "target_hour": "Heure cible",
+          "recoverycalc_hour": "Heure de coupure chauffage",
           "sensor_interior_temperature": "Capteur de température intérieure",
           "phone_alarm_selector": "Capteur alarme téléphone",
           "tsp": "Consigne (Set Point)"
@@ -47,6 +50,7 @@
         "data_description": {
           "name": "Nom de l'intégration",
           "target_hour": "Heure de réveil souhaitée (ex: 6:00)",
+          "recoverycalc_hour": "Heure d'arrêt du chauffage le soir (ex: 23:00)",
           "sensor_interior_temperature": "Capteur de température de la pièce (ex: sensor.room_temperature)",
           "phone_alarm_selector": "Capteur de la prochaine alarme du téléphone (ex: sensor.nexus_next_alarm)",
           "tsp": "Température de consigne souhaitée (13-26°C)"
@@ -98,6 +102,16 @@
     "on_recovery_start": {
       "name": "Début de la relance",
       "description": "Déclenche les actions au début de la relance du chauffage (enregistre les températures et calcule RCth).",
+      "fields": {
+        "entry_id": {
+          "name": "ID de l'entrée",
+          "description": "L'ID de l'entrée de configuration (optionnel, utilise la première disponible si non spécifié)."
+        }
+      }
+    },
+    "on_recovery_end": {
+      "name": "Fin de la relance",
+      "description": "Déclenche les actions à la fin de la relance du chauffage (enregistre les températures et calcule RPth).",
       "fields": {
         "entry_id": {
           "name": "ID de l'entrée",

@@ -6,7 +6,8 @@
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
   "image": "mcr.microsoft.com/devcontainers/python:3.13-bookworm",
   "features": {
-    "ghcr.io/devcontainers-extra/features/exa:1": {}
+    "ghcr.io/devcontainers-extra/features/exa:1": {},
+    "ghcr.io/devcontainers-extra/features/ffmpeg-apt-get:1": {}
   },
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.

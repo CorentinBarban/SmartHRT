@@ -1,4 +1,4 @@
-""" Le Config Flow pour SmartHRT """
+"""Le Config Flow pour SmartHRT"""
 
 import logging
 from typing import Any
@@ -17,6 +17,7 @@ from .const import (
     DOMAIN,
     CONF_NAME,
     CONF_TARGET_HOUR,
+    CONF_RECOVERYCALC_HOUR,
     CONF_SENSOR_INTERIOR_TEMP,
     CONF_PHONE_ALARM,
     CONF_TSP,
@@ -24,6 +25,7 @@ from .const import (
     DEFAULT_TSP_MIN,
     DEFAULT_TSP_MAX,
     DEFAULT_TSP_STEP,
+    DEFAULT_RECOVERYCALC_HOUR,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -45,7 +47,8 @@ def add_suggested_values_to_schema(
             # Copy the marker to not modify the flow schema
             new_key = copy.copy(key)
             new_key.description = {
-                "suggested_value": suggested_values[key]}  # type: ignore
+                "suggested_value": suggested_values[key]
+            }  # type: ignore
         schema[new_key] = val
     _LOGGER.debug("add_suggested_values_to_schema: schema=%s", schema)
     return vol.Schema(schema)
@@ -70,9 +73,11 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
         """Gestion de l'étape 'user'. Point d'entrée du configFlow.
         Demande le nom de l'intégration.
         """
-        user_form = vol.Schema({
-            vol.Required(CONF_NAME): str,
-        })
+        user_form = vol.Schema(
+            {
+                vol.Required(CONF_NAME): str,
+            }
+        )
 
         if user_input is None:
             _LOGGER.debug(
@@ -102,6 +107,10 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
             {
                 # Heure cible (Wake Up Time)
                 vol.Required(CONF_TARGET_HOUR): selector.TimeSelector(),
+                # Heure de coupure chauffage (soir)
+                vol.Required(
+                    CONF_RECOVERYCALC_HOUR, default="23:00:00"
+                ): selector.TimeSelector(),
                 # Capteur de température intérieure
                 vol.Required(CONF_SENSOR_INTERIOR_TEMP): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain=SENSOR_DOMAIN),
@@ -173,6 +182,10 @@ class SmartHRTOptionsFlow(OptionsFlow):
                 vol.Required(CONF_NAME): str,
                 # Heure cible (Wake Up Time)
                 vol.Required(CONF_TARGET_HOUR): selector.TimeSelector(),
+                # Heure de coupure chauffage (soir)
+                vol.Required(
+                    CONF_RECOVERYCALC_HOUR, default="23:00:00"
+                ): selector.TimeSelector(),
                 # Capteur de température intérieure
                 vol.Required(CONF_SENSOR_INTERIOR_TEMP): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain=SENSOR_DOMAIN)

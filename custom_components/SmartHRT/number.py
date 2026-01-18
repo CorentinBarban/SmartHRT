@@ -1,4 +1,5 @@
-""" Implements the SmartHRT number entities """
+"""Implements the SmartHRT number entities"""
+
 import logging
 
 from homeassistant.const import UnitOfTemperature, UnitOfTime
@@ -33,7 +34,9 @@ async def async_setup_entry(
 
     _LOGGER.debug("Calling number async_setup_entry entry=%s", entry)
 
-    coordinator: SmartHRTCoordinator = hass.data[DOMAIN][entry.entry_id][DATA_COORDINATOR]
+    coordinator: SmartHRTCoordinator = hass.data[DOMAIN][entry.entry_id][
+        DATA_COORDINATOR
+    ]
 
     entities = [
         SmartHRTSetPointNumber(coordinator, entry),
@@ -51,7 +54,9 @@ async def async_setup_entry(
 class SmartHRTBaseNumber(NumberEntity):
     """Classe de base pour les number SmartHRT"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         """Initialisation de base"""
         self._coordinator = coordinator
         self._config_entry = config_entry
@@ -89,7 +94,9 @@ class SmartHRTBaseNumber(NumberEntity):
 class SmartHRTSetPointNumber(SmartHRTBaseNumber):
     """Entité number pour la consigne de température (Set Point)"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "Consigne"
         self._attr_unique_id = f"{self._device_id}_setpoint"
@@ -116,7 +123,9 @@ class SmartHRTSetPointNumber(SmartHRTBaseNumber):
 class SmartHRTRCthNumber(SmartHRTBaseNumber):
     """Entité number pour RCth"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "RCth"
         self._attr_unique_id = f"{self._device_id}_rcth"
@@ -142,7 +151,9 @@ class SmartHRTRCthNumber(SmartHRTBaseNumber):
 class SmartHRTRPthNumber(SmartHRTBaseNumber):
     """Entité number pour RPth"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "RPth"
         self._attr_unique_id = f"{self._device_id}_rpth"
@@ -168,7 +179,9 @@ class SmartHRTRPthNumber(SmartHRTBaseNumber):
 class SmartHRTRCthLWNumber(SmartHRTBaseNumber):
     """Entité number pour RCth low wind"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "RCth (vent faible)"
         self._attr_unique_id = f"{self._device_id}_rcth_lw"
@@ -188,14 +201,16 @@ class SmartHRTRCthLWNumber(SmartHRTBaseNumber):
         return "mdi:home-battery-outline"
 
     async def async_set_native_value(self, value: float) -> None:
-        self._coordinator.data.rcth_lw = value
-        self._coordinator._notify_listeners()
+        _LOGGER.info("RCth LW changed to: %s", value)
+        self._coordinator.set_rcth_lw(value)
 
 
 class SmartHRTRCthHWNumber(SmartHRTBaseNumber):
     """Entité number pour RCth high wind"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "RCth (vent fort)"
         self._attr_unique_id = f"{self._device_id}_rcth_hw"
@@ -215,14 +230,16 @@ class SmartHRTRCthHWNumber(SmartHRTBaseNumber):
         return "mdi:home-battery-outline"
 
     async def async_set_native_value(self, value: float) -> None:
-        self._coordinator.data.rcth_hw = value
-        self._coordinator._notify_listeners()
+        _LOGGER.info("RCth HW changed to: %s", value)
+        self._coordinator.set_rcth_hw(value)
 
 
 class SmartHRTRPthLWNumber(SmartHRTBaseNumber):
     """Entité number pour RPth low wind"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "RPth (vent faible)"
         self._attr_unique_id = f"{self._device_id}_rpth_lw"
@@ -242,14 +259,16 @@ class SmartHRTRPthLWNumber(SmartHRTBaseNumber):
         return "mdi:home-lightning-bolt-outline"
 
     async def async_set_native_value(self, value: float) -> None:
-        self._coordinator.data.rpth_lw = value
-        self._coordinator._notify_listeners()
+        _LOGGER.info("RPth LW changed to: %s", value)
+        self._coordinator.set_rpth_lw(value)
 
 
 class SmartHRTRPthHWNumber(SmartHRTBaseNumber):
     """Entité number pour RPth high wind"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "RPth (vent fort)"
         self._attr_unique_id = f"{self._device_id}_rpth_hw"
@@ -269,14 +288,16 @@ class SmartHRTRPthHWNumber(SmartHRTBaseNumber):
         return "mdi:home-lightning-bolt-outline"
 
     async def async_set_native_value(self, value: float) -> None:
-        self._coordinator.data.rpth_hw = value
-        self._coordinator._notify_listeners()
+        _LOGGER.info("RPth HW changed to: %s", value)
+        self._coordinator.set_rpth_hw(value)
 
 
 class SmartHRTRelaxationNumber(SmartHRTBaseNumber):
     """Entité number pour le facteur de relaxation"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "Facteur de relaxation"
         self._attr_unique_id = f"{self._device_id}_relaxation"

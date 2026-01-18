@@ -69,3 +69,18 @@ on_recovery_start:
       example: "abc123"
       selector:
         text:
+
+on_recovery_end:
+  name: On Recovery End
+  description: >
+    Call this service at the end of heating recovery (when target temperature 
+    is reached or target hour is reached). It records temperatures and 
+    calculates RPth (thermal power constant).
+  fields:
+    entry_id:
+      name: Entry ID
+      description: The config entry ID (optional, uses first available if not specified).
+      required: false
+      example: "abc123"
+      selector:
+        text:

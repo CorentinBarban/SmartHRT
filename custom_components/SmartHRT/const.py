@@ -14,6 +14,7 @@ PLATFORMS: list[Platform] = [
 CONF_NAME = "name"
 CONF_DEVICE_ID = "device_id"
 CONF_TARGET_HOUR = "target_hour"
+CONF_RECOVERYCALC_HOUR = "recoverycalc_hour"
 CONF_SENSOR_INTERIOR_TEMP = "sensor_interior_temperature"
 CONF_PHONE_ALARM = "phone_alarm_selector"
 CONF_TSP = "tsp"
@@ -49,3 +50,13 @@ SERVICE_CALCULATE_RECOVERY_UPDATE_TIME = "calculate_recovery_update_time"
 SERVICE_CALCULATE_RCTH_FAST = "calculate_rcth_fast"
 SERVICE_ON_HEATING_STOP = "on_heating_stop"
 SERVICE_ON_RECOVERY_START = "on_recovery_start"
+SERVICE_ON_RECOVERY_END = "on_recovery_end"
+
+# Weather forecast settings
+FORECAST_HOURS = 3
+
+# Temperature detection thresholds
+TEMP_DECREASE_THRESHOLD = 0.2  # °C drop threshold to detect actual cooling start
+
+# Default recoverycalc hour (23:00)
+DEFAULT_RECOVERYCALC_HOUR = "23:00:00"

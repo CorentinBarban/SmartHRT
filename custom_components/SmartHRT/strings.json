@@ -18,12 +18,14 @@
         "description": "Configure sensors and heating parameters",
         "data": {
           "target_hour": "Target hour",
+          "recoverycalc_hour": "Heating stop hour",
           "sensor_interior_temperature": "Interior temperature sensor",
           "phone_alarm_selector": "Phone alarm sensor",
           "tsp": "Set Point"
         },
         "data_description": {
           "target_hour": "Wake up time (e.g. 6:00)",
+          "recoverycalc_hour": "Time when heating stops (e.g. 23:00)",
           "sensor_interior_temperature": "Room temperature sensor (e.g. sensor.room_temperature)",
           "phone_alarm_selector": "Phone next alarm sensor (e.g. sensor.nexus_next_alarm)",
           "tsp": "Target temperature (13-26°C)"
@@ -40,6 +42,7 @@
         "data": {
           "name": "Name",
           "target_hour": "Target hour",
+          "recoverycalc_hour": "Heating stop hour",
           "sensor_interior_temperature": "Interior temperature sensor",
           "phone_alarm_selector": "Phone alarm sensor",
           "tsp": "Set Point"
@@ -47,6 +50,7 @@
         "data_description": {
           "name": "Integration name",
           "target_hour": "Wake up time (e.g. 6:00)",
+          "recoverycalc_hour": "Time when heating stops (e.g. 23:00)",
           "sensor_interior_temperature": "Room temperature sensor (e.g. sensor.room_temperature)",
           "phone_alarm_selector": "Phone next alarm sensor (e.g. sensor.nexus_next_alarm)",
           "tsp": "Target temperature (13-26°C)"
@@ -98,6 +102,16 @@
     "on_recovery_start": {
       "name": "On Recovery Start",
       "description": "Triggers actions at the start of heating recovery (records temperatures and calculates RCth).",
+      "fields": {
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "The config entry ID (optional, uses first available if not specified)."
+        }
+      }
+    },
+    "on_recovery_end": {
+      "name": "On Recovery End",
+      "description": "Triggers actions at the end of heating recovery (records temperatures and calculates RPth).",
       "fields": {
         "entry_id": {
           "name": "Entry ID",
