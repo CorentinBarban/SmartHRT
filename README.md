@@ -1,273 +1,275 @@
 # SmartHRT
 
-**Smart Heating Recovery Time** - Intégration native Home Assistant pour le calcul intelligent de l'heure de relance du chauffage.
+**Smart Heating Recovery Time** - Native Home Assistant integration for intelligent heating start time calculation.
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/v/release/corentinBarban/smartHRT?include_prereleases)](https://github.com/corentinBarban/SmartHRT/releases)
 
+🇫🇷 [Version française](README_fr.md)
+
 ---
 
-## 📋 Table des matières
+## 📋 Table of Contents
 
-1. [Présentation](#-présentation)
-2. [Principe de fonctionnement](#-principe-de-fonctionnement)
-3. [Modèle thermique](#-modèle-thermique)
+1. [Overview](#-overview)
+2. [How It Works](#-how-it-works)
+3. [Thermal Model](#-thermal-model)
 4. [Installation](#-installation)
 5. [Configuration](#-configuration)
-6. [Entités créées](#-entités-créées)
-7. [Services disponibles](#-services-disponibles)
-8. [Cycle de vie automatique](#-cycle-de-vie-automatique)
+6. [Created Entities](#-created-entities)
+7. [Available Services](#-available-services)
+8. [Automatic Lifecycle](#-automatic-lifecycle)
 9. [Auto-calibration](#-auto-calibration)
-10. [Exemples d'automatisation](#-exemples-dautomatisation)
-11. [Architecture technique](#-architecture-technique)
+10. [Automation Examples](#-automation-examples)
+11. [Technical Architecture](#-technical-architecture)
 12. [FAQ](#-faq)
 
 ---
 
-## 🎯 Présentation
+## 🎯 Overview
 
-> **Problème** : La masse thermique des radiateurs et des murs offre un bon confort thermique, mais rend difficile la prédiction du temps de relance du chauffage le matin. Sans prédire correctement le moment de démarrer le chauffage la nuit, il est soit trop tard (et il fait froid), soit trop tôt (on chauffe inutilement le salon pendant le sommeil).
+> **Problem**: The thermal mass of radiators and walls provides good thermal comfort but makes it difficult to predict heating recovery time in the morning. Without correctly predicting when to start heating at night, it's either too late (and too cold) or too early (heating the living room unnecessarily while sleeping).
 
-**SmartHRT** résout ce problème en calculant automatiquement l'heure optimale de redémarrage du chauffage (`recovery_start_hour`) pour atteindre la température de consigne (`tsp`) à l'heure souhaitée (`target_hour`).
+**SmartHRT** solves this problem by automatically calculating the optimal heating restart time (`recovery_start_hour`) to reach the target temperature (`tsp`) at the desired time (`target_hour`).
 
-<img src="./img/SmartHeatingRecoveryTime_principle.png" alt="Principe SmartHRT" style="width:75%; height:auto;">
+<img src="./img/SmartHeatingRecoveryTime_principle.png" alt="SmartHRT Principle" style="width:75%; height:auto;">
 
-### Avantages
+### Benefits
 
-- ✅ **Économies d'énergie** : Le chauffage ne démarre qu'au moment nécessaire
-- ✅ **Confort optimal** : La température cible est atteinte à l'heure du réveil
-- ✅ **Auto-apprentissage** : Les paramètres s'ajustent automatiquement à votre logement
-- ✅ **Prévisions météo** : Utilise les prévisions de température et de vent
-- ✅ **Synchronisation alarme** : Se synchronise avec l'alarme de votre smartphone
+- ✅ **Energy savings**: Heating only starts when necessary
+- ✅ **Optimal comfort**: Target temperature is reached at wake-up time
+- ✅ **Self-learning**: Parameters automatically adjust to your home
+- ✅ **Weather forecasts**: Uses temperature and wind forecasts
+- ✅ **Alarm sync**: Synchronizes with your smartphone alarm
 
 ---
 
-## 🔄 Principe de fonctionnement
+## 🔄 How It Works
 
-Le système fonctionne selon un cycle quotidien automatique :
+The system operates on an automatic daily cycle:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           CYCLE QUOTIDIEN SmartHRT                          │
+│                           SmartHRT DAILY CYCLE                              │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  23:00 (recoverycalc_hour)     03:00 (calculé)        06:00 (target_hour)   │
+│  23:00 (recoverycalc_hour)     03:00 (calculated)      06:00 (target_hour)  │
 │         │                            │                        │             │
 │         ▼                            ▼                        ▼             │
 │    ┌─────────┐                 ┌─────────┐               ┌─────────┐        │
 │    │ PHASE 1 │ ──────────────▶ │ PHASE 2 │ ────────────▶ │ PHASE 3 │       │
-│    │  ARRÊT  │   Refroidiss.   │ RELANCE │   Chauffage   │   FIN   │        │
-│    │CHAUFFAGE│                 │         │               │ RELANCE │        │
+│    │ HEATING │   Cooling down  │RECOVERY │   Heating up  │RECOVERY │        │
+│    │  STOP   │                 │  START  │               │   END   │        │
 │    └─────────┘                 └─────────┘               └─────────┘        │
 │         │                            │                        │             │
-│    • Snapshot Tint/Text        • Calcul RCth réel        • Calcul RPth      │
-│    • Détection lag temp        • Début chauffe           • Mise à jour      │
-│    • Calcul recovery_time      • Mode rp_calc = ON         coefficients     │
+│    • Snapshot Tint/Text        • Calculate actual RCth   • Calculate RPth   │
+│    • Temp lag detection        • Start heating           • Update           │
+│    • Calculate recovery_time   • rp_calc mode = ON         coefficients     │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 📐 Modèle thermique
+## 📐 Thermal Model
 
-SmartHRT utilise un modèle thermique du premier ordre avec deux paramètres clés :
+SmartHRT uses a first-order thermal model with two key parameters:
 
-### Constantes thermiques
+### Thermal Constants
 
-| Paramètre | Nom                                   | Description                                                                           |
-| --------- | ------------------------------------- | ------------------------------------------------------------------------------------- |
-| **RCth**  | Constante de temps thermique (h)      | Combine l'isolation et la masse thermique. Détermine la vitesse de refroidissement.   |
-| **RPth**  | Constante de puissance thermique (°C) | Combine l'isolation et la puissance de chauffe. Gain de température max vs extérieur. |
+| Parameter | Name                        | Description                                                             |
+| --------- | --------------------------- | ----------------------------------------------------------------------- |
+| **RCth**  | Thermal Time Constant (h)   | Combines insulation and thermal mass. Determines cooling rate.          |
+| **RPth**  | Thermal Power Constant (°C) | Combines insulation and heating power. Max temperature gain vs outdoor. |
 
-### Formule de calcul
+### Calculation Formula
 
-L'heure de relance est calculée par la formule (inversée de la loi de Newton) :
+The recovery start time is calculated using the inverted Newton's law of cooling:
 
 $$
-\text{duréeRelance} = RC_{th} \cdot \ln \left( \frac{RP_{th} + T_{ext} - T_{int}^{départ}}{RP_{th} + T_{ext} - T_{sp}} \right)
+\text{recoveryDuration} = RC_{th} \cdot \ln \left( \frac{RP_{th} + T_{ext} - T_{int}^{start}}{RP_{th} + T_{ext} - T_{sp}} \right)
 $$
 
-### Interpolation selon le vent
+### Wind Interpolation
 
-Les coefficients RCth et RPth varient linéairement selon la vitesse du vent :
+RCth and RPth coefficients vary linearly with wind speed:
 
-- **Vent faible** (10 km/h) : Utilise `rcth_lw` / `rpth_lw`
-- **Vent fort** (60 km/h) : Utilise `rcth_hw` / `rpth_hw`
+- **Low wind** (10 km/h): Uses `rcth_lw` / `rpth_lw`
+- **High wind** (60 km/h): Uses `rcth_hw` / `rpth_hw`
 
-Cette interpolation permet de tenir compte de l'augmentation des pertes thermiques par vent fort.
+This interpolation accounts for increased heat losses in windy conditions.
 
 ---
 
 ## 📦 Installation
 
-### Prérequis
+### Prerequisites
 
-- Home Assistant 2024.1 ou supérieur
-- HACS (recommandé)
-- Une entité météo (weather.\*) configurée pour les prévisions
+- Home Assistant 2024.1 or higher
+- HACS (recommended)
+- A weather entity (weather.\*) configured for forecasts
 
-### Option 1 : HACS (Recommandé)
+### Option 1: HACS (Recommended)
 
-1. Ouvrir HACS dans Home Assistant
-2. Aller dans "Intégrations"
-3. Cliquer sur les 3 points → "Dépôts personnalisés"
-4. Ajouter `https://github.com/corentinBarban/SmartHRT` avec la catégorie "Integration"
-5. Rechercher "SmartHRT" et installer
-6. Redémarrer Home Assistant
-7. Aller dans Paramètres → Appareils & Services → Ajouter une intégration → SmartHRT
+1. Open HACS in Home Assistant
+2. Go to "Integrations"
+3. Click the 3 dots → "Custom repositories"
+4. Add `https://github.com/corentinBarban/SmartHRT` with category "Integration"
+5. Search for "SmartHRT" and install
+6. Restart Home Assistant
+7. Go to Settings → Devices & Services → Add Integration → SmartHRT
 
-### Option 2 : Installation manuelle
+### Option 2: Manual Installation
 
-1. Télécharger le dossier `custom_components/SmartHRT`
-2. Le copier dans le répertoire `config/custom_components/` de Home Assistant
-3. Redémarrer Home Assistant
-4. Ajouter l'intégration via l'interface
+1. Download the `custom_components/SmartHRT` folder
+2. Copy it to your Home Assistant `config/custom_components/` directory
+3. Restart Home Assistant
+4. Add the integration via the UI
 
 ---
 
 ## ⚙️ Configuration
 
-### Paramètres obligatoires
+### Required Parameters
 
-| Paramètre                       | Description                       | Exemple                  |
-| ------------------------------- | --------------------------------- | ------------------------ |
-| **name**                        | Nom de l'instance                 | "Salon"                  |
-| **target_hour**                 | Heure de fin de relance (réveil)  | 06:00                    |
-| **recoverycalc_hour**           | Heure de coupure chauffage (soir) | 23:00                    |
-| **sensor_interior_temperature** | Capteur de température intérieure | sensor.salon_temperature |
-| **tsp**                         | Température de consigne           | 20.0                     |
+| Parameter                       | Description                    | Example                 |
+| ------------------------------- | ------------------------------ | ----------------------- |
+| **name**                        | Instance name                  | "Living Room"           |
+| **target_hour**                 | Recovery end time (wake-up)    | 06:00                   |
+| **recoverycalc_hour**           | Heating stop time (evening)    | 23:00                   |
+| **sensor_interior_temperature** | Interior temperature sensor    | sensor.living_room_temp |
+| **tsp**                         | Target temperature (set point) | 20.0                    |
 
-### Paramètres optionnels
+### Optional Parameters
 
-| Paramètre                | Description               | Exemple                 |
-| ------------------------ | ------------------------- | ----------------------- |
-| **phone_alarm_selector** | Capteur alarme smartphone | sensor.phone_next_alarm |
+| Parameter                | Description             | Example                 |
+| ------------------------ | ----------------------- | ----------------------- |
+| **phone_alarm_selector** | Smartphone alarm sensor | sensor.phone_next_alarm |
 
 ---
 
-## 📊 Entités créées
+## 📊 Created Entities
 
 ### Sensors
 
-| Entité                         | Description                      |
-| ------------------------------ | -------------------------------- |
-| `sensor.<name>_interior_temp`  | Température intérieure           |
-| `sensor.<name>_exterior_temp`  | Température extérieure           |
-| `sensor.<name>_wind_speed`     | Vitesse du vent (m/s)            |
-| `sensor.<name>_windchill`      | Température ressentie            |
-| `sensor.<name>_recovery_start` | Heure de relance calculée        |
-| `sensor.<name>_rcth_sensor`    | Coefficient RCth                 |
-| `sensor.<name>_rpth_sensor`    | Coefficient RPth                 |
-| `sensor.<name>_rcth_fast`      | RCth dynamique (suivi nuit)      |
-| `sensor.<name>_wind_forecast`  | Prévision vent moyenne 3h        |
-| `sensor.<name>_temp_forecast`  | Prévision température moyenne 3h |
-| `sensor.<name>_phone_alarm`    | Prochaine alarme téléphone       |
+| Entity                         | Description                     |
+| ------------------------------ | ------------------------------- |
+| `sensor.<name>_interior_temp`  | Interior temperature            |
+| `sensor.<name>_exterior_temp`  | Exterior temperature            |
+| `sensor.<name>_wind_speed`     | Wind speed (m/s)                |
+| `sensor.<name>_windchill`      | Wind chill temperature          |
+| `sensor.<name>_recovery_start` | Calculated recovery start time  |
+| `sensor.<name>_rcth_sensor`    | RCth coefficient                |
+| `sensor.<name>_rpth_sensor`    | RPth coefficient                |
+| `sensor.<name>_rcth_fast`      | Dynamic RCth (night tracking)   |
+| `sensor.<name>_wind_forecast`  | 3h average wind forecast        |
+| `sensor.<name>_temp_forecast`  | 3h average temperature forecast |
+| `sensor.<name>_phone_alarm`    | Next phone alarm                |
 
-### Numbers (modifiables)
+### Numbers (adjustable)
 
-| Entité                     | Description             |
-| -------------------------- | ----------------------- |
-| `number.<name>_setpoint`   | Consigne de température |
-| `number.<name>_rcth`       | Coefficient RCth        |
-| `number.<name>_rpth`       | Coefficient RPth        |
-| `number.<name>_rcth_lw`    | RCth vent faible        |
-| `number.<name>_rcth_hw`    | RCth vent fort          |
-| `number.<name>_rpth_lw`    | RPth vent faible        |
-| `number.<name>_rpth_hw`    | RPth vent fort          |
-| `number.<name>_relaxation` | Facteur de relaxation   |
+| Entity                     | Description          |
+| -------------------------- | -------------------- |
+| `number.<name>_setpoint`   | Temperature setpoint |
+| `number.<name>_rcth`       | RCth coefficient     |
+| `number.<name>_rpth`       | RPth coefficient     |
+| `number.<name>_rcth_lw`    | RCth low wind        |
+| `number.<name>_rcth_hw`    | RCth high wind       |
+| `number.<name>_rpth_lw`    | RPth low wind        |
+| `number.<name>_rpth_hw`    | RPth high wind       |
+| `number.<name>_relaxation` | Relaxation factor    |
 
 ### Switches
 
-| Entité                            | Description                               |
-| --------------------------------- | ----------------------------------------- |
-| `switch.<name>_smartheating_mode` | Active/désactive le chauffage intelligent |
-| `switch.<name>_adaptive_mode`     | Active/désactive l'auto-calibration       |
+| Entity                            | Description                     |
+| --------------------------------- | ------------------------------- |
+| `switch.<name>_smartheating_mode` | Enable/disable smart heating    |
+| `switch.<name>_adaptive_mode`     | Enable/disable auto-calibration |
 
 ### Time
 
-| Entité                           | Description                |
-| -------------------------------- | -------------------------- |
-| `time.<name>_target_hour`        | Heure cible (réveil)       |
-| `time.<name>_recoverycalc_hour`  | Heure de coupure chauffage |
-| `time.<name>_recoverystart_hour` | Heure de relance calculée  |
+| Entity                           | Description               |
+| -------------------------------- | ------------------------- |
+| `time.<name>_target_hour`        | Target hour (wake-up)     |
+| `time.<name>_recoverycalc_hour`  | Heating stop hour         |
+| `time.<name>_recoverystart_hour` | Calculated recovery start |
 
 ---
 
-## 🔧 Services disponibles
+## 🔧 Available Services
 
-| Service                                   | Description                            |
-| ----------------------------------------- | -------------------------------------- |
-| `smarthrt.calculate_recovery_time`        | Calcule l'heure de relance             |
-| `smarthrt.calculate_recovery_update_time` | Calcule la prochaine mise à jour       |
-| `smarthrt.calculate_rcth_fast`            | Calcule RCth dynamique                 |
-| `smarthrt.on_heating_stop`                | Déclenche l'arrêt chauffage (snapshot) |
-| `smarthrt.on_recovery_start`              | Déclenche le début de relance          |
-| `smarthrt.on_recovery_end`                | Déclenche la fin de relance            |
+| Service                                   | Description                     |
+| ----------------------------------------- | ------------------------------- |
+| `smarthrt.calculate_recovery_time`        | Calculate recovery start time   |
+| `smarthrt.calculate_recovery_update_time` | Calculate next update time      |
+| `smarthrt.calculate_rcth_fast`            | Calculate dynamic RCth          |
+| `smarthrt.on_heating_stop`                | Trigger heating stop (snapshot) |
+| `smarthrt.on_recovery_start`              | Trigger recovery start          |
+| `smarthrt.on_recovery_end`                | Trigger recovery end            |
 
-### Paramètre optionnel
+### Optional Parameter
 
-Tous les services acceptent un paramètre `entry_id` optionnel pour cibler une instance spécifique.
+All services accept an optional `entry_id` parameter to target a specific instance.
 
 ---
 
-## 🔁 Cycle de vie automatique
+## 🔁 Automatic Lifecycle
 
-SmartHRT gère automatiquement les déclencheurs horaires :
+SmartHRT automatically manages time-based triggers:
 
-### Phase 1 : Arrêt du chauffage (`recoverycalc_hour`)
+### Phase 1: Heating Stop (`recoverycalc_hour`)
 
-À l'heure configurée (ex: 23:00) :
+At the configured time (e.g., 23:00):
 
-1. Initialise les coefficients à 50 si première exécution
-2. Enregistre un snapshot (Tint, Text, timestamp)
-3. Active la détection du lag de température
-4. Calcule l'heure de relance prévue
+1. Initializes coefficients to 50 if first run
+2. Records a snapshot (Tint, Text, timestamp)
+3. Activates temperature lag detection
+4. Calculates expected recovery start time
 
-### Phase 2 : Début de relance (`recovery_start_hour`)
+### Phase 2: Recovery Start (`recovery_start_hour`)
 
-À l'heure calculée (ex: 03:00) :
+At the calculated time (e.g., 03:00):
 
-1. Enregistre les températures actuelles
-2. Calcule le RCth réel observé sur la nuit
-3. Met à jour les coefficients `rcth_lw` et `rcth_hw`
-4. Active le mode de calcul RPth
+1. Records current temperatures
+2. Calculates actual RCth observed overnight
+3. Updates `rcth_lw` and `rcth_hw` coefficients
+4. Activates RPth calculation mode
 
-### Phase 3 : Fin de relance (`target_hour` ou consigne atteinte)
+### Phase 3: Recovery End (`target_hour` or setpoint reached)
 
-Quand la consigne est atteinte ou à l'heure cible :
+When setpoint is reached or at target time:
 
-1. Enregistre les températures finales
-2. Calcule le RPth réel observé
-3. Met à jour les coefficients `rpth_lw` et `rpth_hw`
+1. Records final temperatures
+2. Calculates actual observed RPth
+3. Updates `rpth_lw` and `rpth_hw` coefficients
 
 ---
 
 ## 📈 Auto-calibration
 
-L'auto-calibration utilise une **relaxation exponentielle** avec un polynôme cubique pour distribuer l'erreur :
+Auto-calibration uses **exponential relaxation** with a cubic polynomial to distribute the error:
 
-1. Après chaque cycle, les RCth/RPth mesurés sont comparés aux valeurs interpolées
-2. L'erreur est répartie sur les coefficients vent faible/fort selon le vent moyen de la nuit
-3. Les coefficients sont lissés avec le `relaxation_factor` (défaut: 2.0)
+1. After each cycle, measured RCth/RPth are compared to interpolated values
+2. Error is distributed to low/high wind coefficients based on overnight average wind
+3. Coefficients are smoothed with the `relaxation_factor` (default: 2.0)
 
-**Formule de mise à jour** :
+**Update formula**:
 
 $$
 coef_{new} = \frac{coef_{old} + relaxation \times coef_{calculated}}{1 + relaxation}
 $$
 
-> 💡 Les premiers jours peuvent ne pas être précis. L'auto-calibration s'améliore progressivement.
+> 💡 The first few days may not be accurate. Auto-calibration improves progressively.
 
 ---
 
-## 🤖 Exemples d'automatisation
+## 🤖 Automation Examples
 
-### Démarrer le chauffage à l'heure de relance
+### Start heating at recovery time
 
 ```yaml
 automation:
-  - alias: "SmartHRT - Démarrer chauffage"
+  - alias: "SmartHRT - Start heating"
     trigger:
       - platform: time
         at: sensor.smarthrt_recovery_start
@@ -278,88 +280,91 @@ automation:
     action:
       - service: climate.set_temperature
         target:
-          entity_id: climate.salon
+          entity_id: climate.living_room
         data:
           temperature: "{{ states('number.smarthrt_setpoint') | float }}"
 ```
 
-### Arrêter le chauffage le soir
+### Stop heating in the evening
 
 ```yaml
 automation:
-  - alias: "SmartHRT - Arrêter chauffage soir"
+  - alias: "SmartHRT - Stop heating evening"
     trigger:
       - platform: time
         at: time.smarthrt_recoverycalc_hour
     action:
       - service: climate.turn_off
         target:
-          entity_id: climate.salon
+          entity_id: climate.living_room
 ```
 
 ---
 
-## 🏗️ Architecture technique
+## 🏗️ Technical Architecture
 
 ```
 custom_components/SmartHRT/
-├── __init__.py          # Point d'entrée de l'intégration
-├── coordinator.py       # Coordinateur central avec logique thermique
-├── config_flow.py       # Interface de configuration UI
-├── const.py             # Constantes et valeurs par défaut
-├── sensor.py            # Entités sensor (températures, coefficients)
-├── switch.py            # Entités switch (modes)
-├── number.py            # Entités number (consigne, relaxation)
-├── time.py              # Entités time (heures cibles)
-├── services.yaml        # Définitions des services
-├── strings.json         # Chaînes UI (anglais)
-├── manifest.json        # Métadonnées de l'intégration
+├── __init__.py          # Integration entry point
+├── coordinator.py       # Central coordinator with thermal logic
+├── config_flow.py       # UI configuration interface
+├── const.py             # Constants and default values
+├── sensor.py            # Sensor entities (temperatures, coefficients)
+├── switch.py            # Switch entities (modes)
+├── number.py            # Number entities (setpoint, relaxation)
+├── time.py              # Time entities (target hours)
+├── services.yaml        # Service definitions
+├── strings.json         # UI strings (English)
+├── manifest.json        # Integration metadata
 └── translations/
-    └── fr.json          # Traductions françaises
+    ├── de.json          # German translations
+    ├── es.json          # Spanish translations
+    ├── fr.json          # French translations
+    └── it.json          # Italian translations
 ```
 
-### Classes principales
+### Main Classes
 
-- **`SmartHRTCoordinator`** : Coordinateur central gérant tous les calculs thermiques, les listeners et les services
-- **`SmartHRTData`** : Dataclass contenant toutes les données d'état (températures, coefficients, timestamps, modes)
+- **`SmartHRTCoordinator`**: Central coordinator managing all thermal calculations, listeners, and services
+- **`SmartHRTData`**: Dataclass containing all state data (temperatures, coefficients, timestamps, modes)
 
 ---
 
 ## ❓ FAQ
 
-### Comment synchroniser avec l'alarme de mon téléphone ?
+### How to sync with my phone alarm?
 
-Configurez le paramètre `phone_alarm_selector` avec le capteur de votre téléphone (ex: `sensor.phone_next_alarm`). L'heure cible sera automatiquement mise à jour.
+Configure the `phone_alarm_selector` parameter with your phone's sensor (e.g., `sensor.phone_next_alarm`). The target hour will be automatically updated.
 
-### Que faire pendant les vacances ?
+### What to do during holidays?
 
-Désactivez le switch `Mode chauffage intelligent` pour suspendre les calculs.
+Disable the `Smart Heating Mode` switch to suspend calculations.
 
-### Les prédictions ne sont pas précises les premiers jours ?
+### Predictions aren't accurate the first few days?
 
-C'est normal ! L'auto-calibration nécessite quelques cycles pour s'adapter à votre logement. Les coefficients s'améliorent progressivement.
+That's normal! Auto-calibration needs a few cycles to adapt to your home. Coefficients improve progressively.
 
-### Comment ajuster manuellement les coefficients ?
+### How to manually adjust coefficients?
 
-Désactivez le `Mode adaptatif` et modifiez les entités `number.*_rcth` et `number.*_rpth` directement.
+Disable `Adaptive Mode` and modify the `number.*_rcth` and `number.*_rpth` entities directly.
 
 ---
 
 ## 📝 Changelog
 
-### Janvier 2026 - Intégration Native
+### January 2026 - Native Integration
 
-- **NOUVEAU** : Réécriture complète en intégration native Home Assistant (compatible HACS)
-- **NOUVEAU** : Configuration via interface UI (plus de YAML requis)
-- **NOUVEAU** : Services Home Assistant pour l'automatisation
-- **NOUVEAU** : Déclencheurs horaires automatiques (recoverycalc_hour, target_hour, recovery_start)
-- **NOUVEAU** : Prévisions météo intégrées (température et vent sur 3h)
-- **NOUVEAU** : Détection du lag de température (délai radiateur)
-- **NOUVEAU** : Calcul de la moyenne de vent sur 4h pour la calibration
-- **AMÉLIORÉ** : Architecture centralisée avec coordinateur unique
+- **NEW**: Complete rewrite as native Home Assistant integration (HACS compatible)
+- **NEW**: UI configuration (no more YAML required)
+- **NEW**: Home Assistant services for automation
+- **NEW**: Automatic time triggers (recoverycalc_hour, target_hour, recovery_start)
+- **NEW**: Integrated weather forecasts (temperature and wind over 3h)
+- **NEW**: Temperature lag detection (radiator delay)
+- **NEW**: 4h wind speed average for calibration
+- **IMPROVED**: Centralized architecture with single coordinator
 
 ---
 
-## 📄 Licence
+## 📄 License
 
-Ce projet est sous licence GNU GENERAL PUBLIC LICENSE. Voir le fichier [LICENCE](LICENCE) pour plus de détails.
+This project is licensed under the GNU GENERAL PUBLIC LICENSE. See the [LICENCE](LICENCE) file for details.
