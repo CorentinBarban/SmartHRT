@@ -3,5 +3,35 @@ name = "hass-template-climate"
 version = "0.0.0"
 description = ""
 readme = "README.md"
-requires-python = ">=3.13.2"
-dependencies = ["colorlog>=6.9.0", "homeassistant>=2026.1.1"]
+requires-python = ">=3.12"
+dependencies = ["colorlog>=6.9.0", "homeassistant>=2024.1.0"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+pythonpath = ["."]
+addopts = "-v --tb=short"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.4.0",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4"]
+ignore = ["E501"]
