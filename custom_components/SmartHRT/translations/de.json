@@ -1,0 +1,123 @@
+{
+  "title": "SmartHRT",
+  "config": {
+    "flow_title": "SmartHRT Konfiguration",
+    "step": {
+      "user": {
+        "title": "Identifikation",
+        "description": "Konfigurieren Sie Ihre SmartHRT-Integration",
+        "data": {
+          "name": "Name"
+        },
+        "data_description": {
+          "name": "Name der Integration"
+        }
+      },
+      "sensors": {
+        "title": "Sensorkonfiguration",
+        "description": "Konfigurieren Sie die Sensoren und Heizungsparameter",
+        "data": {
+          "target_hour": "Zielzeit",
+          "recoverycalc_hour": "Heizung Abschaltzeit",
+          "sensor_interior_temperature": "Innentemperatursensor",
+          "phone_alarm_selector": "Telefon-Wecker-Sensor",
+          "tsp": "Solltemperatur (Set Point)"
+        },
+        "data_description": {
+          "target_hour": "Gewünschte Aufwachzeit (z.B.: 6:00)",
+          "recoverycalc_hour": "Abschaltzeit der Heizung am Abend (z.B.: 23:00)",
+          "sensor_interior_temperature": "Raumtemperatursensor (z.B.: sensor.room_temperature)",
+          "phone_alarm_selector": "Nächster Telefon-Wecker-Sensor (z.B.: sensor.nexus_next_alarm)",
+          "tsp": "Gewünschte Temperatur (13-26°C)"
+        }
+      }
+    }
+  },
+  "options": {
+    "flow_title": "SmartHRT Optionen",
+    "step": {
+      "init": {
+        "title": "SmartHRT Konfiguration",
+        "description": "Ändern Sie die Konfiguration Ihrer intelligenten Heizung",
+        "data": {
+          "name": "Name",
+          "target_hour": "Zielzeit",
+          "recoverycalc_hour": "Heizung Abschaltzeit",
+          "sensor_interior_temperature": "Innentemperatursensor",
+          "phone_alarm_selector": "Telefon-Wecker-Sensor",
+          "tsp": "Solltemperatur (Set Point)"
+        },
+        "data_description": {
+          "name": "Name der Integration",
+          "target_hour": "Gewünschte Aufwachzeit (z.B.: 6:00)",
+          "recoverycalc_hour": "Abschaltzeit der Heizung am Abend (z.B.: 23:00)",
+          "sensor_interior_temperature": "Raumtemperatursensor (z.B.: sensor.room_temperature)",
+          "phone_alarm_selector": "Nächster Telefon-Wecker-Sensor (z.B.: sensor.nexus_next_alarm)",
+          "tsp": "Gewünschte Temperatur (13-26°C)"
+        }
+      }
+    }
+  },
+  "services": {
+    "calculate_recovery_time": {
+      "name": "Aufheizzeit berechnen",
+      "description": "Berechnet die Startzeit der Heizung basierend auf thermischen Parametern.",
+      "fields": {
+        "entry_id": {
+          "name": "Konfigurations-ID",
+          "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
+        }
+      }
+    },
+    "calculate_recovery_update_time": {
+      "name": "Aktualisierungszeit berechnen",
+      "description": "Berechnet, wann die nächste Aktualisierung der Aufheizberechnung erfolgen soll.",
+      "fields": {
+        "entry_id": {
+          "name": "Konfigurations-ID",
+          "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
+        }
+      }
+    },
+    "calculate_rcth_fast": {
+      "name": "Dynamisches RCth berechnen",
+      "description": "Berechnet die dynamische Entwicklung von RCth vor dem Start der Aufheizung.",
+      "fields": {
+        "entry_id": {
+          "name": "Konfigurations-ID",
+          "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
+        }
+      }
+    },
+    "on_heating_stop": {
+      "name": "Heizungsstopp",
+      "description": "Löst Aktionen aus, wenn die Heizung stoppt (zeichnet Temperaturen und Zeitstempel für Berechnungen auf).",
+      "fields": {
+        "entry_id": {
+          "name": "Konfigurations-ID",
+          "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
+        }
+      }
+    },
+    "on_recovery_start": {
+      "name": "Aufheizstart",
+      "description": "Löst Aktionen zu Beginn der Aufheizung aus (zeichnet Temperaturen auf und berechnet RCth).",
+      "fields": {
+        "entry_id": {
+          "name": "Konfigurations-ID",
+          "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
+        }
+      }
+    },
+    "on_recovery_end": {
+      "name": "Aufheizende",
+      "description": "Löst Aktionen am Ende der Aufheizung aus (zeichnet Temperaturen auf und berechnet RPth).",
+      "fields": {
+        "entry_id": {
+          "name": "Konfigurations-ID",
+          "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
+        }
+      }
+    }
+  }
+}

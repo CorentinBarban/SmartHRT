@@ -1,0 +1,123 @@
+{
+  "title": "SmartHRT",
+  "config": {
+    "flow_title": "Configuración SmartHRT",
+    "step": {
+      "user": {
+        "title": "Identificación",
+        "description": "Configura tu integración SmartHRT",
+        "data": {
+          "name": "Nombre"
+        },
+        "data_description": {
+          "name": "Nombre de la integración"
+        }
+      },
+      "sensors": {
+        "title": "Configuración de sensores",
+        "description": "Configura los sensores y parámetros de calefacción",
+        "data": {
+          "target_hour": "Hora objetivo",
+          "recoverycalc_hour": "Hora de apagado de calefacción",
+          "sensor_interior_temperature": "Sensor de temperatura interior",
+          "phone_alarm_selector": "Sensor de alarma del teléfono",
+          "tsp": "Temperatura deseada (Set Point)"
+        },
+        "data_description": {
+          "target_hour": "Hora de despertar deseada (ej: 6:00)",
+          "recoverycalc_hour": "Hora de apagado de la calefacción por la noche (ej: 23:00)",
+          "sensor_interior_temperature": "Sensor de temperatura de la habitación (ej: sensor.room_temperature)",
+          "phone_alarm_selector": "Sensor de la próxima alarma del teléfono (ej: sensor.nexus_next_alarm)",
+          "tsp": "Temperatura deseada (13-26°C)"
+        }
+      }
+    }
+  },
+  "options": {
+    "flow_title": "Opciones SmartHRT",
+    "step": {
+      "init": {
+        "title": "Configuración SmartHRT",
+        "description": "Modifica la configuración de tu calefacción inteligente",
+        "data": {
+          "name": "Nombre",
+          "target_hour": "Hora objetivo",
+          "recoverycalc_hour": "Hora de apagado de calefacción",
+          "sensor_interior_temperature": "Sensor de temperatura interior",
+          "phone_alarm_selector": "Sensor de alarma del teléfono",
+          "tsp": "Temperatura deseada (Set Point)"
+        },
+        "data_description": {
+          "name": "Nombre de la integración",
+          "target_hour": "Hora de despertar deseada (ej: 6:00)",
+          "recoverycalc_hour": "Hora de apagado de la calefacción por la noche (ej: 23:00)",
+          "sensor_interior_temperature": "Sensor de temperatura de la habitación (ej: sensor.room_temperature)",
+          "phone_alarm_selector": "Sensor de la próxima alarma del teléfono (ej: sensor.nexus_next_alarm)",
+          "tsp": "Temperatura deseada (13-26°C)"
+        }
+      }
+    }
+  },
+  "services": {
+    "calculate_recovery_time": {
+      "name": "Calcular hora de reinicio",
+      "description": "Calcula la hora de inicio de la calefacción según los parámetros térmicos.",
+      "fields": {
+        "entry_id": {
+          "name": "ID de configuración",
+          "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
+        }
+      }
+    },
+    "calculate_recovery_update_time": {
+      "name": "Calcular hora de actualización",
+      "description": "Calcula cuándo debe ocurrir la próxima actualización del cálculo de reinicio.",
+      "fields": {
+        "entry_id": {
+          "name": "ID de configuración",
+          "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
+        }
+      }
+    },
+    "calculate_rcth_fast": {
+      "name": "Calcular RCth dinámico",
+      "description": "Calcula la evolución dinámica de RCth antes del inicio del reinicio.",
+      "fields": {
+        "entry_id": {
+          "name": "ID de configuración",
+          "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
+        }
+      }
+    },
+    "on_heating_stop": {
+      "name": "Parada de calefacción",
+      "description": "Activa las acciones cuando la calefacción se apaga (registra temperaturas y marcas de tiempo para los cálculos).",
+      "fields": {
+        "entry_id": {
+          "name": "ID de configuración",
+          "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
+        }
+      }
+    },
+    "on_recovery_start": {
+      "name": "Inicio de reinicio",
+      "description": "Activa las acciones al inicio del reinicio de la calefacción (registra temperaturas y calcula RCth).",
+      "fields": {
+        "entry_id": {
+          "name": "ID de configuración",
+          "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
+        }
+      }
+    },
+    "on_recovery_end": {
+      "name": "Fin de reinicio",
+      "description": "Activa las acciones al final del reinicio de la calefacción (registra temperaturas y calcula RPth).",
+      "fields": {
+        "entry_id": {
+          "name": "ID de configuración",
+          "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
+        }
+      }
+    }
+  }
+}

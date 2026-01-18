@@ -1,0 +1,123 @@
+{
+  "title": "SmartHRT",
+  "config": {
+    "flow_title": "Configurazione SmartHRT",
+    "step": {
+      "user": {
+        "title": "Identificazione",
+        "description": "Configura la tua integrazione SmartHRT",
+        "data": {
+          "name": "Nome"
+        },
+        "data_description": {
+          "name": "Nome dell'integrazione"
+        }
+      },
+      "sensors": {
+        "title": "Configurazione sensori",
+        "description": "Configura i sensori e i parametri di riscaldamento",
+        "data": {
+          "target_hour": "Ora obiettivo",
+          "recoverycalc_hour": "Ora spegnimento riscaldamento",
+          "sensor_interior_temperature": "Sensore temperatura interna",
+          "phone_alarm_selector": "Sensore sveglia telefono",
+          "tsp": "Temperatura impostata (Set Point)"
+        },
+        "data_description": {
+          "target_hour": "Ora di sveglia desiderata (es: 6:00)",
+          "recoverycalc_hour": "Ora di spegnimento del riscaldamento la sera (es: 23:00)",
+          "sensor_interior_temperature": "Sensore di temperatura della stanza (es: sensor.room_temperature)",
+          "phone_alarm_selector": "Sensore della prossima sveglia del telefono (es: sensor.nexus_next_alarm)",
+          "tsp": "Temperatura desiderata (13-26°C)"
+        }
+      }
+    }
+  },
+  "options": {
+    "flow_title": "Opzioni SmartHRT",
+    "step": {
+      "init": {
+        "title": "Configurazione SmartHRT",
+        "description": "Modifica la configurazione del tuo riscaldamento intelligente",
+        "data": {
+          "name": "Nome",
+          "target_hour": "Ora obiettivo",
+          "recoverycalc_hour": "Ora spegnimento riscaldamento",
+          "sensor_interior_temperature": "Sensore temperatura interna",
+          "phone_alarm_selector": "Sensore sveglia telefono",
+          "tsp": "Temperatura impostata (Set Point)"
+        },
+        "data_description": {
+          "name": "Nome dell'integrazione",
+          "target_hour": "Ora di sveglia desiderata (es: 6:00)",
+          "recoverycalc_hour": "Ora di spegnimento del riscaldamento la sera (es: 23:00)",
+          "sensor_interior_temperature": "Sensore di temperatura della stanza (es: sensor.room_temperature)",
+          "phone_alarm_selector": "Sensore della prossima sveglia del telefono (es: sensor.nexus_next_alarm)",
+          "tsp": "Temperatura desiderata (13-26°C)"
+        }
+      }
+    }
+  },
+  "services": {
+    "calculate_recovery_time": {
+      "name": "Calcola ora di riavvio",
+      "description": "Calcola l'ora di avvio del riscaldamento in base ai parametri termici.",
+      "fields": {
+        "entry_id": {
+          "name": "ID configurazione",
+          "description": "L'ID della configurazione (opzionale, usa il primo disponibile se non specificato)."
+        }
+      }
+    },
+    "calculate_recovery_update_time": {
+      "name": "Calcola ora aggiornamento",
+      "description": "Calcola quando deve avvenire il prossimo aggiornamento del calcolo di riavvio.",
+      "fields": {
+        "entry_id": {
+          "name": "ID configurazione",
+          "description": "L'ID della configurazione (opzionale, usa il primo disponibile se non specificato)."
+        }
+      }
+    },
+    "calculate_rcth_fast": {
+      "name": "Calcola RCth dinamico",
+      "description": "Calcola l'evoluzione dinamica di RCth prima dell'avvio del riscaldamento.",
+      "fields": {
+        "entry_id": {
+          "name": "ID configurazione",
+          "description": "L'ID della configurazione (opzionale, usa il primo disponibile se non specificato)."
+        }
+      }
+    },
+    "on_heating_stop": {
+      "name": "Arresto riscaldamento",
+      "description": "Attiva le azioni quando il riscaldamento si spegne (registra temperature e orari per i calcoli).",
+      "fields": {
+        "entry_id": {
+          "name": "ID configurazione",
+          "description": "L'ID della configurazione (opzionale, usa il primo disponibile se non specificato)."
+        }
+      }
+    },
+    "on_recovery_start": {
+      "name": "Inizio riavvio",
+      "description": "Attiva le azioni all'inizio del riavvio del riscaldamento (registra temperature e calcola RCth).",
+      "fields": {
+        "entry_id": {
+          "name": "ID configurazione",
+          "description": "L'ID della configurazione (opzionale, usa il primo disponibile se non specificato)."
+        }
+      }
+    },
+    "on_recovery_end": {
+      "name": "Fine riavvio",
+      "description": "Attiva le azioni alla fine del riavvio del riscaldamento (registra temperature e calcola RPth).",
+      "fields": {
+        "entry_id": {
+          "name": "ID configurazione",
+          "description": "L'ID della configurazione (opzionale, usa il primo disponibile se non specificato)."
+        }
+      }
+    }
+  }
+}
