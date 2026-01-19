@@ -64,15 +64,15 @@ class SmartHRTBaseTime(TimeEntity):
             model="Smart Heating Regulator",
         )
 
-    @callback
-    async def async_added_to_hass(self):
+    async def async_added_to_hass(self) -> None:
         """Callback appelé lorsque l'entité est ajoutée à HA"""
+        await super().async_added_to_hass()
         self._coordinator.register_listener(self._on_coordinator_update)
 
-    @callback
-    async def async_will_remove_from_hass(self):
+    async def async_will_remove_from_hass(self) -> None:
         """Callback appelé lorsque l'entité est retirée de HA"""
         self._coordinator.unregister_listener(self._on_coordinator_update)
+        await super().async_will_remove_from_hass()
 
     @callback
     def _on_coordinator_update(self):

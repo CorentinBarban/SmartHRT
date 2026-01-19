@@ -1,4 +1,5 @@
-""" Implements the SmartHRT switch entities """
+"""Implements the SmartHRT switch entities"""
+
 import logging
 
 from homeassistant.core import HomeAssistant, callback
@@ -25,7 +26,9 @@ async def async_setup_entry(
 
     _LOGGER.debug("Calling switch async_setup_entry entry=%s", entry)
 
-    coordinator: SmartHRTCoordinator = hass.data[DOMAIN][entry.entry_id][DATA_COORDINATOR]
+    coordinator: SmartHRTCoordinator = hass.data[DOMAIN][entry.entry_id][
+        DATA_COORDINATOR
+    ]
 
     entities = [
         SmartHRTSmartHeatingSwitch(coordinator, entry),
@@ -37,7 +40,9 @@ async def async_setup_entry(
 class SmartHRTBaseSwitch(SwitchEntity):
     """Classe de base pour les switch SmartHRT"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         """Initialisation de base"""
         self._coordinator = coordinator
         self._config_entry = config_entry
@@ -56,18 +61,18 @@ class SmartHRTBaseSwitch(SwitchEntity):
             model="Smart Heating Regulator",
         )
 
-    @callback
-    async def async_added_to_hass(self):
+    async def async_added_to_hass(self) -> None:
         """Callback appelé lorsque l'entité est ajoutée à HA"""
+        await super().async_added_to_hass()
         self._coordinator.register_listener(self._on_coordinator_update)
 
-    @callback
-    async def async_will_remove_from_hass(self):
+    async def async_will_remove_from_hass(self) -> None:
         """Callback appelé lorsque l'entité est retirée de HA"""
         self._coordinator.unregister_listener(self._on_coordinator_update)
+        await super().async_will_remove_from_hass()
 
     @callback
-    def _on_coordinator_update(self):
+    def _on_coordinator_update(self) -> None:
         """Callback lors d'une mise à jour du coordinateur"""
         self.async_write_ha_state()
 
@@ -75,7 +80,9 @@ class SmartHRTBaseSwitch(SwitchEntity):
 class SmartHRTSmartHeatingSwitch(SmartHRTBaseSwitch):
     """Switch pour activer/désactiver le mode chauffage intelligent"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "Mode chauffage intelligent"
         self._attr_unique_id = f"{self._device_id}_smartheating_mode"
@@ -102,7 +109,9 @@ class SmartHRTSmartHeatingSwitch(SmartHRTBaseSwitch):
 class SmartHRTAdaptiveSwitch(SmartHRTBaseSwitch):
     """Switch pour activer/désactiver le mode adaptatif (auto-calibration)"""
 
-    def __init__(self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry) -> None:
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
         super().__init__(coordinator, config_entry)
         self._attr_name = "Mode adaptatif"
         self._attr_unique_id = f"{self._device_id}_adaptive_mode"

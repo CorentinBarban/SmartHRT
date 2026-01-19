@@ -1,8 +1,193 @@
 views:
-  - type: sections
+  - title: Home
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading_style: title
+            heading: Températures
+            icon: mdi:temperature-celsius
+          - graph: line
+            type: sensor
+            detail: 1
+            name: Température salon
+            grid_options:
+              columns: full
+              rows: 3
+            hours_to_show: 12
+            entity: sensor.thermostat_salon_temperature
+          - graph: line
+            type: sensor
+            entity: sensor.capteur_temperature_chambre_temperature
+            detail: 1
+            name: Température chambre
+            grid_options:
+              columns: full
+              rows: 3
+            hours_to_show: 12
+          - graph: line
+            type: sensor
+            entity: sensor.capteur_temperature_bureau_temperature
+            detail: 1
+            name: Température bureau
+            grid_options:
+              columns: full
+              rows: 3
+            hours_to_show: 12
+      - type: grid
+        cards:
+          - type: heading
+            heading_style: title
+            heading: Salon
+            icon: mdi:sofa-single
+          - type: custom:mushroom-light-card
+            entity: light.lumieres_salon
+            grid_options:
+              columns: 12
+              rows: 1
+            show_brightness_control: true
+            show_color_control: true
+            show_color_temp_control: true
+            collapsible_controls: true
+          - type: custom:mushroom-light-card
+            entity: light.lampadaire_salon
+            grid_options:
+              columns: 12
+              rows: 1
+          - type: heading
+            heading_style: title
+            heading: Salle à manger
+            icon: mdi:sofa-single
+          - type: custom:mushroom-light-card
+            entity: light.lumiere_salle_a_manger
+            show_brightness_control: true
+            show_color_control: true
+            show_color_temp_control: true
+            collapsible_controls: true
+            grid_options:
+              columns: full
+              rows: 1
+          - type: heading
+            heading_style: title
+            heading: Cuisine
+            icon: mdi:chef-hat
+          - type: custom:mushroom-light-card
+            entity: light.cusine
+            show_brightness_control: true
+            show_color_control: true
+            show_color_temp_control: true
+            collapsible_controls: true
+            grid_options:
+              columns: full
+          - type: heading
+            heading_style: title
+            heading: Bureau
+            icon: mdi:desk-lamp
+          - type: custom:mushroom-light-card
+            entity: light.lumiere_salon
+            show_brightness_control: true
+            show_color_control: false
+            show_color_temp_control: true
+            collapsible_controls: true
+            grid_options:
+              columns: full
+              rows: 1
+        column_span: 1
+      - type: grid
+        cards:
+          - type: heading
+            heading_style: title
+            heading: Couloir
+            icon: ''
+          - type: custom:mushroom-light-card
+            entity: light.lumieres_couloir
+            show_brightness_control: true
+            show_color_control: true
+            show_color_temp_control: true
+            collapsible_controls: true
+            grid_options:
+              columns: full
+          - type: heading
+            heading_style: title
+            heading: Chambre
+            icon: mdi:bed
+          - type: custom:mushroom-light-card
+            entity: light.lumieres_chambre
+            show_brightness_control: true
+            show_color_control: true
+            show_color_temp_control: true
+            collapsible_controls: true
+            grid_options:
+              columns: full
+          - type: heading
+            heading_style: title
+            heading: Dressing
+            icon: mdi:hanger
+          - type: custom:mushroom-light-card
+            entity: light.lumieres_dressing
+            show_brightness_control: true
+            show_color_control: true
+            show_color_temp_control: true
+            collapsible_controls: true
+            grid_options:
+              columns: full
+          - type: heading
+            heading_style: title
+            heading: Extérieur
+            icon: mdi:outdoor-lamp
+          - type: custom:mushroom-light-card
+            entity: light.lumiere_wc
+            grid_options:
+              rows: 1
+              columns: full
+            show_brightness_control: true
+            collapsible_controls: true
+            show_color_temp_control: true
+            fill_container: false
+        column_span: 1
+      - type: grid
+        cards:
+          - type: heading
+            heading: Volets
+            heading_style: title
+            icon: mdi:window-shutter-open
+          - type: custom:mushroom-cover-card
+            entity: cover.volet_salon
+            show_position_control: true
+            grid_options:
+              columns: 12
+              rows: 2
+          - type: custom:mushroom-cover-card
+            entity: cover.volet_cuisine
+            show_position_control: true
+            grid_options:
+              columns: 12
+              rows: 2
+    badges: []
+    cards:
+      - type: grid
+        square: false
+        columns: 1
+        cards:
+          - type: entities
+            entities:
+              - entity: number.chambre_boost
+                name: Boost
+              - entity: number.chambre_vacation
+                name: Vacation
+            title: Bureau
+          - type: thermostat
+            entity: climate.chambre
+            features:
+              - type: climate-hvac-modes
+                hvac_modes:
+                  - heat
+                  - 'off'
+                  - auto
+
     max_columns: 3
-    title: SmartHRT
-    path: smarthrt
+    title: thermal2
+    path: thermal2
     icon: mdi:radiator
     sections:
       - type: grid
@@ -13,23 +198,29 @@ views:
               - type: entity
                 show_state: true
                 show_icon: true
-                entity: switch.smarthrt_smartheating_mode
+                entity: input_boolean.smartheating_mode
                 tap_action:
                   action: toggle
             icon: mdi:import
             heading: CONFIGURATION [set ON/OFF]->
           - type: custom:bubble-card
             sub_button:
-              - entity: sensor.smarthrt_interior_temp
+              - entity: sensor.thermostat_salon_temperature
                 show_name: true
                 show_state: true
                 show_attribute: false
                 show_icon: false
                 show_background: false
+              - entity: input_text.sensor_interior_temperature
+                show_name: false
+                show_state: true
+                name: define interior sensor NAME here
+                show_icon: false
+                state_background: true
             card_type: separator
             icon: mdi:home-thermometer-outline
             card_layout: large-2-rows
-            name: Température intérieure
+            name: SET SensorName->
             styles: |-
               * { 
                 font-size: 11px !important;
@@ -41,8 +232,9 @@ views:
                 name: Heating OFF (e.g. 11pm)
                 show_icon: true
                 state_background: true
-                entity: time.smarthrt_recoverycalc_hour
+                entity: input_datetime.recoverycalc_hour
                 show_attribute: false
+                attribute: editable
             card_type: separator
             icon: mdi:radiator-off
             card_layout: large
@@ -57,14 +249,15 @@ views:
                 show_state: true
                 show_attribute: false
                 show_icon: true
-                entity: time.smarthrt_target_hour
+                entity: input_datetime.target_hour
               - show_name: true
                 show_state: true
-                name: "target "
+                name: 'target '
                 show_icon: true
                 state_background: true
-                entity: number.smarthrt_setpoint
+                entity: input_number.tsp
                 show_attribute: false
+                attribute: editable
             card_type: separator
             icon: mdi:clock-end
             card_layout: large-2-rows
@@ -75,19 +268,35 @@ views:
               }
           - type: custom:bubble-card
             card_type: button
-            entity: sensor.smarthrt_phone_alarm
+            entity: automation.recovery_target_alarm2
             card_layout: large-2-rows
             show_state: true
             force_icon: true
             sub_button:
-              - entity: sensor.smarthrt_phone_alarm
+              - entity: sensor.phone_nxt_alarm
                 show_name: false
                 show_state: true
                 show_attribute: false
                 show_icon: false
+                visibility:
+                  - condition: state
+                    entity: automation.recovery_target_alarm2
+                    state: 'on'
                 state_background: false
                 show_background: false
-            name: Phone Alarm
+              - show_name: false
+                show_state: true
+                name: define next_alarm sensor NAME here
+                show_icon: false
+                state_background: true
+                entity: input_text.phone_alarm_selector
+                visibility:
+                  - condition: state
+                    entity: automation.recovery_target_alarm2
+                    state: 'on'
+            name: NextAlarm2Target
+            tap_action:
+              action: toggle
             icon: mdi:phone-clock
             styles: |-
               * { 
@@ -95,81 +304,79 @@ views:
               }
           - type: custom:bubble-card
             card_type: button
-            entity: switch.smarthrt_adaptive_mode
+            entity: input_boolean.recovery_adaptive_mode
             card_layout: large-2-rows
             show_state: true
             force_icon: true
             sub_button:
-              - entity: sensor.smarthrt_rcth_sensor
-                show_state: true
+              - entity: sensor.rcth_value
+                show_state: false
                 show_name: true
                 name: RCth
                 visibility:
                   - condition: state
-                    entity: switch.smarthrt_adaptive_mode
-                    state: "on"
-              - entity: sensor.smarthrt_rpth_sensor
-                show_state: true
+                    entity: input_boolean.recovery_adaptive_mode
+                    state: 'on'
+              - entity: sensor.rpth_value
+                show_state: false
                 show_name: true
                 name: RPth
                 visibility:
                   - condition: state
-                    entity: switch.smarthrt_adaptive_mode
-                    state: "on"
-              - entity: number.smarthrt_relaxation
+                    entity: input_boolean.recovery_adaptive_mode
+                    state: 'on'
+              - entity: input_number.relaxation_factor
                 show_name: true
                 show_state: true
                 visibility:
                   - condition: state
-                    entity: switch.smarthrt_adaptive_mode
-                    state: "on"
+                    entity: input_boolean.recovery_adaptive_mode
+                    state: 'on'
                 name: relax
             name: Self Calibration
-            tap_action:
-              action: toggle
           - type: tile
-            entity: number.smarthrt_rcth_lw
+            entity: input_number.rcth_lw
             vertical: true
             visibility:
               - condition: state
-                entity: switch.smarthrt_adaptive_mode
-                state: "off"
+                entity: input_boolean.recovery_adaptive_mode
+                state: 'off'
             name: RC_lowWind
             grid_options:
               columns: 3
               rows: 2
             color: primary
           - type: tile
-            entity: number.smarthrt_rcth_hw
+            entity: input_number.rcth_hw
             vertical: true
             visibility:
               - condition: state
-                entity: switch.smarthrt_adaptive_mode
-                state: "off"
+                entity: input_boolean.recovery_adaptive_mode
+                state: 'off'
             grid_options:
               columns: 3
               rows: 2
             name: RC_highWind
             color: accent
           - type: tile
-            entity: number.smarthrt_rpth_lw
+            entity: input_number.rpth_lw
             vertical: true
             visibility:
               - condition: state
-                entity: switch.smarthrt_adaptive_mode
-                state: "off"
+                entity: input_boolean.recovery_adaptive_mode
+                state: 'off'
             grid_options:
               columns: 3
               rows: 2
             name: RP_lowWind
             color: primary
           - type: tile
-            entity: number.smarthrt_rpth_hw
+            entity: input_number.rpth_hw
             vertical: true
             visibility:
               - condition: state
-                entity: switch.smarthrt_adaptive_mode
-                state: "off"
+                entity: input_boolean.recovery_adaptive_mode
+                state: 'off'
             grid_options:
               columns: 3
               rows: 2
@@ -182,8 +389,8 @@ views:
             name: Set the constants (no self-calibration)
             visibility:
               - condition: state
-                entity: switch.smarthrt_adaptive_mode
-                state: "off"
+                entity: input_boolean.recovery_adaptive_mode
+                state: 'off'
             styles: |-
               * { 
                 font-weight: normal !important;
@@ -192,50 +399,28 @@ views:
         cards:
           - type: heading
             heading_style: title
-            badges: []
-            icon: mdi:cog-play
-            heading: SERVICES
-          - type: tile
-            grid_options:
-              columns: 12
-              rows: 1
-            entity: button.smarthrt_calculate_recovery
-            name: Calculate Recovery Time
-          - type: heading
-            heading_style: title
             icon: mdi:home-search-outline
             heading: OUTPUTS
           - type: custom:bubble-card
             sub_button:
               - show_name: false
                 show_state: true
-                name: ""
+                name: ''
                 show_icon: true
                 state_background: true
                 show_attribute: false
-                entity: time.smarthrt_recoverystart_hour
-              - entity: sensor.smarthrt_recovery_start
+                attribute: editable
+                entity: input_datetime.recoverystart_hour
+              - entity: sensor.recoverystart_hour_value
                 show_name: true
                 show_last_changed: false
                 show_state: true
                 state_background: true
-                name: ""
+                name: ''
             card_type: separator
             icon: mdi:calculator
             card_layout: large-2-rows
             name: planned recovery START
-          - type: custom:bubble-card
-            sub_button:
-              - show_name: true
-                show_state: true
-                name: Next Update
-                show_icon: true
-                state_background: true
-                entity: time.smarthrt_recoveryupdate_hour
-            card_type: separator
-            icon: mdi:update
-            card_layout: large
-            name: Recovery Update
           - type: custom:mini-graph-card
             height: 100
             decimals: 1
@@ -243,13 +428,13 @@ views:
             lower_bound_secondary: 0
             upper_bound_secondary: 1
             entities:
-              - entity: sensor.smarthrt_interior_temp
+              - entity: sensor.thermostat_salon_temperature
                 name: Température intérieure
-              - entity: number.smarthrt_setpoint
+              - entity: input_number.tsp
                 name: Température de consigne
                 color: white
                 show_fill: false
-              - entity: sensor.smarthrt_night_state
+              - entity: sensor.night_state
                 color: Black
                 aggregate_func: Max
                 show_state: false
@@ -260,21 +445,21 @@ views:
                 y_axis: secondary
             color_thresholds:
               - value: 40
-                color: "#6e0000"
+                color: '#6e0000'
               - value: 30
-                color: "#470101"
+                color: '#470101'
               - value: 25
-                color: "#ff0000"
+                color: '#ff0000'
               - value: 20
-                color: "#ffba00"
+                color: '#ffba00'
               - value: 15
-                color: "#00aa99"
+                color: '#00aa99'
               - value: 10
-                color: "#0090ff"
+                color: '#0090ff'
               - value: 5
-                color: "#004e8b"
+                color: '#004e8b'
               - value: 0
-                color: "#002542"
+                color: '#002542'
             line_width: 1
             name: Températures
             hours_to_show: 48
@@ -318,22 +503,22 @@ views:
               columns: full
           - type: custom:bubble-card
             sub_button:
-              - entity: sensor.smarthrt_wind_forecast
+              - entity: sensor.wind_speed_forecast_avg
                 name: Prévision
                 show_name: true
                 show_state: true
-              - entity: sensor.smarthrt_wind_avg
+              - entity: sensor.wind_speed_avg
                 name: avg
                 show_name: true
                 show_state: true
-              - entity: sensor.smarthrt_temp_forecast
+              - entity: sensor.temperature_forecast_avg
                 name: Température Prévisionnelle
                 show_state: true
                 show_name: true
             card_type: separator
             icon: mdi:weather-cloudy-clock
             card_layout: large-2-rows
-            name: ""
+            name: ''
             grid_options:
               columns: full
               rows: 2
@@ -350,14 +535,906 @@ views:
                 show_state: true
                 show_attribute: false
                 show_icon: true
-                entity: sensor.smarthrt_rcth_sensor
+                entity: input_number.rcth_calculated
+              - show_name: true
+                show_state: true
+                name: RPth_calculated
+                show_icon: true
+                state_background: true
+                entity: input_number.rpth_calculated
+                show_attribute: false
+                attribute: editable
+            card_type: separator
+            icon: mdi:calculator
+            card_layout: large-2-rows
+            name: Calc Values
+          - type: custom:bubble-card
+            sub_button:
+              - show_name: true
+                show_last_changed: false
+                show_state: false
+                state_background: true
+                name: lag detection ONgoing (wait for temp decrease)
+                visibility:
+                  - condition: state
+                    entity: automation.detect_temperature_decrease_start_time
+                    state: 'on'
+                show_attribute: false
+                show_icon: true
+                show_background: true
+              - show_name: true
+                show_last_changed: false
+                show_state: false
+                state_background: true
+                name: lag detection OFF
+                visibility:
+                  - condition: state
+                    entity: automation.detect_temperature_decrease_start_time
+                    state: 'off'
+                show_attribute: false
+                show_icon: true
+                show_background: true
+            card_type: separator
+            icon: mdi:timer-alert-outline
+            card_layout: large
+            name: ''
+          - type: custom:bubble-card
+            sub_button:
+              - entity: input_number.temperature_recovery_calc
+                show_name: true
+                show_last_changed: false
+                show_state: true
+                state_background: true
+                name: Tint
+              - entity: input_number.text_recovery_calc
+                show_state: true
+                name: Text
+                show_name: true
+              - show_name: false
+                show_state: true
+                name: ''
+                show_icon: true
+                state_background: true
+                entity: input_datetime.time_recovery_calc
+                show_attribute: false
+                attribute: editable
+            card_type: separator
+            icon: mdi:radiator-off
+            card_layout: large-2-rows
+            name: ''
+          - type: custom:bubble-card
+            sub_button:
+              - entity: input_number.temperature_recovery_start
+                show_name: true
+                show_last_changed: false
+                show_state: true
+                state_background: true
+                name: Tint
+              - entity: input_number.text_recovery_start
+                show_state: true
+                name: Text
+                state_background: true
+                show_name: true
+                show_background: true
+              - show_name: false
+                show_state: true
+                name: ''
+                show_icon: true
+                state_background: true
+                entity: input_datetime.time_recovery_start
+                show_attribute: false
+                attribute: editable
+            card_type: separator
+            icon: mdi:radiator
+            card_layout: large-2-rows
+            name: ''
+            visibility:
+              - condition: state
+                entity: input_boolean.recovery_calc_mode
+                state: 'off'
+          - type: custom:bubble-card
+            sub_button:
+              - entity: input_number.temperature_recovery_start
+                show_name: true
+                show_last_changed: false
+                show_state: false
+                state_background: true
+                name: waiting START
+              - entity: input_number.text_recovery_start
+                show_state: false
+                name: waiting START
+                state_background: true
+                show_name: true
+                show_background: true
+              - show_name: true
+                show_state: false
+                name: waiting START
+                show_icon: true
+                state_background: true
+                entity: input_datetime.time_recovery_start
+                show_attribute: false
+                attribute: editable
+            card_type: separator
+            icon: mdi:radiator
+            card_layout: large-2-rows
+            name: ''
+            visibility:
+              - condition: state
+                entity: input_boolean.recovery_calc_mode
+                state: 'on'
+            styles: ''
+          - type: custom:bubble-card
+            sub_button:
+              - entity: input_number.temperature_recovery_end
+                show_name: true
+                show_last_changed: false
+                show_state: false
+                state_background: true
+                name: Waiting END
+              - entity: input_number.text_recovery_end
+                show_state: false
+                name: Waiting END
+                state_background: true
+                show_name: true
+                show_background: true
+              - show_name: true
+                show_state: false
+                name: Waiting END
+                show_icon: true
+                state_background: true
+                entity: input_datetime.time_recovery_end
+                show_attribute: false
+                attribute: editable
+            card_type: separator
+            icon: mdi:weather-sunset-up
+            card_layout: large-2-rows
+            name: ''
+            visibility:
+              - condition: state
+                entity: input_boolean.recovery_calc_mode
+                state: 'on'
+          - type: custom:bubble-card
+            sub_button:
+              - entity: input_number.temperature_recovery_end
+                show_name: true
+                show_last_changed: false
+                show_state: false
+                state_background: true
+                name: Waiting END
+              - entity: input_number.text_recovery_end
+                show_state: false
+                name: Waiting END
+                state_background: true
+                show_name: true
+                show_background: true
+              - show_name: true
+                show_state: false
+                name: Waiting END
+                show_icon: true
+                state_background: true
+                entity: input_datetime.time_recovery_end
+                show_attribute: false
+                attribute: editable
+            card_type: separator
+            icon: mdi:weather-sunset-up
+            card_layout: large-2-rows
+            name: ''
+            visibility:
+              - condition: state
+                entity: input_boolean.rp_calc_mode
+                state: 'on'
+          - type: custom:bubble-card
+            sub_button:
+              - entity: input_number.temperature_recovery_end
+                show_name: true
+                show_last_changed: false
+                show_state: true
+                state_background: true
+                name: Tint
+              - entity: input_number.text_recovery_end
+                show_state: true
+                name: Text
+                state_background: true
+                show_name: true
+                show_background: true
+              - show_name: false
+                show_state: true
+                name: ''
+                show_icon: true
+                state_background: true
+                entity: input_datetime.time_recovery_end
+                show_attribute: false
+                attribute: editable
+            card_type: separator
+            icon: mdi:weather-sunset-up
+            card_layout: large-2-rows
+            name: ''
+            visibility:
+              - condition: state
+                entity: input_boolean.rp_calc_mode
+                state: 'off'
+              - condition: state
+                entity: input_boolean.recovery_calc_mode
+                state: 'off'
+          - type: heading
+            heading: Ongoing CALCULATIONS
+            heading_style: title
+            icon: mdi:calculator
+          - type: custom:bubble-card
+            sub_button:
+              - show_name: true
+                show_last_changed: false
+                show_state: true
+                state_background: true
+                name: NextCalc
+                entity: input_datetime.recoveryupdate_hour
+                show_icon: false
+              - entity: input_number.rcth_fast
+                show_state: true
+                name: Last
+                state_background: true
+                show_name: true
+                show_background: true
+              - entity: input_number.rcth_calculated
+                show_state: true
+                name: calc
+                state_background: true
+                show_name: true
+                show_background: true
+              - show_name: false
+                show_state: true
+                name: ''
+                show_icon: true
+                state_background: true
+                show_attribute: false
+                attribute: editable
+                entity: input_boolean.recovery_calc_mode
+            card_type: separator
+            icon: ''
+            card_layout: large-2-rows
+            name: RCthdyn
+          - type: custom:bubble-card
+            sub_button:
+              - show_name: false
+                show_state: true
+                name: ''
+                show_icon: true
+                state_background: true
+                show_attribute: false
+                attribute: editable
+                entity: input_boolean.rp_calc_mode
+              - show_name: true
+                show_last_changed: false
+                show_state: true
+                state_background: true
+                name: NextCalc
+                entity: input_datetime.target_hour
+                show_icon: false
+              - entity: input_number.rpth_calculated
+                show_state: true
+                name: Last
+                state_background: true
+                show_name: true
+                show_background: true
+            card_type: separator
+            icon: ''
+            card_layout: large-2-rows
+            name: RPth
+        column_span: 1
+      - type: grid
+        cards:
+          - type: heading
+            heading_style: title
+            icon: mdi:brain
+            heading: Advanced GRAPHS
+          - type: custom:mini-graph-card
+            height: 100
+            decimals: 1
+            hour24: true
+            lower_bound: 0
+            lower_bound_secondary: 0
+            upper_bound_secondary: 1
+            entities:
+              - entity: sensor.recoverystart_hour_value
+                name: Recovery Time start
+                color: white
+              - entity: sensor.night_state
+                show_fill: true
+                color: Black
+                aggregate_func: Max
+                show_state: false
+                smoothing: false
+                show_line: false
+                show_points: false
+                show_legend: false
+                y_axis: secondary
+            line_width: 1
+            name: Recovery Time
+            hours_to_show: 18
+            points_per_hour: 12
+            group_by: 30min
+            show:
+              icon: true
+              name: true
+              fill: fade
+              labels: true
+              name_adaptive_color: true
+            card_mod:
+              style: |
+                .states--secondary {
+                   font-size: 0px;
+                     }
+                 ha-card .header.flex .name.flex { 
+                   margin-top: 0px;
+                   font-size: 12px;
+                   margin-left: 0px;
+                   } 
+                 ha-card .states.flex {
+                   margin-top: -100px;
+                   margin-left: 120px;
+                   margin-right: 0px;
+                   font-weight: italic;
+                   font-size: 8px;
+                   }
+                 ha-card .graph .graph__container {
+                   margin-top: 0px;
+                   }
+                 ha-card .graph .graph__container .graph__labels span { 
+                   font-size: 100%;
+                   }
+                 ha-card .header.flex .icon {
+                   --mdc-icon-size: 30px;
+                   margin-top: 0px;
+                   margin-right: 00px;
+                   }
+            grid_options:
+              columns: full
+          - type: custom:mini-graph-card
+            height: 100
+            decimals: 1
+            hour24: true
+            lower_bound_secondary: 0
+            upper_bound_secondary: 1
+            entities:
+              - entity: sensor.windchill
+                name: Température ressentie
+                show_fill: false
+                color: white
+              - entity: sensor.exterior_temperature
+                name: Température extérieure
+              - entity: sensor.night_state
+                color: Black
+                aggregate_func: Max
+                show_state: false
+                smoothing: false
+                show_line: false
+                show_points: false
+                show_legend: false
+                y_axis: secondary
+            color_thresholds:
+              - value: 40
+                color: '#6e0000'
+              - value: 30
+                color: '#470101'
+              - value: 25
+                color: '#ff0000'
+              - value: 20
+                color: '#ffba00'
+              - value: 15
+                color: '#00aa99'
+              - value: 10
+                color: '#0090ff'
+              - value: 5
+                color: '#004e8b'
+              - value: 0
+                color: '#002542'
+            line_width: 1
+            name: Températures
+            hours_to_show: 48
+            points_per_hour: 12
+            group_by: hour
+            show:
+              icon: true
+              name: true
+              fill: fade
+              labels: true
+              name_adaptive_color: true
+            card_mod:
+              style: |
+                .states--secondary {
+                   font-size: 0px;
+                     }
+                 ha-card .header.flex .name.flex { 
+                   margin-top: 0px;
+                   font-size: 12px;
+                   margin-left: 0px;
+                   } 
+                 ha-card .states.flex {
+                   margin-top: -60px;
+                   margin-left: 120px;
+                   margin-right: 0px;
+                   font-weight: italic;
+                   font-size: 8px;
+                   }
+                 ha-card .graph .graph__container {
+                   margin-top: -10px;
+                   }
+                 ha-card .graph .graph__container .graph__labels span { 
+                   font-size: 100%;
+                   }
+                 ha-card .header.flex .icon {
+                   --mdc-icon-size: 30px;
+                   margin-top: 0px;
+                   margin-right: 00px;
+                   }
+            grid_options:
+              columns: full
+          - type: custom:apexcharts-card
+            graph_span: 4d
+            span:
+              start: day
+              offset: '-2d'
+            stacked: true
+            all_series_config:
+              type: column
+              group_by:
+                func: avg
+                duration: 3h
+            header:
+              floating: true
+              show: true
+              show_states: true
+              colorize_states: true
+              standard_format: true
+            series:
+              - entity: sensor.wind_speed
+                name: wind
+                unit: km/h
+            yaxis:
+              - min: 0
+                max: '|+5|'
+            apex_config:
+              chart:
+                height: 100%
+              legend:
+                position: top
+                show: false
+          - type: custom:mini-graph-card
+            height: 100
+            decimals: 1
+            hour24: true
+            lower_bound_secondary: 0
+            upper_bound_secondary: 1
+            entities:
+              - entity: input_number.rcth_calculated
+                name: RCth calc
+                color: white
+                show_fill: false
+              - entity: input_number.rcth
+                name: RCth
+              - entity: input_number.rpth_calculated
+                name: RPth calc
+                color: darkred
+                show_fill: false
+              - entity: input_number.rpth
+                name: RPth
+              - entity: sensor.night_state
+                color: Black
+                aggregate_func: Max
+                show_state: false
+                smoothing: false
+                show_line: false
+                show_points: false
+                show_legend: false
+                y_axis: secondary
+            color_thresholds:
+              - value: 105
+                color: '#6e0000'
+              - value: 90
+                color: '#470101'
+              - value: 75
+                color: '#ff0000'
+              - value: 60
+                color: '#ffba00'
+              - value: 45
+                color: '#00aa99'
+              - value: 30
+                color: '#0090ff'
+              - value: 15
+                color: '#004e8b'
+              - value: 0
+                color: '#002542'
+            line_width: 1
+            name: Coeff
+            hours_to_show: 144
+            points_per_hour: 12
+            group_by: hour
+            show:
+              icon: true
+              name: true
+              fill: fade
+              labels: true
+              name_adaptive_color: true
+            card_mod:
+              style: |
+                .states--secondary {
+                   font-size: 0px;
+                     }
+                 ha-card .header.flex .name.flex { 
+                   margin-top: 0px;
+                   font-size: 12px;
+                   margin-left: 0px;
+                   } 
+                 ha-card .states.flex {
+                   margin-top: -60px;
+                   margin-left: 120px;
+                   margin-right: 0px;
+                   font-weight: italic;
+                   font-size: 8px;
+                   }
+                 ha-card .graph .graph__container {
+                   margin-top: -10px;
+                   }
+                 ha-card .graph .graph__container .graph__labels span { 
+                   font-size: 100%;
+                   }
+                 ha-card .header.flex .icon {
+                   --mdc-icon-size: 30px;
+                   margin-top: 0px;
+                   margin-right: 00px;
+                   }
+            grid_options:
+              columns: full
+    cards: []
+    dense_section_placement: true
+  - type: sections
+    max_columns: 3
+    title: SmartHRT
+    path: smarthrt
+    icon: mdi:radiator
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading_style: title
+            badges:
+              - type: entity
+                show_state: true
+                show_icon: true
+                entity: switch.smarthrt_mode_chauffage_intelligent
+                tap_action:
+                  action: toggle
+            icon: mdi:import
+            heading: CONFIGURATION [set ON/OFF]->
+          - type: custom:bubble-card
+            sub_button:
+              - entity: sensor.smarthrt_temperature_interieure
+                show_name: true
+                show_state: true
+                show_attribute: false
+                show_icon: false
+                show_background: false
+            card_type: separator
+            icon: mdi:home-thermometer-outline
+            card_layout: large-2-rows
+            name: Température intérieure
+            styles: |-
+              * { 
+                font-size: 11px !important;
+              }
+          - type: custom:bubble-card
+            sub_button:
+              - show_name: true
+                show_state: true
+                name: Heating OFF (e.g. 11pm)
+                show_icon: true
+                state_background: true
+                entity: time.smarthrt_heure_coupure_chauffage
+                show_attribute: false
+            card_type: separator
+            icon: mdi:radiator-off
+            card_layout: large
+            name: SET off time->
+            styles: |-
+              * { 
+                font-size: 11px !important;
+              }
+          - type: custom:bubble-card
+            sub_button:
+              - show_name: true
+                show_state: true
+                show_attribute: false
+                show_icon: true
+                entity: time.smarthrt_heure_cible
+              - show_name: true
+                show_state: true
+                name: 'target '
+                show_icon: true
+                state_background: true
+                entity: number.smarthrt_consigne
+                show_attribute: false
+            card_type: separator
+            icon: mdi:clock-end
+            card_layout: large-2-rows
+            name: SET target->
+            styles: |-
+              * { 
+                font-size: 11px !important;
+              }
+          - type: custom:bubble-card
+            card_type: button
+            entity: sensor.smarthrt_alarme_telephone
+            card_layout: large-2-rows
+            show_state: true
+            force_icon: true
+            name: Phone Alarm
+            icon: mdi:phone-clock
+            styles: |-
+              * { 
+                font-size: 11px !important;
+              }
+            button_type: switch
+          - type: custom:bubble-card
+            card_type: button
+            entity: switch.smarthrt_mode_adaptatif
+            card_layout: large-2-rows
+            show_state: true
+            force_icon: true
+            sub_button:
+              main:
+                - entity: sensor.rcth_value
+                  show_state: true
+                  show_name: true
+                  name: RCth
+                  visibility:
+                    - condition: state
+                      entity: switch.smarthrt_mode_adaptatif
+                      state: 'on'
+                - entity: sensor.rpth_value
+                  show_state: true
+                  show_name: true
+                  name: RPth
+                  visibility:
+                    - condition: state
+                      entity: switch.smarthrt_mode_adaptatif
+                      state: 'on'
+                - entity: number.smarthrt_facteur_de_relaxation
+                  show_name: true
+                  show_state: true
+                  visibility:
+                    - condition: state
+                      entity: switch.smarthrt_mode_adaptatif
+                      state: 'on'
+                  name: relax
+              bottom: []
+            name: Self Calibration
+            tap_action:
+              action: toggle
+            button_type: switch
+          - type: tile
+            grid_options:
+              columns: 3
+              rows: 2
+            visibility:
+              - condition: state
+                entity: switch.smarthrt_mode_adaptatif
+                state: 'off'
+            entity: number.smarthrt_rcth_vent_faible
+            name: RC_lowWind
+            color: primary
+            vertical: true
+            features_position: bottom
+          - type: tile
+            grid_options:
+              columns: 3
+              rows: 2
+            visibility:
+              - condition: state
+                entity: switch.smarthrt_adaptive_mode
+                state: 'off'
+            entity: number.smarthrt_rcth_vent_fort
+            name: RC_highWind
+            color: accent
+            vertical: true
+            features_position: bottom
+          - type: tile
+            grid_options:
+              columns: 3
+              rows: 2
+            visibility:
+              - condition: state
+                entity: switch.smarthrt_adaptive_mode
+                state: 'off'
+            entity: number.smarthrt_rpth_vent_faible
+            name: RP_lowWind
+            color: primary
+            vertical: true
+            features_position: bottom
+          - type: tile
+            grid_options:
+              columns: 3
+              rows: 2
+            visibility:
+              - condition: state
+                entity: switch.smarthrt_adaptive_mode
+                state: 'off'
+            entity: number.smarthrt_rpth_vent_fort
+            name: RP_highWind
+            color: accent
+            vertical: true
+            features_position: bottom
+          - type: custom:bubble-card
+            card_type: separator
+            icon: mdi:hand-pointing-up
+            card_layout: large
+            name: Set the constants (no self-calibration)
+            visibility:
+              - condition: state
+                entity: switch.smarthrt_mode_adaptatif
+                state: 'off'
+            styles: |-
+              * { 
+                font-weight: normal !important;
+              }
+      - type: grid
+        cards:
+          - type: heading
+            heading_style: title
+            icon: mdi:home-search-outline
+            heading: OUTPUTS
+          - type: custom:bubble-card
+            sub_button:
+              - show_name: false
+                show_state: true
+                name: ''
+                show_icon: true
+                state_background: true
+                show_attribute: false
+                entity: time.smarthrt_heure_relance_calculee
+              - entity: sensor.smarthrt
+                show_name: true
+                show_last_changed: false
+                show_state: true
+                state_background: true
+                name: ''
+            card_type: separator
+            icon: mdi:calculator
+            card_layout: large-2-rows
+            name: planned recovery START
+          - type: custom:bubble-card
+            sub_button:
+              - show_name: true
+                show_state: true
+                name: Next Update
+                show_icon: true
+                state_background: true
+                entity: time.smarthrt_heure_prochaine_mise_a_jour_calcul
+            card_type: separator
+            icon: mdi:update
+            card_layout: large
+            name: Recovery Update
+          - type: custom:mini-graph-card
+            height: 100
+            decimals: 1
+            hour24: true
+            lower_bound_secondary: 0
+            upper_bound_secondary: 1
+            entities:
+              - entity: sensor.smarthrt_temperature_interieure
+                name: Température intérieure
+              - entity: number.smarthrt_consigne
+                name: Température de consigne
+                color: white
+                show_fill: false
+              - entity: sensor.smarthrt_etat_nuit
+                color: Black
+                aggregate_func: Max
+                show_state: false
+                smoothing: false
+                show_line: false
+                show_points: false
+                show_legend: false
+                y_axis: secondary
+            color_thresholds:
+              - value: 40
+                color: '#6e0000'
+              - value: 30
+                color: '#470101'
+              - value: 25
+                color: '#ff0000'
+              - value: 20
+                color: '#ffba00'
+              - value: 15
+                color: '#00aa99'
+              - value: 10
+                color: '#0090ff'
+              - value: 5
+                color: '#004e8b'
+              - value: 0
+                color: '#002542'
+            line_width: 1
+            name: Températures
+            hours_to_show: 48
+            points_per_hour: 12
+            group_by: hour
+            show:
+              icon: true
+              name: true
+              fill: fade
+              labels: true
+              name_adaptive_color: true
+            card_mod:
+              style: |
+                .states--secondary {
+                   font-size: 0px;
+                     }
+                 ha-card .header.flex .name.flex { 
+                   margin-top: 0px;
+                   font-size: 12px;
+                   margin-left: 0px;
+                   } 
+                 ha-card .states.flex {
+                   margin-top: -60px;
+                   margin-left: 120px;
+                   margin-right: 0px;
+                   font-weight: italic;
+                   font-size: 8px;
+                   }
+                 ha-card .graph .graph__container {
+                   margin-top: -10px;
+                   }
+                 ha-card .graph .graph__container .graph__labels span { 
+                   font-size: 100%;
+                   }
+                 ha-card .header.flex .icon {
+                   --mdc-icon-size: 30px;
+                   margin-top: 0px;
+                   margin-right: 00px;
+                   }
+            grid_options:
+              columns: full
+          - type: custom:bubble-card
+            sub_button:
+              - entity: sensor.smarthrt_prevision_vent
+                name: Prévision
+                show_name: true
+                show_state: true
+              - entity: sensor.smarthrt_vitesse_du_vent
+                name: avg
+                show_name: true
+                show_state: true
+              - entity: sensor.smarthrt_prevision_temperature
+                name: Température Prévisionnelle
+                show_state: true
+                show_name: true
+            card_type: separator
+            icon: mdi:weather-cloudy-clock
+            card_layout: large-2-rows
+            name: ''
+            grid_options:
+              columns: full
+              rows: 2
+        column_span: 1
+      - type: grid
+        cards:
+          - type: heading
+            heading_style: title
+            icon: mdi:brain
+            heading: Advanced OUTPUTS
+          - type: custom:bubble-card
+            sub_button:
+              - show_name: true
+                show_state: true
+                show_attribute: false
+                show_icon: true
+                entity: sensor.rcth_value
                 name: RCth
               - show_name: true
                 show_state: true
                 name: RPth
                 show_icon: true
                 state_background: true
-                entity: sensor.smarthrt_rpth_sensor
+                entity: sensor.rpth_value
                 show_attribute: false
             card_type: separator
             icon: mdi:calculator
@@ -365,19 +1442,7 @@ views:
             name: Thermal Coefficients
           - type: custom:bubble-card
             sub_button:
-              - show_name: true
-                show_state: true
-                name: RCth Fast
-                show_icon: true
-                state_background: true
-                entity: sensor.smarthrt_rcth_fast
-            card_type: separator
-            icon: mdi:speedometer
-            card_layout: large
-            name: Dynamic RCth
-          - type: custom:bubble-card
-            sub_button:
-              - entity: sensor.smarthrt_stop_lag_duration
+              - entity: sensor.smarthrt_duree_lag_arret
                 show_name: true
                 show_last_changed: false
                 show_state: true
@@ -389,11 +1454,11 @@ views:
             name: Temperature Lag
           - type: custom:bubble-card
             sub_button:
-              - entity: sensor.smarthrt_recovery_calc_mode
+              - entity: sensor.smarthrt_mode_calcul_relance
                 show_name: true
                 show_state: true
                 name: RC Calc
-              - entity: sensor.smarthrt_rp_calc_mode
+              - entity: sensor.smarthrt_mode_calcul_rp
                 show_name: true
                 show_state: true
                 name: RP Calc
@@ -412,13 +1477,13 @@ views:
             lower_bound_secondary: 0
             upper_bound_secondary: 1
             entities:
-              - entity: sensor.smarthrt_windchill
+              - entity: sensor.smarthrt_temperature_ressentie
                 name: Température ressentie
                 show_fill: false
                 color: white
-              - entity: sensor.smarthrt_exterior_temp
+              - entity: sensor.smarthrt_temperature_exterieure
                 name: Température extérieure
-              - entity: sensor.smarthrt_night_state
+              - entity: sensor.smarthrt_etat_nuit
                 color: Black
                 aggregate_func: Max
                 show_state: false
@@ -429,21 +1494,21 @@ views:
                 y_axis: secondary
             color_thresholds:
               - value: 40
-                color: "#6e0000"
+                color: '#6e0000'
               - value: 30
-                color: "#470101"
+                color: '#470101'
               - value: 25
-                color: "#ff0000"
+                color: '#ff0000'
               - value: 20
-                color: "#ffba00"
+                color: '#ffba00'
               - value: 15
-                color: "#00aa99"
+                color: '#00aa99'
               - value: 10
-                color: "#0090ff"
+                color: '#0090ff'
               - value: 5
-                color: "#004e8b"
+                color: '#004e8b'
               - value: 0
-                color: "#002542"
+                color: '#002542'
             line_width: 1
             name: Températures extérieures
             hours_to_show: 48
@@ -489,7 +1554,7 @@ views:
             graph_span: 4d
             span:
               start: day
-              offset: "-2d"
+              offset: '-2d'
             stacked: true
             all_series_config:
               type: column
@@ -503,12 +1568,12 @@ views:
               colorize_states: true
               standard_format: true
             series:
-              - entity: sensor.smarthrt_wind_speed
+              - entity: sensor.smarthrt_vitesse_du_vent
                 name: wind
-                unit: m/s
+                unit: Km/h
             yaxis:
               - min: 0
-                max: "|+5|"
+                max: '|+5|'
             apex_config:
               chart:
                 height: 100%
@@ -522,13 +1587,13 @@ views:
             lower_bound_secondary: 0
             upper_bound_secondary: 1
             entities:
-              - entity: sensor.smarthrt_rcth_sensor
+              - entity: sensor.smarthrt_rcth
                 name: RCth
                 color: cyan
-              - entity: sensor.smarthrt_rpth_sensor
+              - entity: sensor.smarthrt_rpth
                 name: RPth
                 color: orange
-              - entity: sensor.smarthrt_night_state
+              - entity: sensor.smarthrt_etat_nuit
                 color: Black
                 aggregate_func: Max
                 show_state: false
@@ -539,24 +1604,24 @@ views:
                 y_axis: secondary
             color_thresholds:
               - value: 105
-                color: "#6e0000"
+                color: '#6e0000'
               - value: 90
-                color: "#470101"
+                color: '#470101'
               - value: 75
-                color: "#ff0000"
+                color: '#ff0000'
               - value: 60
-                color: "#ffba00"
+                color: '#ffba00'
               - value: 45
-                color: "#00aa99"
+                color: '#00aa99'
               - value: 30
-                color: "#0090ff"
+                color: '#0090ff'
               - value: 15
-                color: "#004e8b"
+                color: '#004e8b'
               - value: 0
-                color: "#002542"
+                color: '#002542'
             line_width: 1
             name: Thermal Coefficients
-            hours_to_show: 144
+            hours_to_show: 72
             points_per_hour: 12
             group_by: hour
             show:

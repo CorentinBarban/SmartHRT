@@ -634,6 +634,7 @@ class SmartHRTCoordinator:
             )
         )
 
+    @callback
     def _schedule_recovery_update(self, trigger_time: datetime) -> None:
         """Programme le déclencheur de mise à jour du calcul"""
         # Annuler le trigger précédent s'il existe
@@ -641,6 +642,7 @@ class SmartHRTCoordinator:
             self._unsub_recovery_update()
             self._unsub_recovery_update = None
 
+        _LOGGER.debug("SmartHRT: Programmation prochaine mise à jour: %s", trigger_time)
         self._unsub_recovery_update = async_track_point_in_time(
             self._hass, self._on_recovery_update_hour, trigger_time
         )
