@@ -663,34 +663,42 @@ class SmartHRTCoordinator:
             )
 
             if forecast_response and entity_id in forecast_response:
-                forecasts = forecast_response[entity_id].get("forecast", [])[
-                    :FORECAST_HOURS
-                ]
+                entity_forecast = forecast_response[entity_id]
+                if isinstance(entity_forecast, dict):
+                    forecast_list = entity_forecast.get("forecast", [])
+                    if isinstance(forecast_list, list):
+                        forecasts = forecast_list[:FORECAST_HOURS]
 
-                if forecasts:
-                    # Moyenne température
-                    temps = [
-                        f.get("temperature", 0)
-                        for f in forecasts
-                        if f.get("temperature") is not None
-                    ]
-                    if temps:
-                        self.data.temperature_forecast_avg = sum(temps) / len(temps)
+                        if forecasts:
+                            # Moyenne température
+                            temps: list[float] = []
+                            winds: list[float] = []
 
-                    # Moyenne vent
-                    winds = [
-                        f.get("wind_speed", 0)
-                        for f in forecasts
-                        if f.get("wind_speed") is not None
-                    ]
-                    if winds:
-                        self.data.wind_speed_forecast_avg = sum(winds) / len(winds)
+                            for f in forecasts:
+                                if isinstance(f, dict):
+                                    temp_val = f.get("temperature")
+                                    if isinstance(temp_val, (int, float)):
+                                        temps.append(float(temp_val))
 
-                    _LOGGER.debug(
-                        "Prévisions mises à jour: temp=%.1f°C, vent=%.1fkm/h",
-                        self.data.temperature_forecast_avg,
-                        self.data.wind_speed_forecast_avg,
-                    )
+                                    wind_val = f.get("wind_speed")
+                                    if isinstance(wind_val, (int, float)):
+                                        winds.append(float(wind_val))
+
+                            if temps:
+                                self.data.temperature_forecast_avg = sum(temps) / len(
+                                    temps
+                                )
+
+                            if winds:
+                                self.data.wind_speed_forecast_avg = sum(winds) / len(
+                                    winds
+                                )
+
+                            _LOGGER.debug(
+                                "Prévisions mises à jour: temp=%.1f°C, vent=%.1fkm/h",
+                                self.data.temperature_forecast_avg,
+                                self.data.wind_speed_forecast_avg,
+                            )
         except Exception as ex:
             _LOGGER.warning(
                 "Erreur lors de la récupération des prévisions météo: %s", ex
@@ -862,15 +870,17 @@ class SmartHRTCoordinator:
 
     def calculate_rcth_fast(self) -> None:
         """Calcule l'évolution dynamique de RCth"""
-        if None in (
-            self.data.interior_temp,
-            self.data.exterior_temp,
-            self.data.time_recovery_calc,
+        if (
+            self.data.interior_temp is None
+            or self.data.exterior_temp is None
+            or self.data.time_recovery_calc is None
         ):
             return
 
-        tint, text = self.data.interior_temp, self.data.exterior_temp
-        tint_off, text_off = self.data.temp_recovery_calc, self.data.text_recovery_calc
+        tint: float = self.data.interior_temp
+        text: float = self.data.exterior_temp
+        tint_off: float = self.data.temp_recovery_calc
+        text_off: float = self.data.text_recovery_calc
 
         dt_hours = (dt_util.now() - self.data.time_recovery_calc).total_seconds() / 3600
         if dt_hours < 0:

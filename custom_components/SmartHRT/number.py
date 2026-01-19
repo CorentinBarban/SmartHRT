@@ -190,7 +190,6 @@ class SmartHRTRCthLWNumber(SmartHRTBaseNumber):
         self._attr_native_step = 0.5
         self._attr_native_unit_of_measurement = UnitOfTime.HOURS
         self._attr_mode = NumberMode.BOX
-        self._attr_entity_registry_enabled_default = False
 
     @property
     def native_value(self) -> float:
@@ -219,7 +218,6 @@ class SmartHRTRCthHWNumber(SmartHRTBaseNumber):
         self._attr_native_step = 0.5
         self._attr_native_unit_of_measurement = UnitOfTime.HOURS
         self._attr_mode = NumberMode.BOX
-        self._attr_entity_registry_enabled_default = False
 
     @property
     def native_value(self) -> float:
@@ -248,7 +246,6 @@ class SmartHRTRPthLWNumber(SmartHRTBaseNumber):
         self._attr_native_step = 0.5
         self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
         self._attr_mode = NumberMode.BOX
-        self._attr_entity_registry_enabled_default = False
 
     @property
     def native_value(self) -> float:
@@ -277,7 +274,6 @@ class SmartHRTRPthHWNumber(SmartHRTBaseNumber):
         self._attr_native_step = 0.5
         self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
         self._attr_mode = NumberMode.BOX
-        self._attr_entity_registry_enabled_default = False
 
     @property
     def native_value(self) -> float:

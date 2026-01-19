@@ -429,7 +429,6 @@ class SmartHRTWindSpeedAvgSensor(SmartHRTBaseSensor):
         super().__init__(coordinator, config_entry)
         self._attr_name = "Vent moyen (4h)"
         self._attr_unique_id = f"{self._device_id}_wind_avg"
-        self._attr_entity_registry_enabled_default = False
 
     @property
     def native_value(self) -> float | None:
@@ -465,7 +464,6 @@ class SmartHRTNightStateSensor(SmartHRTBaseSensor):
         super().__init__(coordinator, config_entry)
         self._attr_name = "État nuit"
         self._attr_unique_id = f"{self._device_id}_night_state"
-        self._attr_entity_registry_enabled_default = False
 
     @property
     def native_value(self) -> int:
@@ -510,7 +508,6 @@ class SmartHRTRecoveryCalcModeSensor(SmartHRTBaseSensor):
         super().__init__(coordinator, config_entry)
         self._attr_name = "Mode calcul relance"
         self._attr_unique_id = f"{self._device_id}_recovery_calc_mode"
-        self._attr_entity_registry_enabled_default = False
 
     @property
     def native_value(self) -> str:
@@ -530,7 +527,6 @@ class SmartHRTRPCalcModeSensor(SmartHRTBaseSensor):
         super().__init__(coordinator, config_entry)
         self._attr_name = "Mode calcul RP"
         self._attr_unique_id = f"{self._device_id}_rp_calc_mode"
-        self._attr_entity_registry_enabled_default = False
 
     @property
     def native_value(self) -> str:
@@ -550,7 +546,6 @@ class SmartHRTStopLagDurationSensor(SmartHRTBaseSensor):
         super().__init__(coordinator, config_entry)
         self._attr_name = "Durée lag arrêt"
         self._attr_unique_id = f"{self._device_id}_stop_lag_duration"
-        self._attr_entity_registry_enabled_default = False
 
     @property
     def native_value(self) -> float | None:

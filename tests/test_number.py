@@ -137,7 +137,6 @@ class TestSmartHRTRCthLWNumber:
         number = SmartHRTRCthLWNumber(mock_coordinator, mock_config_entry)
 
         assert number._attr_name == "RCth (vent faible)"
-        assert number._attr_entity_registry_enabled_default is False
 
     def test_native_value(self, mock_coordinator_with_data, mock_config_entry):
         """Test de la valeur native."""
@@ -155,7 +154,6 @@ class TestSmartHRTRCthHWNumber:
         number = SmartHRTRCthHWNumber(mock_coordinator, mock_config_entry)
 
         assert number._attr_name == "RCth (vent fort)"
-        assert number._attr_entity_registry_enabled_default is False
 
     def test_native_value(self, mock_coordinator_with_data, mock_config_entry):
         """Test de la valeur native."""
