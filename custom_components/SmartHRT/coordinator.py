@@ -134,6 +134,7 @@ class SmartHRTCoordinator:
         self._listeners: list[Callable[[], None]] = []
         self._unsub_listeners: list = []
         self._unsub_time_triggers: list = []
+        self._unsub_recovery_update: Callable | None = None  # Tracker pour recovery_update
 
         self.data = SmartHRTData(
             name=entry.data.get(CONF_NAME, "SmartHRT"),
@@ -176,6 +177,13 @@ class SmartHRTCoordinator:
         await self._register_services()
         await self._update_weather_forecasts()
         self.calculate_recovery_time()
+
+        # Programmer la première mise à jour de recovery_update_hour
+        if self.data.smartheating_mode and self.data.recovery_calc_mode:
+            update_time = self.calculate_recovery_update_time()
+            if update_time:
+                self.data.recovery_update_hour = update_time
+                self._schedule_recovery_update(update_time)
 
     def _setup_listeners(self) -> None:
         """Configure les listeners pour les capteurs"""
@@ -277,6 +285,10 @@ class SmartHRTCoordinator:
         """Déchargement du coordinateur"""
         await self._unregister_services()
         self._cancel_time_triggers()
+        # Annuler le trigger de recovery_update
+        if self._unsub_recovery_update:
+            self._unsub_recovery_update()
+            self._unsub_recovery_update = None
         for unsub in self._unsub_listeners:
             unsub()
         self._unsub_listeners.clear()
@@ -512,6 +524,16 @@ class SmartHRTCoordinator:
         # Active la détection du lag de température
         self.data.temp_lag_detection_active = True
 
+        # Calculer l'heure de relance initiale
+        self.calculate_recovery_time()
+
+        # Programmer la mise à jour de recovery_update_hour si calcul actif
+        if self.data.recovery_calc_mode:
+            update_time = self.calculate_recovery_update_time()
+            if update_time:
+                self.data.recovery_update_hour = update_time
+                self._schedule_recovery_update(update_time)
+
         self._reschedule_recoverycalc_hour()
         self._notify_listeners()
 
@@ -596,10 +618,13 @@ class SmartHRTCoordinator:
 
     def _schedule_recovery_update(self, trigger_time: datetime) -> None:
         """Programme le déclencheur de mise à jour du calcul"""
-        self._unsub_time_triggers.append(
-            async_track_point_in_time(
-                self._hass, self._on_recovery_update_hour, trigger_time
-            )
+        # Annuler le trigger précédent s'il existe
+        if self._unsub_recovery_update:
+            self._unsub_recovery_update()
+            self._unsub_recovery_update = None
+
+        self._unsub_recovery_update = async_track_point_in_time(
+            self._hass, self._on_recovery_update_hour, trigger_time
         )
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -832,12 +857,6 @@ class SmartHRTCoordinator:
             and self.data.recovery_start_hour > now
         ):
             self._schedule_recovery_start(self.data.recovery_start_hour)
-
-        # Calculer et programmer la prochaine mise à jour
-        update_time = self.calculate_recovery_update_time()
-        if update_time:
-            self.data.recovery_update_hour = update_time
-            self._schedule_recovery_update(update_time)
 
         _LOGGER.debug(
             "Recovery time: %s (%.2fh avant target)",
