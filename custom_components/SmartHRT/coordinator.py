@@ -510,6 +510,11 @@ class SmartHRTCoordinator:
             self._reschedule_recoverycalc_hour()
             return
 
+        # Déléguer les calculs lourds à une tâche asynchrone
+        self._hass.async_create_task(self._async_on_recoverycalc_hour())
+
+    async def _async_on_recoverycalc_hour(self) -> None:
+        """Exécute les calculs lourds de l'heure de coupure dans un exécuteur"""
         # Initialisation des constantes si première exécution
         if self.data.rcth_lw <= 0:
             self.data.rcth_lw = 50.0
@@ -526,12 +531,14 @@ class SmartHRTCoordinator:
         # Active la détection du lag de température
         self.data.temp_lag_detection_active = True
 
-        # Calculer l'heure de relance initiale
-        self.calculate_recovery_time()
+        # Exécuter les calculs lourds dans un exécuteur
+        await self._hass.async_add_executor_job(self.calculate_recovery_time)
 
         # Programmer la mise à jour de recovery_update_hour si calcul actif
         if self.data.recovery_calc_mode:
-            update_time = self.calculate_recovery_update_time()
+            update_time = await self._hass.async_add_executor_job(
+                self.calculate_recovery_update_time
+            )
             if update_time:
                 self.data.recovery_update_hour = update_time
                 self._schedule_recovery_update(update_time)
@@ -572,9 +579,16 @@ class SmartHRTCoordinator:
             return
 
         _LOGGER.debug("SmartHRT: Mise à jour du calcul de relance")
-        self.calculate_rcth_fast()
-        self.calculate_recovery_time()
-        update_time = self.calculate_recovery_update_time()
+        # Déléguer les calculs lourds à une tâche asynchrone
+        self._hass.async_create_task(self._async_on_recovery_update_hour())
+
+    async def _async_on_recovery_update_hour(self) -> None:
+        """Exécute les calculs lourds de mise à jour dans un exécuteur"""
+        await self._hass.async_add_executor_job(self.calculate_rcth_fast)
+        await self._hass.async_add_executor_job(self.calculate_recovery_time)
+        update_time = await self._hass.async_add_executor_job(
+            self.calculate_recovery_update_time
+        )
 
         if update_time:
             self.data.recovery_update_hour = update_time
