@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch, AsyncMock
 
 import pytest
+from homeassistant.util import dt as dt_util
 
 from homeassistant.const import UnitOfTemperature, UnitOfSpeed, UnitOfTime
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
@@ -153,7 +154,7 @@ class TestSmartHRTRecoveryStartSensor:
 
     def test_native_value(self, mock_coordinator_with_data, mock_config_entry):
         """Test de la valeur native."""
-        recovery_time = datetime.now() + timedelta(hours=2)
+        recovery_time = dt_util.now() + timedelta(hours=2)
         mock_coordinator_with_data.data.recovery_start_hour = recovery_time
         sensor = SmartHRTRecoveryStartSensor(
             mock_coordinator_with_data, mock_config_entry
@@ -175,7 +176,7 @@ class TestSmartHRTRecoveryStartSensor:
         """Test des attributs supplémentaires."""
         from datetime import time as dt_time
 
-        recovery_time = datetime.now() + timedelta(hours=2)
+        recovery_time = dt_util.now() + timedelta(hours=2)
         mock_coordinator_with_data.data.recovery_start_hour = recovery_time
         mock_coordinator_with_data.data.target_hour = dt_time(6, 0, 0)
         sensor = SmartHRTRecoveryStartSensor(

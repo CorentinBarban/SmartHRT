@@ -5,6 +5,7 @@ from datetime import datetime, time as dt_time, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from homeassistant.util import dt as dt_util
 
 from custom_components.SmartHRT.coordinator import (
     SmartHRTCoordinator,
@@ -199,7 +200,7 @@ class TestRecoveryTimeCalculation:
 
         assert coord.data.recovery_start_hour is not None
         # L'heure de relance doit être avant l'heure cible
-        now = datetime.now()
+        now = dt_util.now()
         target_dt = now.replace(
             hour=coord.data.target_hour.hour,
             minute=coord.data.target_hour.minute,
@@ -243,7 +244,7 @@ class TestRCthFastCalculation:
     def test_calculate_rcth_fast(self, mock_coordinator_with_data):
         """Test du calcul de RCth fast."""
         coord = mock_coordinator_with_data
-        coord.data.time_recovery_calc = datetime.now() - timedelta(hours=2)
+        coord.data.time_recovery_calc = dt_util.now() - timedelta(hours=2)
         coord.data.temp_recovery_calc = 20.0
         coord.data.text_recovery_calc = 5.0
         coord.data.interior_temp = 18.0  # Température a baissé
@@ -404,7 +405,7 @@ class TestHeatingStopRecoveryEvents:
     def test_on_recovery_start(self, mock_coordinator_with_data):
         """Test de l'événement de début de relance."""
         coord = mock_coordinator_with_data
-        coord.data.time_recovery_calc = datetime.now() - timedelta(hours=6)
+        coord.data.time_recovery_calc = dt_util.now() - timedelta(hours=6)
         coord.data.temp_recovery_calc = 20.0
         coord.data.text_recovery_calc = 5.0
 
@@ -419,7 +420,7 @@ class TestHeatingStopRecoveryEvents:
         """Test de l'événement de fin de relance."""
         coord = mock_coordinator_with_data
         coord.data.rp_calc_mode = True
-        coord.data.time_recovery_start = datetime.now() - timedelta(hours=1)
+        coord.data.time_recovery_start = dt_util.now() - timedelta(hours=1)
         coord.data.temp_recovery_start = 17.0
         coord.data.text_recovery_start = 5.0
 
@@ -447,7 +448,7 @@ class TestTemperatureThresholds:
         coord = mock_coordinator_with_data
         coord.data.temp_lag_detection_active = True
         coord.data.temp_recovery_calc = 20.0
-        coord.data.time_recovery_calc = datetime.now()
+        coord.data.time_recovery_calc = dt_util.now()
         coord.data.interior_temp = 19.7  # Baisse de 0.3°C
 
         with patch.object(coord, "calculate_recovery_time"):
@@ -474,7 +475,7 @@ class TestTemperatureThresholds:
         coord.data.rp_calc_mode = True
         coord.data.tsp = 19.0
         coord.data.interior_temp = 19.5
-        coord.data.time_recovery_start = datetime.now() - timedelta(hours=1)
+        coord.data.time_recovery_start = dt_util.now() - timedelta(hours=1)
         coord.data.temp_recovery_start = 17.0
         coord.data.text_recovery_start = 5.0
 

@@ -240,24 +240,32 @@ class SmartHRTCoordinator:
         )
 
         # Trigger pour recovery_start_hour (démarrage relance)
-        if self.data.recovery_start_hour and self.data.recovery_start_hour > now:
-            self._unsub_time_triggers.append(
-                async_track_point_in_time(
-                    self._hass,
-                    self._on_recovery_start_hour,
-                    self.data.recovery_start_hour,
+        if self.data.recovery_start_hour:
+            recovery_start = self.data.recovery_start_hour
+            if recovery_start.tzinfo is None:
+                recovery_start = dt_util.as_local(recovery_start)
+            if recovery_start > now:
+                self._unsub_time_triggers.append(
+                    async_track_point_in_time(
+                        self._hass,
+                        self._on_recovery_start_hour,
+                        recovery_start,
+                    )
                 )
-            )
 
         # Trigger pour recovery_update_hour (mise à jour calcul)
-        if self.data.recovery_update_hour and self.data.recovery_update_hour > now:
-            self._unsub_time_triggers.append(
-                async_track_point_in_time(
-                    self._hass,
-                    self._on_recovery_update_hour,
-                    self.data.recovery_update_hour,
+        if self.data.recovery_update_hour:
+            recovery_update = self.data.recovery_update_hour
+            if recovery_update.tzinfo is None:
+                recovery_update = dt_util.as_local(recovery_update)
+            if recovery_update > now:
+                self._unsub_time_triggers.append(
+                    async_track_point_in_time(
+                        self._hass,
+                        self._on_recovery_update_hour,
+                        recovery_update,
+                    )
                 )
-            )
 
     def _cancel_time_triggers(self) -> None:
         """Annule les déclencheurs horaires"""
@@ -497,7 +505,7 @@ class SmartHRTCoordinator:
             _LOGGER.info("SmartHRT: Initialisation des constantes à 50")
 
         # Enregistre les valeurs courantes
-        self.data.time_recovery_calc = datetime.now()
+        self.data.time_recovery_calc = dt_util.now()
         self.data.temp_recovery_calc = self.data.interior_temp or 17.0
         self.data.text_recovery_calc = self.data.exterior_temp or 0.0
 
@@ -716,8 +724,8 @@ class SmartHRTCoordinator:
             return
         try:
             alarm_dt = datetime.fromisoformat(self.data.phone_alarm)
-            tomorrow = (datetime.now() + timedelta(days=1)).date()
-            if alarm_dt.date() in (datetime.now().date(), tomorrow):
+            tomorrow = (dt_util.now() + timedelta(days=1)).date()
+            if alarm_dt.date() in (dt_util.now().date(), tomorrow):
                 self.data.target_hour = alarm_dt.time()
                 self.calculate_recovery_time()
                 self._notify_listeners()
@@ -771,7 +779,7 @@ class SmartHRTCoordinator:
         rcth = self._get_interpolated_rcth(wind_kmh)
         rpth = self._get_interpolated_rpth(wind_kmh)
 
-        now = datetime.now()
+        now = dt_util.now()
         target_dt = now.replace(
             hour=self.data.target_hour.hour,
             minute=self.data.target_hour.minute,
@@ -836,7 +844,7 @@ class SmartHRTCoordinator:
         if self.data.recovery_start_hour is None:
             return None
 
-        now = datetime.now()
+        now = dt_util.now()
         recovery_time = self.data.recovery_start_hour
         if recovery_time < now:
             recovery_time += timedelta(days=1)
@@ -864,9 +872,7 @@ class SmartHRTCoordinator:
         tint, text = self.data.interior_temp, self.data.exterior_temp
         tint_off, text_off = self.data.temp_recovery_calc, self.data.text_recovery_calc
 
-        dt_hours = (
-            datetime.now() - self.data.time_recovery_calc
-        ).total_seconds() / 3600
+        dt_hours = (dt_util.now() - self.data.time_recovery_calc).total_seconds() / 3600
         if dt_hours < 0:
             dt_hours += 24
 
@@ -1017,7 +1023,7 @@ class SmartHRTCoordinator:
         if self.data.time_recovery_calc is None:
             return
 
-        now = datetime.now()
+        now = dt_util.now()
 
         # Calculer la durée du lag
         self.data.stop_lag_duration = min(
@@ -1043,7 +1049,7 @@ class SmartHRTCoordinator:
 
     def on_heating_stop(self) -> None:
         """Appelé quand le chauffage s'arrête (service manuel)"""
-        self.data.time_recovery_calc = datetime.now()
+        self.data.time_recovery_calc = dt_util.now()
         self.data.temp_recovery_calc = self.data.interior_temp or 17.0
         self.data.text_recovery_calc = self.data.exterior_temp or 0.0
         self.data.temp_lag_detection_active = True
@@ -1054,7 +1060,7 @@ class SmartHRTCoordinator:
         """Appelé au début de la relance
         Équivalent de l'automation 'boostTIME' du YAML
         """
-        self.data.time_recovery_start = datetime.now()
+        self.data.time_recovery_start = dt_util.now()
         self.data.temp_recovery_start = self.data.interior_temp or 17.0
         self.data.text_recovery_start = self.data.exterior_temp or 0.0
 
@@ -1078,7 +1084,7 @@ class SmartHRTCoordinator:
         if not self.data.rp_calc_mode:
             return
 
-        self.data.time_recovery_end = datetime.now()
+        self.data.time_recovery_end = dt_util.now()
         self.data.temp_recovery_end = self.data.interior_temp or 17.0
         self.data.text_recovery_end = self.data.exterior_temp or 0.0
 

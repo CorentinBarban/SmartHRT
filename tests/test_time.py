@@ -4,6 +4,7 @@ from datetime import time as dt_time, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
+from homeassistant.util import dt as dt_util
 
 from homeassistant.helpers.device_registry import DeviceEntryType
 
@@ -98,7 +99,7 @@ class TestSmartHRTRecoveryStartHourTime:
         self, mock_coordinator_with_data, mock_config_entry
     ):
         """Test de la valeur native avec une datetime."""
-        recovery_time = datetime.now().replace(
+        recovery_time = dt_util.now().replace(
             hour=5, minute=30, second=0, microsecond=0
         )
         mock_coordinator_with_data.data.recovery_start_hour = recovery_time
@@ -140,7 +141,7 @@ class TestSmartHRTRecoveryUpdateHourTime:
         """Test de la valeur native avec une datetime."""
         from custom_components.SmartHRT.time import SmartHRTRecoveryUpdateHourTime
 
-        update_time = datetime.now().replace(hour=2, minute=45, second=0, microsecond=0)
+        update_time = dt_util.now().replace(hour=2, minute=45, second=0, microsecond=0)
         mock_coordinator_with_data.data.recovery_update_hour = update_time
         time_entity = SmartHRTRecoveryUpdateHourTime(
             mock_coordinator_with_data, mock_config_entry
