@@ -134,7 +134,9 @@ class SmartHRTCoordinator:
         self._listeners: list[Callable[[], None]] = []
         self._unsub_listeners: list = []
         self._unsub_time_triggers: list = []
-        self._unsub_recovery_update: Callable | None = None  # Tracker pour recovery_update
+        self._unsub_recovery_update: Callable | None = (
+            None  # Tracker pour recovery_update
+        )
 
         self.data = SmartHRTData(
             name=entry.data.get(CONF_NAME, "SmartHRT"),
@@ -577,6 +579,8 @@ class SmartHRTCoordinator:
         if update_time:
             self.data.recovery_update_hour = update_time
             self._schedule_recovery_update(update_time)
+
+        self._notify_listeners()
 
     def _reschedule_recoverycalc_hour(self) -> None:
         """Reprogramme le déclencheur recoverycalc_hour pour le lendemain"""
