@@ -120,6 +120,48 @@ class TestSmartHRTRecoveryStartHourTime:
         assert time_entity.native_value is None
 
 
+class TestSmartHRTRecoveryUpdateHourTime:
+    """Tests pour l'entité time de l'heure de mise à jour du calcul."""
+
+    def test_properties(self, mock_coordinator, mock_config_entry):
+        """Test des propriétés."""
+        from custom_components.SmartHRT.time import SmartHRTRecoveryUpdateHourTime
+
+        time_entity = SmartHRTRecoveryUpdateHourTime(
+            mock_coordinator, mock_config_entry
+        )
+
+        assert time_entity._attr_name == "Heure prochaine mise à jour calcul"
+        assert time_entity.icon == "mdi:update"
+
+    def test_native_value_with_datetime(
+        self, mock_coordinator_with_data, mock_config_entry
+    ):
+        """Test de la valeur native avec une datetime."""
+        from custom_components.SmartHRT.time import SmartHRTRecoveryUpdateHourTime
+
+        update_time = datetime.now().replace(hour=2, minute=45, second=0, microsecond=0)
+        mock_coordinator_with_data.data.recovery_update_hour = update_time
+        time_entity = SmartHRTRecoveryUpdateHourTime(
+            mock_coordinator_with_data, mock_config_entry
+        )
+
+        result = time_entity.native_value
+        assert result.hour == 2
+        assert result.minute == 45
+
+    def test_native_value_none(self, mock_coordinator_with_data, mock_config_entry):
+        """Test quand l'heure de mise à jour est None."""
+        from custom_components.SmartHRT.time import SmartHRTRecoveryUpdateHourTime
+
+        mock_coordinator_with_data.data.recovery_update_hour = None
+        time_entity = SmartHRTRecoveryUpdateHourTime(
+            mock_coordinator_with_data, mock_config_entry
+        )
+
+        assert time_entity.native_value is None
+
+
 class TestSmartHRTBaseTime:
     """Tests pour la classe de base SmartHRTBaseTime."""
 
@@ -155,11 +197,12 @@ class TestAsyncSetupEntry:
 
         await async_setup_entry(mock_hass, mock_config_entry, mock_add_entities)
 
-        # Vérifier que 3 entités ont été ajoutées
-        assert len(entities_added) == 3
+        # Vérifier que 4 entités ont été ajoutées
+        assert len(entities_added) == 4
 
         # Vérifier les types d'entités
         entity_types = [type(e).__name__ for e in entities_added]
         assert "SmartHRTTargetHourTime" in entity_types
         assert "SmartHRTRecoveryCalcHourTime" in entity_types
         assert "SmartHRTRecoveryStartHourTime" in entity_types
+        assert "SmartHRTRecoveryUpdateHourTime" in entity_types
