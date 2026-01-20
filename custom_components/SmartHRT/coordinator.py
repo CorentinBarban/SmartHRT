@@ -188,16 +188,14 @@ class SmartHRTCoordinator:
             self._schedule_recovery_start(self.data.recovery_start_hour)
 
         # Programmer la première mise à jour de recovery_update_hour
-        # Calculé dès qu'un recovery_start_hour est disponible, même si recovery_calc_mode est off
+        # Le trigger est toujours programmé pour maintenir la chaîne de mises à jour active
         if self.data.smartheating_mode and self.data.recovery_start_hour:
             update_time = await self._hass.async_add_executor_job(
                 self.calculate_recovery_update_time
             )
             if update_time:
                 self.data.recovery_update_hour = update_time
-                # Ne programmer le trigger que si recovery_calc_mode est actif
-                if self.data.recovery_calc_mode:
-                    self._schedule_recovery_update(update_time)
+                self._schedule_recovery_update(update_time)
 
     def _setup_listeners(self) -> None:
         """Configure les listeners pour les capteurs"""
@@ -562,14 +560,14 @@ class SmartHRTCoordinator:
         ):
             self._schedule_recovery_start(self.data.recovery_start_hour)
 
-        # Programmer la mise à jour de recovery_update_hour si calcul actif
-        if self.data.recovery_calc_mode:
-            update_time = await self._hass.async_add_executor_job(
-                self.calculate_recovery_update_time
-            )
-            if update_time:
-                self.data.recovery_update_hour = update_time
-                self._schedule_recovery_update(update_time)
+        # Toujours programmer la mise à jour de recovery_update_hour
+        # pour maintenir la chaîne de mises à jour active
+        update_time = await self._hass.async_add_executor_job(
+            self.calculate_recovery_update_time
+        )
+        if update_time:
+            self.data.recovery_update_hour = update_time
+            self._schedule_recovery_update(update_time)
 
         self._reschedule_recoverycalc_hour()
         self._notify_listeners()
@@ -603,7 +601,7 @@ class SmartHRTCoordinator:
         """Appelé pour mettre à jour le calcul de l'heure de relance
         Équivalent de l'automation 'Nth_RECOVERY_calc' du YAML
         """
-        if not self.data.smartheating_mode or not self.data.recovery_calc_mode:
+        if not self.data.smartheating_mode:
             return
 
         _LOGGER.debug("SmartHRT: Mise à jour du calcul de relance")
@@ -615,18 +613,22 @@ class SmartHRTCoordinator:
         # Sauvegarder l'heure de relance avant calcul
         prev_recovery_start = self.data.recovery_start_hour
 
-        await self._hass.async_add_executor_job(self.calculate_rcth_fast)
-        await self._hass.async_add_executor_job(self.calculate_recovery_time)
+        # N'exécuter les calculs que si recovery_calc_mode est actif
+        if self.data.recovery_calc_mode:
+            await self._hass.async_add_executor_job(self.calculate_rcth_fast)
+            await self._hass.async_add_executor_job(self.calculate_recovery_time)
 
-        # Programmer le trigger de relance si nécessaire (depuis le thread principal)
-        now = dt_util.now()
-        if (
-            self.data.recovery_start_hour
-            and prev_recovery_start != self.data.recovery_start_hour
-            and self.data.recovery_start_hour > now
-        ):
-            self._schedule_recovery_start(self.data.recovery_start_hour)
+            # Programmer le trigger de relance si nécessaire (depuis le thread principal)
+            now = dt_util.now()
+            if (
+                self.data.recovery_start_hour
+                and prev_recovery_start != self.data.recovery_start_hour
+                and self.data.recovery_start_hour > now
+            ):
+                self._schedule_recovery_start(self.data.recovery_start_hour)
 
+        # Toujours reprogrammer le prochain trigger de mise à jour
+        # pour maintenir la chaîne active même si recovery_calc_mode est off
         update_time = await self._hass.async_add_executor_job(
             self.calculate_recovery_update_time
         )
@@ -634,6 +636,7 @@ class SmartHRTCoordinator:
         if update_time:
             self.data.recovery_update_hour = update_time
             self._schedule_recovery_update(update_time)
+            _LOGGER.debug("SmartHRT: Prochaine mise à jour programmée: %s", update_time)
 
         self._notify_listeners()
 
@@ -923,16 +926,32 @@ class SmartHRTCoordinator:
     def calculate_recovery_update_time(self) -> datetime | None:
         """Calcule l'heure de mise à jour de la relance
         Équivalent du script calculate_recoveryupdate_time du YAML
+
+        La logique (identique au YAML):
+        - Reconstruit recoverystart_time à partir de l'heure de recovery_start_hour
+        - Calcule le temps restant avant la relance
+        - Reprogramme dans max(time_remaining/3, 0) secondes, plafonné à 1200s (20min)
+        - À moins de 30min avant la relance, arrête en programmant dans 3600s
         """
         if self.data.recovery_start_hour is None:
             return None
 
         now = dt_util.now()
-        recovery_time = self.data.recovery_start_hour
-        if recovery_time < now:
-            recovery_time += timedelta(days=1)
 
-        time_remaining = (recovery_time - now).total_seconds()
+        # Comme dans le YAML: reconstruire recoverystart_time depuis l'heure
+        # de recovery_start_hour (pas le datetime complet)
+        recovery_hour = self.data.recovery_start_hour.hour
+        recovery_minute = self.data.recovery_start_hour.minute
+        recoverystart_time = now.replace(
+            hour=recovery_hour,
+            minute=recovery_minute,
+            second=0,
+            microsecond=0,
+        )
+        if recoverystart_time < now:
+            recoverystart_time += timedelta(days=1)
+
+        time_remaining = (recoverystart_time - now).total_seconds()
 
         # Recalcule pas plus tard que dans 1200s (20min)
         # À moins de 30min avant la relance on arrête
@@ -941,7 +960,16 @@ class SmartHRTCoordinator:
         else:
             seconds = min(max(time_remaining / 3, 0), 1200)
 
-        return now + timedelta(seconds=seconds)
+        update_time = now + timedelta(seconds=seconds)
+
+        _LOGGER.debug(
+            "Recovery update time calculated: %s (time_remaining=%.0fs, seconds=%.0fs)",
+            update_time,
+            time_remaining,
+            seconds,
+        )
+
+        return update_time
 
     def calculate_rcth_fast(self) -> None:
         """Calcule l'évolution dynamique de RCth"""
