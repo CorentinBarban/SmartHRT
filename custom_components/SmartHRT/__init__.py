@@ -1,4 +1,5 @@
 """Initialisation du package de l'intégration SmartHRT"""
+
 import logging
 
 from homeassistant.core import HomeAssistant
@@ -8,6 +9,38 @@ from .const import DOMAIN, PLATFORMS, DATA_COORDINATOR
 from .coordinator import SmartHRTCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+
+# Version du schéma de configuration
+CONFIG_ENTRY_VERSION = 1
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate old entry to current version.
+
+    Cette fonction est appelée par Home Assistant si la version
+    de l'entrée de configuration est différente de CONFIG_ENTRY_VERSION.
+    """
+    _LOGGER.debug(
+        "Migrating SmartHRT config entry from version %s to %s",
+        entry.version,
+        CONFIG_ENTRY_VERSION,
+    )
+
+    if entry.version > CONFIG_ENTRY_VERSION:
+        # Downgrade non supporté
+        _LOGGER.error(
+            "Cannot downgrade SmartHRT config entry from version %s to %s",
+            entry.version,
+            CONFIG_ENTRY_VERSION,
+        )
+        return False
+
+    # Exemple de migration future:
+    # if entry.version == 1:
+    #     new_data = {**entry.data, "new_field": "default_value"}
+    #     hass.config_entries.async_update_entry(entry, data=new_data, version=2)
+
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

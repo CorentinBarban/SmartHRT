@@ -61,7 +61,11 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
     # La version de notre configFlow. Va permettre de migrer les entités
     # vers une version plus récente en cas de changement
     VERSION = 1
-    _user_inputs: dict = {}
+
+    def __init__(self) -> None:
+        """Initialize the config flow."""
+        super().__init__()
+        self._user_inputs: dict[str, Any] = {}
 
     @staticmethod
     @callback
@@ -97,6 +101,10 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
         )
         # On mémorise les user_input
         self._user_inputs.update(user_input)
+
+        # Vérifier les entrées dupliquées basées sur le nom
+        await self.async_set_unique_id(user_input[CONF_NAME])
+        self._abort_if_unique_id_configured()
 
         # On appelle le step 2 (configuration des capteurs)
         return await self.async_step_sensors()
@@ -165,15 +173,12 @@ class SmartHRTOptionsFlow(OptionsFlow):
     """La classe qui implémente le option flow pour SmartHRT.
     Elle doit dériver de OptionsFlow"""
 
-    _user_inputs: dict = {}
-    # Pour mémoriser la config en cours
-    config_entry: ConfigEntry = None  # type: ignore
-
     def __init__(self, config_entry: ConfigEntry) -> None:
         """Initialisation de l'option flow. On a le ConfigEntry existant en entrée"""
-        self.config_entry = config_entry
+        super().__init__()
+        self._config_entry = config_entry
         # On initialise les user_inputs avec les données du configEntry
-        self._user_inputs = config_entry.data.copy()
+        self._user_inputs: dict[str, Any] = dict(config_entry.data)
 
     async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
         """Gestion de l'étape 'init'. Point d'entrée du optionsFlow."""
@@ -229,18 +234,17 @@ class SmartHRTOptionsFlow(OptionsFlow):
         # On appelle le step de fin pour enregistrer les modifications
         return await self.async_end()  # pyright: ignore[reportReturnType]
 
-    async def async_end(self):
+    async def async_end(self) -> FlowResult:
         """Finalization of the ConfigEntry creation"""
         _LOGGER.info(
             "Recreation de l'entry %s. La nouvelle config est maintenant : %s",
-            self.config_entry.entry_id,
+            self._config_entry.entry_id,
             self._user_inputs,
         )
         # Modification des data de la configEntry
         # (et non pas ajout d'un objet options dans la configEntry)
         self.hass.config_entries.async_update_entry(
-            self.config_entry, data=self._user_inputs
+            self._config_entry, data=self._user_inputs
         )
-        # Suppression de l'objet options dans la configEntry
-        # pyright: ignore[reportArgumentType]
-        return self.async_create_entry(title=None, data=None)  # type: ignore
+        # Retourne un entry vide pour finaliser le flow
+        return self.async_create_entry(title="", data={})

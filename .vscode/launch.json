@@ -1,39 +1,39 @@
 {
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-      {
-        // Example of attaching to local debug server
-        "name": "Python: Attach Local",
-        "type": "debugpy",
-        "request": "attach",
-        "connect": {
-          "host": "localhost",
-          "port": 5678
-        },
-        "pathMappings": [
-          {
-            "localRoot": "${workspaceFolder}",
-            "remoteRoot": "."
-          }
-        ]
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // Attach to Home Assistant running with debugpy
+      "name": "Python: Attach to Home Assistant",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
       },
-      {
-        // Example of attaching to my production server
-        "name": "Python: Attach Remote",
-        "type": "debugpy",
-        "request": "attach",
-        "connect": {
-          "host": "homeassistant.local",
-          "port": 5678
-        },
-        "pathMappings": [
-          {
-            "localRoot": "${workspaceFolder}",
-            "remoteRoot": "/usr/src/homeassistant"
-          }
-        ]
-      }
-    ]
-  }
-  
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/custom_components",
+          "remoteRoot": "${workspaceFolder}/custom_components"
+        }
+      ],
+      "justMyCode": false
+    },
+    {
+      // Example of attaching to my production server
+      "name": "Python: Attach Remote",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "homeassistant.local",
+        "port": 5678
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}",
+          "remoteRoot": "/usr/src/homeassistant"
+        }
+      ]
+    }
+  ]
+}

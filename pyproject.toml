@@ -22,6 +22,7 @@ addopts = "-v --tb=short"
 
 [dependency-groups]
 dev = [
+    "debugpy>=1.8.19",
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",

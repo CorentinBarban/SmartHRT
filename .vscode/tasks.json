@@ -6,6 +6,17 @@
       "type": "shell",
       "command": "uv run .devcontainer/hass.sh",
       "problemMatcher": []
+    },
+    {
+      "label": "Run Home Assistant with Debugger (port 5678)",
+      "type": "shell",
+      "command": "uv run .devcontainer/hass_debug.sh",
+      "problemMatcher": [],
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
     }
   ]
 }

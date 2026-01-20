@@ -178,14 +178,26 @@ class SmartHRTCoordinator:
         self._setup_time_triggers()
         await self._register_services()
         await self._update_weather_forecasts()
-        self.calculate_recovery_time()
+
+        # Calcul initial de l'heure de relance
+        await self._hass.async_add_executor_job(self.calculate_recovery_time)
+
+        # Programmer le trigger de relance si nécessaire
+        now = dt_util.now()
+        if self.data.recovery_start_hour and self.data.recovery_start_hour > now:
+            self._schedule_recovery_start(self.data.recovery_start_hour)
 
         # Programmer la première mise à jour de recovery_update_hour
-        if self.data.smartheating_mode and self.data.recovery_calc_mode:
-            update_time = self.calculate_recovery_update_time()
+        # Calculé dès qu'un recovery_start_hour est disponible, même si recovery_calc_mode est off
+        if self.data.smartheating_mode and self.data.recovery_start_hour:
+            update_time = await self._hass.async_add_executor_job(
+                self.calculate_recovery_update_time
+            )
             if update_time:
                 self.data.recovery_update_hour = update_time
-                self._schedule_recovery_update(update_time)
+                # Ne programmer le trigger que si recovery_calc_mode est actif
+                if self.data.recovery_calc_mode:
+                    self._schedule_recovery_update(update_time)
 
     def _setup_listeners(self) -> None:
         """Configure les listeners pour les capteurs"""
@@ -379,6 +391,10 @@ class SmartHRTCoordinator:
         if not coord:
             return {"success": False, "error": "Coordinator not found"}
         result = coord.calculate_recovery_update_time()
+        if result:
+            coord.data.recovery_update_hour = result
+            coord._schedule_recovery_update(result)
+            coord._notify_listeners()
         return {
             "recovery_update_hour": result.isoformat() if result else None,
             "success": True,
@@ -531,8 +547,20 @@ class SmartHRTCoordinator:
         # Active la détection du lag de température
         self.data.temp_lag_detection_active = True
 
+        # Sauvegarder l'heure de relance avant calcul
+        prev_recovery_start = self.data.recovery_start_hour
+
         # Exécuter les calculs lourds dans un exécuteur
         await self._hass.async_add_executor_job(self.calculate_recovery_time)
+
+        # Programmer le trigger de relance si nécessaire (depuis le thread principal)
+        now = dt_util.now()
+        if (
+            self.data.recovery_start_hour
+            and prev_recovery_start != self.data.recovery_start_hour
+            and self.data.recovery_start_hour > now
+        ):
+            self._schedule_recovery_start(self.data.recovery_start_hour)
 
         # Programmer la mise à jour de recovery_update_hour si calcul actif
         if self.data.recovery_calc_mode:
@@ -584,8 +612,21 @@ class SmartHRTCoordinator:
 
     async def _async_on_recovery_update_hour(self) -> None:
         """Exécute les calculs lourds de mise à jour dans un exécuteur"""
+        # Sauvegarder l'heure de relance avant calcul
+        prev_recovery_start = self.data.recovery_start_hour
+
         await self._hass.async_add_executor_job(self.calculate_rcth_fast)
         await self._hass.async_add_executor_job(self.calculate_recovery_time)
+
+        # Programmer le trigger de relance si nécessaire (depuis le thread principal)
+        now = dt_util.now()
+        if (
+            self.data.recovery_start_hour
+            and prev_recovery_start != self.data.recovery_start_hour
+            and self.data.recovery_start_hour > now
+        ):
+            self._schedule_recovery_start(self.data.recovery_start_hour)
+
         update_time = await self._hass.async_add_executor_job(
             self.calculate_recovery_update_time
         )
@@ -810,8 +851,8 @@ class SmartHRTCoordinator:
         Équivalent du script calculate_recovery_time du YAML
         Utilise les prévisions météo pour le calcul
         """
-        if self.data.interior_temp is None:
-            return
+        # Utiliser 17°C par défaut si la température intérieure n'est pas disponible (comme dans le YAML)
+        tint = self.data.interior_temp if self.data.interior_temp is not None else 17.0
 
         # Utiliser les prévisions météo comme dans le YAML
         text = (
@@ -819,7 +860,6 @@ class SmartHRTCoordinator:
             if self.data.temperature_forecast_avg
             else (self.data.exterior_temp or 0.0)
         )
-        tint = self.data.interior_temp
         tsp = self.data.tsp
 
         # Utiliser les prévisions de vent
@@ -871,12 +911,8 @@ class SmartHRTCoordinator:
             seconds=int(duree_relance * 3600)
         )
 
-        # Si l'heure de relance a changé, reprogrammer le trigger
-        if (
-            prev_recovery_start != self.data.recovery_start_hour
-            and self.data.recovery_start_hour > now
-        ):
-            self._schedule_recovery_start(self.data.recovery_start_hour)
+        # Note: Le scheduling du trigger est fait dans le contexte async appelant
+        # car async_track_point_in_time doit être appelé depuis le thread principal
 
         _LOGGER.debug(
             "Recovery time: %s (%.2fh avant target)",
@@ -1089,6 +1125,12 @@ class SmartHRTCoordinator:
         self.data.temp_lag_detection_active = False
 
         self.calculate_recovery_time()
+
+        # Calculer et programmer la prochaine mise à jour (comme dans le YAML)
+        update_time = self.calculate_recovery_update_time()
+        if update_time:
+            self.data.recovery_update_hour = update_time
+            self._schedule_recovery_update(update_time)
 
         _LOGGER.info(
             "SmartHRT: Baisse de température détectée après %.0fs de lag",

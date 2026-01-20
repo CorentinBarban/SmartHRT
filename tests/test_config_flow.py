@@ -63,6 +63,8 @@ class TestSmartHRTConfigFlow:
         """Create a config flow instance."""
         flow = SmartHRTConfigFlow()
         flow.hass = MagicMock()
+        # Add context dict for async_set_unique_id
+        flow.context = {}
         return flow
 
     @pytest.mark.asyncio
@@ -76,9 +78,15 @@ class TestSmartHRTConfigFlow:
     @pytest.mark.asyncio
     async def test_async_step_user_with_input(self, config_flow):
         """Test de async_step_user avec user_input."""
-        with patch.object(
-            config_flow, "async_step_sensors", new_callable=AsyncMock
-        ) as mock_sensors:
+        with (
+            patch.object(
+                config_flow, "async_step_sensors", new_callable=AsyncMock
+            ) as mock_sensors,
+            patch.object(
+                config_flow, "async_set_unique_id", new_callable=AsyncMock
+            ) as mock_set_unique_id,
+            patch.object(config_flow, "_abort_if_unique_id_configured") as mock_abort,
+        ):
             mock_sensors.return_value = {
                 "type": FlowResultType.FORM,
                 "step_id": "sensors",
@@ -86,6 +94,8 @@ class TestSmartHRTConfigFlow:
 
             result = await config_flow.async_step_user({CONF_NAME: "Test SmartHRT"})
 
+            mock_set_unique_id.assert_called_once_with("Test SmartHRT")
+            mock_abort.assert_called_once()
             mock_sensors.assert_called_once()
             assert config_flow._user_inputs[CONF_NAME] == "Test SmartHRT"
 
@@ -165,7 +175,7 @@ class TestSmartHRTOptionsFlow:
 
     def test_options_flow_init(self, options_flow, mock_config_entry):
         """Test de l'initialisation du options flow."""
-        assert options_flow.config_entry == mock_config_entry
+        assert options_flow._config_entry == mock_config_entry
         assert options_flow._user_inputs[CONF_NAME] == "Test SmartHRT"
 
     @pytest.mark.asyncio
@@ -209,6 +219,7 @@ class TestConfigFlowIntegration:
         """Test du flux complet de configuration."""
         flow = SmartHRTConfigFlow()
         flow.hass = MagicMock()
+        flow.context = {}
 
         # Étape 1: user
         result1 = await flow.async_step_user(None)
@@ -216,9 +227,13 @@ class TestConfigFlowIntegration:
         assert result1["step_id"] == "user"
 
         # Étape 2: user avec input
-        with patch.object(
-            flow, "async_step_sensors", new_callable=AsyncMock
-        ) as mock_sensors:
+        with (
+            patch.object(
+                flow, "async_step_sensors", new_callable=AsyncMock
+            ) as mock_sensors,
+            patch.object(flow, "async_set_unique_id", new_callable=AsyncMock),
+            patch.object(flow, "_abort_if_unique_id_configured"),
+        ):
             mock_sensors.return_value = {
                 "type": FlowResultType.FORM,
                 "step_id": "sensors",
