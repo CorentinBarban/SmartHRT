@@ -16,6 +16,7 @@ from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_point_in_time,
 )
+from homeassistant.helpers.storage import Store
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.util import dt as dt_util
 
@@ -39,10 +40,20 @@ from .const import (
     SERVICE_ON_HEATING_STOP,
     SERVICE_ON_RECOVERY_START,
     SERVICE_ON_RECOVERY_END,
+    SERVICE_RESET_LEARNING,
+    SERVICE_TRIGGER_CALCULATION,
     DATA_COORDINATOR,
     FORECAST_HOURS,
     TEMP_DECREASE_THRESHOLD,
     DEFAULT_RECOVERYCALC_HOUR,
+    STORAGE_KEY_RCTH,
+    STORAGE_KEY_RPTH,
+    STORAGE_KEY_RCTH_LW,
+    STORAGE_KEY_RCTH_HW,
+    STORAGE_KEY_RPTH_LW,
+    STORAGE_KEY_RPTH_HW,
+    STORAGE_KEY_LAST_RCTH_ERROR,
+    STORAGE_KEY_LAST_RPTH_ERROR,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -55,7 +66,24 @@ SERVICES = [
     SERVICE_ON_HEATING_STOP,
     SERVICE_ON_RECOVERY_START,
     SERVICE_ON_RECOVERY_END,
+    SERVICE_RESET_LEARNING,
+    SERVICE_TRIGGER_CALCULATION,
 ]
+
+
+# Machine à états explicite selon les spécifications
+class SmartHRTState:
+    """États de la machine à états SmartHRT.
+
+    Cycle de vie:
+    HEATING_ON → DETECTING_LAG → MONITORING → RECOVERY → HEATING_PROCESS → HEATING_ON
+    """
+
+    HEATING_ON = "heating_on"  # État 1: Journée, chauffage actif
+    DETECTING_LAG = "detecting_lag"  # État 2: Attente baisse de température (-0.2°C)
+    MONITORING = "monitoring"  # État 3: Surveillance nocturne, calculs récurrents
+    RECOVERY = "recovery"  # État 4: Moment de la relance, calcul RCth
+    HEATING_PROCESS = "heating_process"  # État 5: Montée en température, calcul RPth
 
 
 @dataclass
@@ -68,7 +96,10 @@ class SmartHRTData:
     target_hour: dt_time = field(default_factory=lambda: dt_time(6, 0, 0))
     recoverycalc_hour: dt_time = field(default_factory=lambda: dt_time(23, 0, 0))
 
-    # Modes
+    # État courant de la machine à états
+    current_state: str = SmartHRTState.HEATING_ON
+
+    # Modes (conservés pour compatibilité)
     smartheating_mode: bool = True
     recovery_adaptive_mode: bool = True
     recovery_calc_mode: bool = False
@@ -124,9 +155,15 @@ class SmartHRTData:
         default_factory=lambda: deque(maxlen=240)
     )  # 4h à 1 sample/min
 
+    # Erreurs du dernier cycle (pour diagnostic)
+    last_rcth_error: float = 0.0
+    last_rpth_error: float = 0.0
+
 
 class SmartHRTCoordinator:
     """Coordinateur central pour SmartHRT"""
+
+    STORAGE_VERSION = 1
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         self._hass = hass
@@ -136,6 +173,10 @@ class SmartHRTCoordinator:
         self._unsub_time_triggers: list = []
         self._unsub_recovery_update: Callable | None = (
             None  # Tracker pour recovery_update
+        )
+        # Persistent storage for learned coefficients
+        self._store: Store = Store(
+            hass, self.STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}"
         )
 
         self.data = SmartHRTData(
@@ -173,6 +214,9 @@ class SmartHRTCoordinator:
             self.data.recoverycalc_hour,
         )
 
+        # Restore learned coefficients from storage
+        await self._restore_learned_data()
+
         await self._update_initial_states()
         self._setup_listeners()
         self._setup_time_triggers()
@@ -196,6 +240,57 @@ class SmartHRTCoordinator:
             if update_time:
                 self.data.recovery_update_hour = update_time
                 self._schedule_recovery_update(update_time)
+
+    async def _restore_learned_data(self) -> None:
+        """Restore learned coefficients from persistent storage.
+
+        This ensures that learned thermal constants (RCth, RPth) survive
+        Home Assistant restarts, as specified in the requirements.
+        """
+        stored_data = await self._store.async_load()
+        if stored_data:
+            _LOGGER.info("Restoring learned coefficients from storage")
+            self.data.rcth = stored_data.get(STORAGE_KEY_RCTH, DEFAULT_RCTH)
+            self.data.rpth = stored_data.get(STORAGE_KEY_RPTH, DEFAULT_RPTH)
+            self.data.rcth_lw = stored_data.get(STORAGE_KEY_RCTH_LW, DEFAULT_RCTH)
+            self.data.rcth_hw = stored_data.get(STORAGE_KEY_RCTH_HW, DEFAULT_RCTH)
+            self.data.rpth_lw = stored_data.get(STORAGE_KEY_RPTH_LW, DEFAULT_RPTH)
+            self.data.rpth_hw = stored_data.get(STORAGE_KEY_RPTH_HW, DEFAULT_RPTH)
+            self.data.last_rcth_error = stored_data.get(
+                STORAGE_KEY_LAST_RCTH_ERROR, 0.0
+            )
+            self.data.last_rpth_error = stored_data.get(
+                STORAGE_KEY_LAST_RPTH_ERROR, 0.0
+            )
+            _LOGGER.debug(
+                "Restored: rcth=%.2f, rpth=%.2f, rcth_lw=%.2f, rcth_hw=%.2f, rpth_lw=%.2f, rpth_hw=%.2f",
+                self.data.rcth,
+                self.data.rpth,
+                self.data.rcth_lw,
+                self.data.rcth_hw,
+                self.data.rpth_lw,
+                self.data.rpth_hw,
+            )
+        else:
+            _LOGGER.debug("No stored learned data found, using defaults")
+
+    async def _save_learned_data(self) -> None:
+        """Save learned coefficients to persistent storage.
+
+        Called after each learning cycle to persist the updated coefficients.
+        """
+        data_to_store = {
+            STORAGE_KEY_RCTH: self.data.rcth,
+            STORAGE_KEY_RPTH: self.data.rpth,
+            STORAGE_KEY_RCTH_LW: self.data.rcth_lw,
+            STORAGE_KEY_RCTH_HW: self.data.rcth_hw,
+            STORAGE_KEY_RPTH_LW: self.data.rpth_lw,
+            STORAGE_KEY_RPTH_HW: self.data.rpth_hw,
+            STORAGE_KEY_LAST_RCTH_ERROR: self.data.last_rcth_error,
+            STORAGE_KEY_LAST_RPTH_ERROR: self.data.last_rpth_error,
+        }
+        await self._store.async_save(data_to_store)
+        _LOGGER.debug("Saved learned coefficients to storage")
 
     def _setup_listeners(self) -> None:
         """Configure les listeners pour les capteurs"""
@@ -324,6 +419,8 @@ class SmartHRTCoordinator:
             SERVICE_ON_HEATING_STOP: self._handle_on_heating_stop,
             SERVICE_ON_RECOVERY_START: self._handle_on_recovery_start,
             SERVICE_ON_RECOVERY_END: self._handle_on_recovery_end,
+            SERVICE_RESET_LEARNING: self._handle_reset_learning,
+            SERVICE_TRIGGER_CALCULATION: self._handle_trigger_calculation,
         }
 
         for service_name, handler in handlers.items():
@@ -449,6 +546,50 @@ class SmartHRTCoordinator:
             "success": True,
         }
 
+    async def _handle_reset_learning(self, call: ServiceCall) -> dict[str, Any]:
+        """Reset all learned thermal coefficients to defaults.
+
+        This service allows users to restart the learning process if
+        coefficients become inaccurate (e.g., after home modifications).
+        """
+        coord = self._get_coordinator(call.data.get("entry_id"))
+        if not coord:
+            return {"success": False, "error": "Coordinator not found"}
+
+        await coord.reset_learning()
+        return {
+            "rcth": coord.data.rcth,
+            "rpth": coord.data.rpth,
+            "rcth_lw": coord.data.rcth_lw,
+            "rcth_hw": coord.data.rcth_hw,
+            "rpth_lw": coord.data.rpth_lw,
+            "rpth_hw": coord.data.rpth_hw,
+            "success": True,
+            "message": "Learning reset to defaults",
+        }
+
+    async def _handle_trigger_calculation(self, call: ServiceCall) -> dict[str, Any]:
+        """Manually trigger a recovery time calculation.
+
+        Useful for forcing an immediate recalculation after parameter changes.
+        """
+        coord = self._get_coordinator(call.data.get("entry_id"))
+        if not coord:
+            return {"success": False, "error": "Coordinator not found"}
+
+        await coord._hass.async_add_executor_job(coord.calculate_recovery_time)
+        coord._notify_listeners()
+
+        return {
+            "recovery_start_hour": (
+                coord.data.recovery_start_hour.isoformat()
+                if coord.data.recovery_start_hour
+                else None
+            ),
+            "time_to_recovery_hours": coord.get_time_to_recovery_hours(),
+            "success": True,
+        }
+
     # ─────────────────────────────────────────────────────────────────────────
     # État initial et callbacks
     # ─────────────────────────────────────────────────────────────────────────
@@ -528,7 +669,10 @@ class SmartHRTCoordinator:
         self._hass.async_create_task(self._async_on_recoverycalc_hour())
 
     async def _async_on_recoverycalc_hour(self) -> None:
-        """Exécute les calculs lourds de l'heure de coupure dans un exécuteur"""
+        """Exécute les calculs lourds de l'heure de coupure dans un exécuteur
+
+        Transition: HEATING_ON → DETECTING_LAG (État 1 → État 2)
+        """
         # Initialisation des constantes si première exécution
         if self.data.rcth_lw <= 0:
             self.data.rcth_lw = 50.0
@@ -542,8 +686,10 @@ class SmartHRTCoordinator:
         self.data.temp_recovery_calc = self.data.interior_temp or 17.0
         self.data.text_recovery_calc = self.data.exterior_temp or 0.0
 
-        # Active la détection du lag de température
+        # Transition vers DETECTING_LAG (État 2)
+        self.data.current_state = SmartHRTState.DETECTING_LAG
         self.data.temp_lag_detection_active = True
+        _LOGGER.debug("SmartHRT: Transition vers état DETECTING_LAG")
 
         # Sauvegarder l'heure de relance avant calcul
         prev_recovery_start = self.data.recovery_start_hour
@@ -1067,6 +1213,9 @@ class SmartHRTCoordinator:
             interpol = max(0.1, lw + (hw - lw) * (x + 0.5))
             err = calc - interpol
 
+            # Store error for diagnostics
+            self.data.last_rcth_error = round(err, 3)
+
             lw_new = max(
                 0.1, lw + err * (1 - 5 / 3 * x - 2 * x * x + 8 / 3 * x * x * x)
             )
@@ -1079,6 +1228,9 @@ class SmartHRTCoordinator:
                 self.data.rcth_lw, (hw + relax * hw_new) / (1 + relax)
             )
             self.data.rcth = max(0.1, (self.data.rcth + relax * calc) / (1 + relax))
+
+            # Save updated coefficients to persistent storage
+            self._hass.async_create_task(self._save_learned_data())
         else:
             lw, hw, calc = (
                 self.data.rpth_lw,
@@ -1087,6 +1239,9 @@ class SmartHRTCoordinator:
             )
             interpol = max(0.1, lw + (hw - lw) * (x + 0.5))
             err = calc - interpol
+
+            # Store error for diagnostics
+            self.data.last_rpth_error = round(err, 3)
 
             lw_new = max(
                 0.1, lw + err * (1 - 5 / 3 * x - 2 * x * x + 8 / 3 * x * x * x)
@@ -1102,6 +1257,9 @@ class SmartHRTCoordinator:
             self.data.rpth = min(
                 19999, max(0.1, (self.data.rpth + relax * calc) / (1 + relax))
             )
+
+            # Save updated coefficients to persistent storage
+            self._hass.async_create_task(self._save_learned_data())
 
     # ─────────────────────────────────────────────────────────────────────────
     # Événements chauffage
@@ -1132,6 +1290,8 @@ class SmartHRTCoordinator:
     def _on_temperature_decrease_detected(self) -> None:
         """Appelé quand la température commence réellement à baisser
         Équivalent du trigger 'temperatureDecrease' dans l'automation detect_temperature_lag
+
+        Transition: DETECTING_LAG → MONITORING (État 2 → État 3)
         """
         if self.data.time_recovery_calc is None:
             return
@@ -1148,9 +1308,11 @@ class SmartHRTCoordinator:
         self.data.text_recovery_calc = self.data.exterior_temp or 0.0
         self.data.time_recovery_calc = now
 
-        # Activer le mode calcul et calculer
+        # Transition vers MONITORING (État 3)
+        self.data.current_state = SmartHRTState.MONITORING
         self.data.recovery_calc_mode = True
         self.data.temp_lag_detection_active = False
+        _LOGGER.debug("SmartHRT: Transition vers état MONITORING")
 
         self.calculate_recovery_time()
 
@@ -1178,7 +1340,13 @@ class SmartHRTCoordinator:
     def on_recovery_start(self) -> None:
         """Appelé au début de la relance
         Équivalent de l'automation 'boostTIME' du YAML
+
+        Transition: MONITORING → RECOVERY → HEATING_PROCESS (État 3 → État 4 → État 5)
         """
+        # Transition vers RECOVERY (État 4)
+        self.data.current_state = SmartHRTState.RECOVERY
+        _LOGGER.debug("SmartHRT: Transition vers état RECOVERY")
+
         self.data.time_recovery_start = dt_util.now()
         self.data.temp_recovery_start = self.data.interior_temp or 17.0
         self.data.text_recovery_start = self.data.exterior_temp or 0.0
@@ -1188,6 +1356,10 @@ class SmartHRTCoordinator:
         self.data.rp_calc_mode = True
         self.data.recovery_calc_mode = False
         self.data.temp_lag_detection_active = False
+
+        # Transition vers HEATING_PROCESS (État 5) - chauffage en cours
+        self.data.current_state = SmartHRTState.HEATING_PROCESS
+        _LOGGER.debug("SmartHRT: Transition vers état HEATING_PROCESS")
 
         _LOGGER.info(
             "SmartHRT: Début de relance - Tint=%.1f°C, RCth calculé=%.2f",
@@ -1199,6 +1371,8 @@ class SmartHRTCoordinator:
     def on_recovery_end(self) -> None:
         """Appelé à la fin de la relance (consigne atteinte ou target_hour)
         Équivalent de l'automation 'recoveryendTIME' du YAML
+
+        Transition: HEATING_PROCESS → HEATING_ON (État 5 → État 1)
         """
         if not self.data.rp_calc_mode:
             return
@@ -1210,6 +1384,10 @@ class SmartHRTCoordinator:
         self.calculate_rpth_at_recovery_end()
 
         self.data.rp_calc_mode = False
+
+        # Transition vers HEATING_ON (État 1) - cycle terminé
+        self.data.current_state = SmartHRTState.HEATING_ON
+        _LOGGER.debug("SmartHRT: Transition vers état HEATING_ON - Cycle terminé")
 
         _LOGGER.info(
             "SmartHRT: Fin de relance - Tint=%.1f°C, RPth calculé=%.2f",
@@ -1287,6 +1465,57 @@ class SmartHRTCoordinator:
         self.data.rpth_hw = value
         self.calculate_recovery_time()
         self._notify_listeners()
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Public methods for services
+    # ─────────────────────────────────────────────────────────────────────────
+
+    async def reset_learning(self) -> None:
+        """Reset all learned thermal coefficients to defaults.
+
+        Resets RCth and RPth (and their wind variants) to default values
+        and clears the error tracking. Also clears persistent storage.
+        """
+        _LOGGER.info("SmartHRT: Resetting learned coefficients to defaults")
+        self.data.rcth = DEFAULT_RCTH
+        self.data.rpth = DEFAULT_RPTH
+        self.data.rcth_lw = DEFAULT_RCTH
+        self.data.rcth_hw = DEFAULT_RCTH
+        self.data.rpth_lw = DEFAULT_RPTH
+        self.data.rpth_hw = DEFAULT_RPTH
+        self.data.rcth_calculated = 0.0
+        self.data.rpth_calculated = 0.0
+        self.data.rcth_fast = 0.0
+        self.data.last_rcth_error = 0.0
+        self.data.last_rpth_error = 0.0
+
+        # Save the reset values to storage
+        await self._save_learned_data()
+
+        # Recalculate recovery time with new coefficients
+        self.calculate_recovery_time()
+        self._notify_listeners()
+
+    def get_time_to_recovery_hours(self) -> float | None:
+        """Calculate the time remaining until recovery starts in hours.
+
+        Returns the duration in hours until the heating should start,
+        or None if recovery_start_hour is not set.
+        """
+        if self.data.recovery_start_hour is None:
+            return None
+
+        now = dt_util.now()
+        recovery_time = self.data.recovery_start_hour
+
+        if recovery_time.tzinfo is None:
+            recovery_time = dt_util.as_local(recovery_time)
+
+        delta = recovery_time - now
+        hours = delta.total_seconds() / 3600
+
+        # Return 0 if time has passed
+        return max(0, round(hours, 2))
 
     # ─────────────────────────────────────────────────────────────────────────
     # Listeners

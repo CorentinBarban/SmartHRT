@@ -51,6 +51,8 @@ SERVICE_CALCULATE_RCTH_FAST = "calculate_rcth_fast"
 SERVICE_ON_HEATING_STOP = "on_heating_stop"
 SERVICE_ON_RECOVERY_START = "on_recovery_start"
 SERVICE_ON_RECOVERY_END = "on_recovery_end"
+SERVICE_RESET_LEARNING = "reset_learning"
+SERVICE_TRIGGER_CALCULATION = "trigger_calculation"
 
 # Weather forecast settings
 FORECAST_HOURS = 3
@@ -60,3 +62,13 @@ TEMP_DECREASE_THRESHOLD = 0.2  # °C drop threshold to detect actual cooling sta
 
 # Default recoverycalc hour (23:00)
 DEFAULT_RECOVERYCALC_HOUR = "23:00:00"
+
+# Storage keys for RestoreEntity persistence
+STORAGE_KEY_RCTH = "rcth"
+STORAGE_KEY_RPTH = "rpth"
+STORAGE_KEY_RCTH_LW = "rcth_lw"
+STORAGE_KEY_RCTH_HW = "rcth_hw"
+STORAGE_KEY_RPTH_LW = "rpth_lw"
+STORAGE_KEY_RPTH_HW = "rpth_hw"
+STORAGE_KEY_LAST_RCTH_ERROR = "last_rcth_error"
+STORAGE_KEY_LAST_RPTH_ERROR = "last_rpth_error"

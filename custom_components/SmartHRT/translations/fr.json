@@ -118,6 +118,26 @@
           "description": "L'ID de l'entrée de configuration (optionnel, utilise la première disponible si non spécifié)."
         }
       }
+    },
+    "reset_learning": {
+      "name": "Réinitialiser l'apprentissage",
+      "description": "Réinitialise tous les coefficients thermiques appris (RCth, RPth) à leurs valeurs par défaut.",
+      "fields": {
+        "entry_id": {
+          "name": "ID de l'entrée",
+          "description": "L'ID de l'entrée de configuration (optionnel, utilise la première disponible si non spécifié)."
+        }
+      }
+    },
+    "trigger_calculation": {
+      "name": "Déclencher le calcul",
+      "description": "Déclenche manuellement un recalcul immédiat de l'heure de relance.",
+      "fields": {
+        "entry_id": {
+          "name": "ID de l'entrée",
+          "description": "L'ID de l'entrée de configuration (optionnel, utilise la première disponible si non spécifié)."
+        }
+      }
     }
   }
 }

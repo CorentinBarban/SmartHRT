@@ -84,3 +84,34 @@ on_recovery_end:
       example: "abc123"
       selector:
         text:
+
+reset_learning:
+  name: Reset Learning
+  description: >
+    Resets all learned thermal coefficients (RCth, RPth and their wind variants) 
+    to their default values (50). Use this service if the learned values have 
+    become inaccurate, for example after home modifications or insulation changes.
+    The reset values are also persisted to storage.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: The config entry ID (optional, uses first available if not specified).
+      required: false
+      example: "abc123"
+      selector:
+        text:
+
+trigger_calculation:
+  name: Trigger Calculation
+  description: >
+    Manually triggers an immediate recalculation of the recovery time. 
+    Useful after changing parameters to see the effect immediately 
+    without waiting for the next scheduled calculation.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: The config entry ID (optional, uses first available if not specified).
+      required: false
+      example: "abc123"
+      selector:
+        text:

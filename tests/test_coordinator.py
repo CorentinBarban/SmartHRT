@@ -483,3 +483,90 @@ class TestTemperatureThresholds:
 
         # La relance doit être terminée
         assert coord.data.rp_calc_mode is False
+
+
+class TestNewFeatures:
+    """Tests pour les nouvelles fonctionnalités ajoutées."""
+
+    def test_data_has_error_tracking_fields(self):
+        """Test que SmartHRTData a les champs pour les erreurs."""
+        data = SmartHRTData()
+        assert hasattr(data, "last_rcth_error")
+        assert hasattr(data, "last_rpth_error")
+        assert data.last_rcth_error == 0.0
+        assert data.last_rpth_error == 0.0
+
+    def test_get_time_to_recovery_hours(self, mock_coordinator_with_data):
+        """Test du calcul du temps avant relance."""
+        coord = mock_coordinator_with_data
+
+        # Set recovery start hour to 2 hours from now
+        future_time = dt_util.now() + timedelta(hours=2)
+        coord.data.recovery_start_hour = future_time
+
+        result = coord.get_time_to_recovery_hours()
+
+        # Should be approximately 2 hours (with some tolerance for test execution time)
+        assert result is not None
+        assert 1.9 <= result <= 2.1
+
+    def test_get_time_to_recovery_hours_none(self, mock_coordinator_with_data):
+        """Test du temps avant relance quand non défini."""
+        coord = mock_coordinator_with_data
+        coord.data.recovery_start_hour = None
+
+        result = coord.get_time_to_recovery_hours()
+
+        assert result is None
+
+    def test_get_time_to_recovery_hours_past(self, mock_coordinator_with_data):
+        """Test du temps avant relance quand déjà passé."""
+        coord = mock_coordinator_with_data
+
+        # Set recovery start hour to 1 hour ago
+        past_time = dt_util.now() - timedelta(hours=1)
+        coord.data.recovery_start_hour = past_time
+
+        result = coord.get_time_to_recovery_hours()
+
+        # Should return 0 when time has passed
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_reset_learning(self, mock_coordinator_with_data):
+        """Test de la réinitialisation de l'apprentissage."""
+        coord = mock_coordinator_with_data
+
+        # Set non-default values
+        coord.data.rcth = 75.0
+        coord.data.rpth = 80.0
+        coord.data.rcth_lw = 70.0
+        coord.data.rcth_hw = 65.0
+        coord.data.rpth_lw = 85.0
+        coord.data.rpth_hw = 75.0
+        coord.data.last_rcth_error = 5.0
+        coord.data.last_rpth_error = -3.0
+
+        await coord.reset_learning()
+
+        # All should be reset to defaults
+        assert coord.data.rcth == DEFAULT_RCTH
+        assert coord.data.rpth == DEFAULT_RPTH
+        assert coord.data.rcth_lw == DEFAULT_RCTH
+        assert coord.data.rcth_hw == DEFAULT_RCTH
+        assert coord.data.rpth_lw == DEFAULT_RPTH
+        assert coord.data.rpth_hw == DEFAULT_RPTH
+        assert coord.data.last_rcth_error == 0.0
+        assert coord.data.last_rpth_error == 0.0
+
+    def test_update_coefficients_stores_error(self, mock_coordinator_with_data):
+        """Test que _update_coefficients stocke l'erreur."""
+        coord = mock_coordinator_with_data
+        coord.data.recovery_adaptive_mode = True
+        coord.data.wind_speed = 5.0  # m/s
+        coord.data.rcth_calculated = 60.0  # Different from interpolated
+
+        coord._update_coefficients("rcth")
+
+        # Error should be stored
+        assert coord.data.last_rcth_error != 0.0

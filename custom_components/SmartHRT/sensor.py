@@ -53,6 +53,8 @@ async def async_setup_entry(
         SmartHRTRecoveryCalcModeSensor(coordinator, entry),
         SmartHRTRPCalcModeSensor(coordinator, entry),
         SmartHRTStopLagDurationSensor(coordinator, entry),
+        SmartHRTTimeToRecoverySensor(coordinator, entry),
+        SmartHRTStateSensor(coordinator, entry),
     ]
 
     async_add_entities(entities, True)
@@ -292,6 +294,7 @@ class SmartHRTRCthSensor(SmartHRTBaseSensor):
             "rcth_lw": round(self._coordinator.data.rcth_lw, 2),
             "rcth_hw": round(self._coordinator.data.rcth_hw, 2),
             "rcth_calculated": round(self._coordinator.data.rcth_calculated, 2),
+            "last_error": self._coordinator.data.last_rcth_error,
         }
 
 
@@ -328,6 +331,7 @@ class SmartHRTRPthSensor(SmartHRTBaseSensor):
             "rpth_lw": round(self._coordinator.data.rpth_lw, 2),
             "rpth_hw": round(self._coordinator.data.rpth_hw, 2),
             "rpth_calculated": round(self._coordinator.data.rpth_calculated, 2),
+            "last_error": self._coordinator.data.last_rpth_error,
         }
 
 
@@ -558,3 +562,102 @@ class SmartHRTStopLagDurationSensor(SmartHRTBaseSensor):
     @property
     def native_unit_of_measurement(self) -> str | None:
         return "s"
+
+
+class SmartHRTTimeToRecoverySensor(SmartHRTBaseSensor):
+    """Sensor de la durée restante avant la relance (time_to_recovery).
+
+    Ce sensor indique le temps restant en heures avant que le chauffage
+    ne doive démarrer selon le calcul de relance.
+    """
+
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "Temps avant relance"
+        self._attr_unique_id = f"{self._device_id}_time_to_recovery"
+
+    @property
+    def native_value(self) -> float | None:
+        return self._coordinator.get_time_to_recovery_hours()
+
+    @property
+    def icon(self) -> str | None:
+        return "mdi:clock-start"
+
+    @property
+    def state_class(self) -> SensorStateClass | None:
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        return UnitOfTime.HOURS
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Attributs supplémentaires avec les erreurs du dernier cycle"""
+        return {
+            "last_rcth_error": self._coordinator.data.last_rcth_error,
+            "last_rpth_error": self._coordinator.data.last_rpth_error,
+            "recovery_start_hour": (
+                self._coordinator.data.recovery_start_hour.isoformat()
+                if self._coordinator.data.recovery_start_hour
+                else None
+            ),
+        }
+
+
+class SmartHRTStateSensor(SmartHRTBaseSensor):
+    """Sensor exposant l'état courant de la machine à états SmartHRT.
+
+    États possibles:
+    - heating_on: Journée, chauffage actif (État 1)
+    - detecting_lag: Attente baisse de température (État 2)
+    - monitoring: Surveillance nocturne (État 3)
+    - recovery: Moment de la relance (État 4)
+    - heating_process: Montée en température (État 5)
+    """
+
+    STATE_ICONS = {
+        "heating_on": "mdi:radiator",
+        "detecting_lag": "mdi:thermometer-minus",
+        "monitoring": "mdi:eye",
+        "recovery": "mdi:clock-fast",
+        "heating_process": "mdi:fire",
+    }
+
+    STATE_LABELS = {
+        "heating_on": "Chauffage actif",
+        "detecting_lag": "Détection lag",
+        "monitoring": "Surveillance",
+        "recovery": "Relance",
+        "heating_process": "Montée en température",
+    }
+
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "État machine"
+        self._attr_unique_id = f"{self._device_id}_state"
+
+    @property
+    def native_value(self) -> str:
+        return self._coordinator.data.current_state
+
+    @property
+    def icon(self) -> str | None:
+        state = self._coordinator.data.current_state
+        return self.STATE_ICONS.get(state, "mdi:state-machine")
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Attributs supplémentaires avec le label lisible de l'état"""
+        state = self._coordinator.data.current_state
+        return {
+            "state_label": self.STATE_LABELS.get(state, state),
+            "recovery_calc_mode": self._coordinator.data.recovery_calc_mode,
+            "rp_calc_mode": self._coordinator.data.rp_calc_mode,
+            "temp_lag_detection_active": self._coordinator.data.temp_lag_detection_active,
+        }

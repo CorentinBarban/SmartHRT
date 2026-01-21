@@ -118,6 +118,26 @@
           "description": "The config entry ID (optional, uses first available if not specified)."
         }
       }
+    },
+    "reset_learning": {
+      "name": "Reset Learning",
+      "description": "Resets all learned thermal coefficients (RCth, RPth) to their default values.",
+      "fields": {
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "The config entry ID (optional, uses first available if not specified)."
+        }
+      }
+    },
+    "trigger_calculation": {
+      "name": "Trigger Calculation",
+      "description": "Manually triggers an immediate recalculation of the recovery time.",
+      "fields": {
+        "entry_id": {
+          "name": "Entry ID",
+          "description": "The config entry ID (optional, uses first available if not specified)."
+        }
+      }
     }
   }
 }

@@ -5,3 +5,24 @@ logger:
   default: info
   logs:
     custom_components.smarthrt: debug
+
+input_number:
+  simulation_temperature:
+    name: "Réglage Température Fictive"
+    initial: 20
+    min: -20
+    max: 50
+    step: 0.5
+    mode: slider
+    icon: mdi:thermostat
+
+template:
+  - sensor:
+      - name: "Température Salon Fictive"
+        unique_id: temp_salon_fictive_01 # Important pour pouvoir l'éditer dans l'UI plus tard
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        icon: mdi:thermometer
+        state: >
+          {{ states('input_number.simulation_temperature') | float(0) }}

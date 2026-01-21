@@ -40,6 +40,9 @@ def mock_hass():
     hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
     hass.config_entries.async_reload = AsyncMock()
     hass.async_create_task = MagicMock()
+    # Add config attribute for Store
+    hass.config = MagicMock()
+    hass.config.path = MagicMock(return_value="/tmp/test_storage")
     # Add loop attribute for async_track_point_in_time
     try:
         hass.loop = asyncio.get_event_loop()
@@ -74,7 +77,14 @@ def mock_coordinator(mock_hass, mock_config_entry):
         patch("custom_components.SmartHRT.coordinator.async_track_state_change_event"),
         patch("custom_components.SmartHRT.coordinator.async_track_time_interval"),
         patch("custom_components.SmartHRT.coordinator.async_track_point_in_time"),
+        patch("custom_components.SmartHRT.coordinator.Store") as mock_store_class,
     ):
+        # Mock the Store instance
+        mock_store = MagicMock()
+        mock_store.async_load = AsyncMock(return_value=None)
+        mock_store.async_save = AsyncMock()
+        mock_store_class.return_value = mock_store
+
         coordinator = SmartHRTCoordinator(mock_hass, mock_config_entry)
         return coordinator
 
