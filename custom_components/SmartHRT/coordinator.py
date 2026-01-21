@@ -54,6 +54,15 @@ from .const import (
     STORAGE_KEY_RPTH_HW,
     STORAGE_KEY_LAST_RCTH_ERROR,
     STORAGE_KEY_LAST_RPTH_ERROR,
+    STORAGE_KEY_CURRENT_STATE,
+    STORAGE_KEY_RECOVERY_CALC_MODE,
+    STORAGE_KEY_RP_CALC_MODE,
+    STORAGE_KEY_TEMP_LAG_DETECTION_ACTIVE,
+    STORAGE_KEY_RECOVERY_START_HOUR,
+    STORAGE_KEY_TIME_RECOVERY_CALC,
+    STORAGE_KEY_TEMP_RECOVERY_CALC,
+    STORAGE_KEY_TEXT_RECOVERY_CALC,
+    STORAGE_KEY_STOP_LAG_DURATION,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -242,14 +251,16 @@ class SmartHRTCoordinator:
                 self._schedule_recovery_update(update_time)
 
     async def _restore_learned_data(self) -> None:
-        """Restore learned coefficients from persistent storage.
+        """Restore learned coefficients and state from persistent storage.
 
-        This ensures that learned thermal constants (RCth, RPth) survive
-        Home Assistant restarts, as specified in the requirements.
+        This ensures that learned thermal constants (RCth, RPth) and the
+        current state machine state survive Home Assistant restarts,
+        as specified in the requirements.
         """
         stored_data = await self._store.async_load()
         if stored_data:
-            _LOGGER.info("Restoring learned coefficients from storage")
+            _LOGGER.info("Restoring learned data and state from storage")
+            # Coefficients thermiques
             self.data.rcth = stored_data.get(STORAGE_KEY_RCTH, DEFAULT_RCTH)
             self.data.rpth = stored_data.get(STORAGE_KEY_RPTH, DEFAULT_RPTH)
             self.data.rcth_lw = stored_data.get(STORAGE_KEY_RCTH_LW, DEFAULT_RCTH)
@@ -262,24 +273,66 @@ class SmartHRTCoordinator:
             self.data.last_rpth_error = stored_data.get(
                 STORAGE_KEY_LAST_RPTH_ERROR, 0.0
             )
+
+            # État de la machine à états
+            self.data.current_state = stored_data.get(
+                STORAGE_KEY_CURRENT_STATE, SmartHRTState.HEATING_ON
+            )
+            self.data.recovery_calc_mode = stored_data.get(
+                STORAGE_KEY_RECOVERY_CALC_MODE, False
+            )
+            self.data.rp_calc_mode = stored_data.get(STORAGE_KEY_RP_CALC_MODE, False)
+            self.data.temp_lag_detection_active = stored_data.get(
+                STORAGE_KEY_TEMP_LAG_DETECTION_ACTIVE, False
+            )
+            self.data.stop_lag_duration = stored_data.get(
+                STORAGE_KEY_STOP_LAG_DURATION, 0.0
+            )
+
+            # Données de session (timestamps et températures)
+            recovery_start_iso = stored_data.get(STORAGE_KEY_RECOVERY_START_HOUR)
+            if recovery_start_iso:
+                try:
+                    self.data.recovery_start_hour = datetime.fromisoformat(
+                        recovery_start_iso
+                    )
+                except (ValueError, TypeError):
+                    self.data.recovery_start_hour = None
+
+            time_recovery_calc_iso = stored_data.get(STORAGE_KEY_TIME_RECOVERY_CALC)
+            if time_recovery_calc_iso:
+                try:
+                    self.data.time_recovery_calc = datetime.fromisoformat(
+                        time_recovery_calc_iso
+                    )
+                except (ValueError, TypeError):
+                    self.data.time_recovery_calc = None
+
+            self.data.temp_recovery_calc = stored_data.get(
+                STORAGE_KEY_TEMP_RECOVERY_CALC, 17.0
+            )
+            self.data.text_recovery_calc = stored_data.get(
+                STORAGE_KEY_TEXT_RECOVERY_CALC, 0.0
+            )
+
             _LOGGER.debug(
-                "Restored: rcth=%.2f, rpth=%.2f, rcth_lw=%.2f, rcth_hw=%.2f, rpth_lw=%.2f, rpth_hw=%.2f",
+                "Restored: state=%s, rcth=%.2f, rpth=%.2f, recovery_calc_mode=%s",
+                self.data.current_state,
                 self.data.rcth,
                 self.data.rpth,
-                self.data.rcth_lw,
-                self.data.rcth_hw,
-                self.data.rpth_lw,
-                self.data.rpth_hw,
+                self.data.recovery_calc_mode,
             )
         else:
             _LOGGER.debug("No stored learned data found, using defaults")
 
     async def _save_learned_data(self) -> None:
-        """Save learned coefficients to persistent storage.
+        """Save learned coefficients and state to persistent storage.
 
-        Called after each learning cycle to persist the updated coefficients.
+        Called after each state transition and learning cycle to persist
+        the updated coefficients and state.
         """
         data_to_store = {
+            # Coefficients thermiques
             STORAGE_KEY_RCTH: self.data.rcth,
             STORAGE_KEY_RPTH: self.data.rpth,
             STORAGE_KEY_RCTH_LW: self.data.rcth_lw,
@@ -288,9 +341,28 @@ class SmartHRTCoordinator:
             STORAGE_KEY_RPTH_HW: self.data.rpth_hw,
             STORAGE_KEY_LAST_RCTH_ERROR: self.data.last_rcth_error,
             STORAGE_KEY_LAST_RPTH_ERROR: self.data.last_rpth_error,
+            # État de la machine à états
+            STORAGE_KEY_CURRENT_STATE: self.data.current_state,
+            STORAGE_KEY_RECOVERY_CALC_MODE: self.data.recovery_calc_mode,
+            STORAGE_KEY_RP_CALC_MODE: self.data.rp_calc_mode,
+            STORAGE_KEY_TEMP_LAG_DETECTION_ACTIVE: self.data.temp_lag_detection_active,
+            STORAGE_KEY_STOP_LAG_DURATION: self.data.stop_lag_duration,
+            # Données de session
+            STORAGE_KEY_RECOVERY_START_HOUR: (
+                self.data.recovery_start_hour.isoformat()
+                if self.data.recovery_start_hour
+                else None
+            ),
+            STORAGE_KEY_TIME_RECOVERY_CALC: (
+                self.data.time_recovery_calc.isoformat()
+                if self.data.time_recovery_calc
+                else None
+            ),
+            STORAGE_KEY_TEMP_RECOVERY_CALC: self.data.temp_recovery_calc,
+            STORAGE_KEY_TEXT_RECOVERY_CALC: self.data.text_recovery_calc,
         }
         await self._store.async_save(data_to_store)
-        _LOGGER.debug("Saved learned coefficients to storage")
+        _LOGGER.debug("Saved learned data and state to storage")
 
     def _setup_listeners(self) -> None:
         """Configure les listeners pour les capteurs"""
@@ -715,6 +787,10 @@ class SmartHRTCoordinator:
             self._schedule_recovery_update(update_time)
 
         self._reschedule_recoverycalc_hour()
+
+        # Sauvegarder l'état après la transition
+        await self._save_learned_data()
+
         self._notify_listeners()
 
     @callback
@@ -1325,6 +1401,10 @@ class SmartHRTCoordinator:
             "SmartHRT: Baisse de température détectée après %.0fs de lag",
             self.data.stop_lag_duration,
         )
+
+        # Sauvegarder l'état après la transition
+        self._hass.async_create_task(self._save_learned_data())
+
         self._notify_listeners()
 
     def on_heating_stop(self) -> None:
@@ -1365,6 +1445,10 @@ class SmartHRTCoordinator:
             self.data.temp_recovery_start,
             self.data.rcth_calculated,
         )
+
+        # Sauvegarder l'état après la transition
+        self._hass.async_create_task(self._save_learned_data())
+
         self._notify_listeners()
 
     def on_recovery_end(self) -> None:
@@ -1393,6 +1477,10 @@ class SmartHRTCoordinator:
             self.data.temp_recovery_end,
             self.data.rpth_calculated,
         )
+
+        # Sauvegarder l'état après la transition (coefficients mis à jour)
+        self._hass.async_create_task(self._save_learned_data())
+
         self._notify_listeners()
 
     def _on_recovery_end(self) -> None:
