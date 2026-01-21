@@ -635,14 +635,13 @@ class SmartHRTCoordinator:
 
     @callback
     def _periodic_update(self, _now) -> None:
-        """Mise à jour périodique (chaque minute)"""
+        """Mise à jour périodique (chaque minute)
+
+        Note: Les calculs de recovery_time sont gérés par recovery_update_hour
+        selon une fréquence dynamique (fidèle au YAML original).
+        """
         self._update_weather_data()
         self._update_wind_speed_average()
-
-        if self.data.smartheating_mode and self.data.recovery_calc_mode:
-            self.calculate_rcth_fast()
-            self.calculate_recovery_time()
-
         self._notify_listeners()
 
     @callback
