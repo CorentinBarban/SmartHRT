@@ -6,7 +6,11 @@
 [![GitHub Release](https://img.shields.io/github/v/release/corentinBarban/smartHRT?include_prereleases)](https://github.com/corentinBarban/SmartHRT/releases)
 
 ---
-
+> [!NOTE]
+> **Ce repository est un fork du projet original [SmartHRT](https://github.com/ebozonne/smarthrt).**
+> Il transforme le package YAML original en une **Intégration Home Assistant (Custom Component)** native en Python.
+>
+> 
 ## 📋 Table des matières
 
 1. [Présentation](#-présentation)
@@ -363,3 +367,4 @@ Désactivez le `Mode adaptatif` et modifiez les entités `number.*_rcth` et `num
 ## 📄 Licence
 
 Ce projet est sous licence GNU GENERAL PUBLIC LICENSE. Voir le fichier [LICENCE](LICENCE) pour plus de détails.
+
