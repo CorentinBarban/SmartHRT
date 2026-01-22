@@ -8,6 +8,11 @@
 🇫🇷 [Version française](README_fr.md)
 
 ---
+> [!NOTE]
+> **This repository is a fork of the original [SmartHRT](https://github.com/ebozonne/smarthrt) project.**
+> It converts the original YAML package into a fully native **Home Assistant Integration (Custom Component)** written in Python.
+>
+
 
 ## 📋 Table of Contents
 
@@ -368,3 +373,4 @@ Disable `Adaptive Mode` and modify the `number.*_rcth` and `number.*_rpth` entit
 ## 📄 License
 
 This project is licensed under the GNU GENERAL PUBLIC LICENSE. See the [LICENCE](LICENCE) file for details.
+
