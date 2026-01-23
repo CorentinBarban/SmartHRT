@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.components.time import TimeEntity
 from homeassistant.helpers.device_registry import DeviceInfo, DeviceEntryType
+from homeassistant.util import dt as dt_util
 
 from .const import (
     DOMAIN,
@@ -131,7 +132,10 @@ class SmartHRTRecoveryCalcHourTime(SmartHRTBaseTime):
 
 
 class SmartHRTRecoveryStartHourTime(SmartHRTBaseTime):
-    """Entité time pour l'heure calculée de démarrage relance (lecture seule)"""
+    """Entité time pour l'heure calculée de démarrage relance (lecture seule).
+
+    ADR-014: L'heure est convertie dans le fuseau horaire local pour l'affichage.
+    """
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
@@ -142,9 +146,11 @@ class SmartHRTRecoveryStartHourTime(SmartHRTBaseTime):
 
     @property
     def native_value(self) -> dt_time | None:
-        """Retourne l'heure de relance calculée"""
+        """Retourne l'heure de relance calculée en heure locale"""
         if self._coordinator.data.recovery_start_hour:
-            return self._coordinator.data.recovery_start_hour.time()
+            # ADR-014: Conversion en heure locale pour l'affichage
+            local_dt = dt_util.as_local(self._coordinator.data.recovery_start_hour)
+            return local_dt.time()
         return None
 
     @property
@@ -159,7 +165,10 @@ class SmartHRTRecoveryStartHourTime(SmartHRTBaseTime):
 
 
 class SmartHRTRecoveryUpdateHourTime(SmartHRTBaseTime):
-    """Entité time pour l'heure de mise à jour du calcul de relance (lecture seule)"""
+    """Entité time pour l'heure de mise à jour du calcul de relance (lecture seule).
+
+    ADR-014: L'heure est convertie dans le fuseau horaire local pour l'affichage.
+    """
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
@@ -170,9 +179,11 @@ class SmartHRTRecoveryUpdateHourTime(SmartHRTBaseTime):
 
     @property
     def native_value(self) -> dt_time | None:
-        """Retourne l'heure de prochaine mise à jour du calcul"""
+        """Retourne l'heure de prochaine mise à jour du calcul en heure locale"""
         if self._coordinator.data.recovery_update_hour:
-            return self._coordinator.data.recovery_update_hour.time()
+            # ADR-014: Conversion en heure locale pour l'affichage
+            local_dt = dt_util.as_local(self._coordinator.data.recovery_update_hour)
+            return local_dt.time()
         return None
 
     @property

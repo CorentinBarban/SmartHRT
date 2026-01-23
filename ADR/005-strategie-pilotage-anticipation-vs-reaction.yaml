@@ -1,7 +1,7 @@
 id: 005
 title: "Stratégie de Pilotage : Anticipation vs Réaction"
 status: "Accepté"
-date: "2024-01-23"
+date: "2026-01-23"
 type: "Fonctionnel"
 context: |
   Les thermostats classiques fonctionnent par hystérésis (ON si T < Consigne) ou PID (modulation en fonction de l'erreur actuelle).

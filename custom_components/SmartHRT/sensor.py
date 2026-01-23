@@ -12,6 +12,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.helpers.device_registry import DeviceInfo, DeviceEntryType
+from homeassistant.util import dt as dt_util
 
 from .const import (
     DOMAIN,
@@ -230,7 +231,10 @@ class SmartHRTWindchillSensor(SmartHRTBaseSensor):
 
 
 class SmartHRTRecoveryStartSensor(SmartHRTBaseSensor):
-    """Sensor de l'heure de démarrage de la relance"""
+    """Sensor de l'heure de démarrage de la relance.
+
+    ADR-014: Les dates sont converties en heure locale pour l'affichage.
+    """
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
@@ -242,7 +246,9 @@ class SmartHRTRecoveryStartSensor(SmartHRTBaseSensor):
     @property
     def native_value(self) -> str | None:
         if self._coordinator.data.recovery_start_hour:
-            return self._coordinator.data.recovery_start_hour.strftime("%H:%M")
+            # ADR-014: Conversion en heure locale pour l'affichage
+            local_time = dt_util.as_local(self._coordinator.data.recovery_start_hour)
+            return local_time.strftime("%H:%M")
         return None
 
     @property
@@ -254,8 +260,10 @@ class SmartHRTRecoveryStartSensor(SmartHRTBaseSensor):
         """Attributs supplémentaires"""
         recovery = self._coordinator.data.recovery_start_hour
         if recovery:
+            # ADR-014: Conversion en heure locale pour l'affichage
+            local_recovery = dt_util.as_local(recovery)
             return {
-                "datetime": recovery.isoformat(),
+                "datetime": local_recovery.isoformat(),
                 "target_hour": self._coordinator.data.target_hour.strftime("%H:%M"),
             }
         return {}
@@ -485,7 +493,10 @@ class SmartHRTNightStateSensor(SmartHRTBaseSensor):
 
 
 class SmartHRTPhoneAlarmSensor(SmartHRTBaseSensor):
-    """Sensor de l'alarme du téléphone"""
+    """Sensor de l'alarme du téléphone.
+
+    ADR-014: L'heure est convertie dans le fuseau horaire local pour l'affichage.
+    """
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
@@ -496,11 +507,30 @@ class SmartHRTPhoneAlarmSensor(SmartHRTBaseSensor):
 
     @property
     def native_value(self) -> str | None:
-        return self._coordinator.data.phone_alarm
+        """Retourne l'heure de l'alarme du téléphone en heure locale."""
+        if not self._coordinator.data.phone_alarm:
+            return None
+        try:
+            # ADR-014: Conversion en heure locale pour l'affichage
+            from datetime import datetime
+
+            alarm_dt = datetime.fromisoformat(self._coordinator.data.phone_alarm)
+            local_alarm = dt_util.as_local(alarm_dt)
+            return local_alarm.strftime("%Y-%m-%d %H:%M")
+        except (ValueError, TypeError):
+            # Si le format n'est pas valide, retourner la valeur brute
+            return self._coordinator.data.phone_alarm
 
     @property
     def icon(self) -> str | None:
         return "mdi:alarm"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Attributs supplémentaires avec la valeur ISO originale."""
+        return {
+            "iso_value": self._coordinator.data.phone_alarm,
+        }
 
 
 class SmartHRTRecoveryCalcModeSensor(SmartHRTBaseSensor):
@@ -597,13 +627,13 @@ class SmartHRTTimeToRecoverySensor(SmartHRTBaseSensor):
     @property
     def extra_state_attributes(self) -> dict:
         """Attributs supplémentaires avec les erreurs du dernier cycle"""
+        recovery_start = self._coordinator.data.recovery_start_hour
         return {
             "last_rcth_error": self._coordinator.data.last_rcth_error,
             "last_rpth_error": self._coordinator.data.last_rpth_error,
+            # ADR-014: Conversion en heure locale pour l'affichage
             "recovery_start_hour": (
-                self._coordinator.data.recovery_start_hour.isoformat()
-                if self._coordinator.data.recovery_start_hour
-                else None
+                dt_util.as_local(recovery_start).isoformat() if recovery_start else None
             ),
         }
 

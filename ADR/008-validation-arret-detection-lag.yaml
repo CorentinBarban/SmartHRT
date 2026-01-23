@@ -1,7 +1,7 @@
 id: 008
 title: "Validation de l'Arrêt par Détection de Lag (-0.2°C)"
 status: "Accepté"
-date: "2024-01-23"
+date: "2026-01-23"
 type: "Fonctionnel"
 context: |
   Pour calculer l'isolation (RCth), le système doit savoir quand le bâtiment commence à refroidir naturellement. Cependant, après l'arrêt du radiateur, la chaleur résiduelle peut faire stagner, voire monter légèrement la température ambiante avant qu'elle ne baisse (inertie du capteur ou du radiateur).

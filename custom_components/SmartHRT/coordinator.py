@@ -652,9 +652,7 @@ class SmartHRTCoordinator:
 
         weather = self._hass.states.get(self._weather_entity_id)
         if weather is None:
-            _LOGGER.warning(
-                "Weather entity %s not found", self._weather_entity_id
-            )
+            _LOGGER.warning("Weather entity %s not found", self._weather_entity_id)
             return
 
         if (temp := weather.attributes.get("temperature")) is not None:

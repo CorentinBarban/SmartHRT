@@ -1,7 +1,7 @@
 id: 002
 title: "Sélection explicite de l'entité météo"
 status: "Accepté"
-date: "2024-01-23"
+date: "2026-01-23"
 context: |
   Actuellement, SmartHRT découvre automatiquement la première entité météo disponible via `hass.states.async_all("weather")`. Cela crée de l'indéterminisme si plusieurs fournisseurs météo sont installés et ne permet pas à l'utilisateur de choisir la source la plus fiable pour son domicile.
 decision: |

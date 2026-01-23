@@ -1,7 +1,7 @@
 id: 001
 title: "Enregistrement des décisions architecturales"
 status: "Accepté"
-date: "2024-01-23"
+date: "2026-01-23"
 context: |
   Le projet SmartHRT évolue et implique des choix techniques complexes (algorithmes thermiques, intégration Home Assistant, gestion d'états). L'absence de documentation sur les décisions passées rend l'intégration de nouveaux contributeurs difficile et risque de provoquer des régressions conceptuelles.
 decision: |

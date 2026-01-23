@@ -175,7 +175,12 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 # Clés stockées dans 'data' (configuration statique - ne change pas)
-STATIC_KEYS = {CONF_NAME, CONF_SENSOR_INTERIOR_TEMP, CONF_WEATHER_ENTITY, CONF_PHONE_ALARM}
+STATIC_KEYS = {
+    CONF_NAME,
+    CONF_SENSOR_INTERIOR_TEMP,
+    CONF_WEATHER_ENTITY,
+    CONF_PHONE_ALARM,
+}
 # Clés stockées dans 'options' (réglages dynamiques - modifiables sans rechargement)
 DYNAMIC_KEYS = {CONF_TARGET_HOUR, CONF_RECOVERYCALC_HOUR, CONF_TSP}
 

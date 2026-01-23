@@ -1,7 +1,7 @@
 id: 004
 title: "Stratégie hybride de persistance des données"
 status: "Accepté (Rétroactif)"
-date: "2024-01-23"
+date: "2026-01-23"
 context: |
   SmartHRT manipule trois types de données :
   1. Configuration statique (Nom, Capteurs).

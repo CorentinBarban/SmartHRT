@@ -1,0 +1,30 @@
+id: 014
+title: "Format des dates et fuseau horaire"
+status: "Accepté"
+date: "2026-01-23"
+type: "Fonctionnel"
+context: |
+  SmartHRT manipule de nombreuses dates et heures : heure de relance calculée, heure cible, timestamps de début/fin de cycle, etc.
+  L'affichage de ces dates dans l'interface utilisateur doit être cohérent et compréhensible pour l'utilisateur, quel que soit son fuseau horaire configuré dans Home Assistant.
+
+  Problèmes potentiels :
+  - Afficher des dates en UTC alors que l'utilisateur attend son heure locale
+  - Incohérence entre les heures affichées et les heures réelles de déclenchement
+  - Confusion lors du passage à l'heure d'été/hiver
+decision: |
+  Toutes les dates et heures affichées à l'utilisateur doivent être converties dans le fuseau horaire configuré sur la machine Home Assistant.
+
+  Règles d'implémentation :
+  1. Utiliser `homeassistant.util.dt` pour toutes les manipulations de dates
+  2. Stocker les dates en interne en UTC (datetime aware)
+  3. Convertir en heure locale uniquement pour l'affichage via `dt_util.as_local()`
+  4. Pour les entrées utilisateur (heures cibles), interpréter dans le fuseau local
+  5. Utiliser `dt_util.now()` au lieu de `datetime.now()` pour obtenir l'heure courante aware
+consequences:
+  positive:
+    - Affichage cohérent avec les attentes de l'utilisateur
+    - Gestion automatique des changements d'heure (été/hiver)
+    - Compatibilité avec les automatisations Home Assistant
+  negative:
+    - Nécessite une attention particulière lors des comparaisons de dates
+    - Complexité accrue pour les tests unitaires (mock du timezone)

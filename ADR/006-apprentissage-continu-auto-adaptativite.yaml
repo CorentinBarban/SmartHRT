@@ -1,7 +1,7 @@
 id: 006
 title: "Apprentissage Continu (Auto-Adaptativité)"
 status: "Accepté"
-date: "2024-01-23"
+date: "2026-01-23"
 type: "Fonctionnel"
 context: |
   Il est impossible pour un utilisateur de connaître les coefficients thermiques exacts de sa maison (RCth : résistance capacité thermique, RPth : puissance thermique). De plus, ces valeurs changent avec le vieillissement de l'isolation ou les saisons.
