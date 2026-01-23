@@ -12,6 +12,7 @@ from homeassistant.config_entries import ConfigEntry
 
 from .const import DOMAIN, PLATFORMS, DATA_COORDINATOR
 from .coordinator import SmartHRTCoordinator
+from .services import async_setup_services, async_unload_services
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -77,6 +78,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Enregistrer les services (une seule fois pour toutes les instances)
+    await async_setup_services(hass)
+
     return True
 
 
@@ -91,7 +95,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         del hass.data[DOMAIN][entry.entry_id]
 
     # Déchargement des plateformes
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    result = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+    # Désenregistrer les services si c'est la dernière instance
+    await async_unload_services(hass)
+
+    return result
 
 
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:

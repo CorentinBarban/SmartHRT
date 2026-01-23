@@ -222,9 +222,13 @@ class SmartHRTOptionsFlow(OptionsFlow):
                 vol.Required(
                     CONF_RECOVERYCALC_HOUR, default="23:00:00"
                 ): selector.TimeSelector(),
-                # Capteur de température intérieure
+                # Capteur de température intérieure (ADR-010: inputs dynamiques)
                 vol.Required(CONF_SENSOR_INTERIOR_TEMP): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain=SENSOR_DOMAIN)
+                ),
+                # ADR-002: Sélection explicite de l'entité météo
+                vol.Required(CONF_WEATHER_ENTITY): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="weather")
                 ),
                 # Capteur d'alarme du téléphone
                 vol.Optional(CONF_PHONE_ALARM): selector.EntitySelector(
@@ -269,12 +273,19 @@ class SmartHRTOptionsFlow(OptionsFlow):
         """Finalization of the ConfigEntry modification.
 
         Sépare les données en:
-        - data: configuration statique (capteurs, nom)
+        - data: configuration statique (capteurs, nom, météo)
         - options: réglages dynamiques (heures, consigne)
 
-        Seules les options sont mises à jour ici, permettant une
-        application des changements sans rechargement complet.
+        Les données statiques nécessitent un rechargement de l'intégration.
+        Les options dynamiques peuvent être appliquées sans rechargement.
         """
+        # Extraire les données statiques (nécessite rechargement)
+        new_data = {
+            key: self._user_inputs[key]
+            for key in STATIC_KEYS
+            if key in self._user_inputs
+        }
+
         # Extraire les options dynamiques
         new_options = {
             key: self._user_inputs[key]
@@ -283,10 +294,19 @@ class SmartHRTOptionsFlow(OptionsFlow):
         }
 
         _LOGGER.info(
-            "Mise à jour des options de l'entry %s. Nouvelles options : %s",
+            "Mise à jour de l'entry %s. Nouvelles data: %s, Nouvelles options: %s",
             self._config_entry.entry_id,
+            new_data,
             new_options,
         )
+
+        # Mettre à jour les données statiques si elles ont changé
+        if new_data != dict(self._config_entry.data):
+            self.hass.config_entries.async_update_entry(
+                self._config_entry,
+                data=new_data,
+            )
+            _LOGGER.info("Données statiques mises à jour, rechargement nécessaire")
 
         # Retourne les nouvelles options - Home Assistant les stockera automatiquement
         # dans config_entry.options et déclenchera update_listener

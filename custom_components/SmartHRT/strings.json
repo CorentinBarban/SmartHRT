@@ -20,7 +20,7 @@
           "target_hour": "Target hour",
           "recoverycalc_hour": "Heating stop hour",
           "sensor_interior_temperature": "Interior temperature sensor",
-          "weather_entity": "Weather entity",
+          "weather_entity": "Weather source (outdoor temperature)",
           "phone_alarm_selector": "Phone alarm sensor",
           "tsp": "Set Point"
         },
@@ -28,7 +28,7 @@
           "target_hour": "Wake up time (e.g. 6:00)",
           "recoverycalc_hour": "Time when heating stops (e.g. 23:00)",
           "sensor_interior_temperature": "Room temperature sensor (e.g. sensor.room_temperature)",
-          "weather_entity": "Weather entity for temperature and wind data (e.g. weather.home)",
+          "weather_entity": "Weather integration providing outdoor temperature and wind speed (e.g. weather.home, weather.meteo_france).",
           "phone_alarm_selector": "Phone next alarm sensor (e.g. sensor.nexus_next_alarm)",
           "tsp": "Target temperature (13-26°C)"
         }
@@ -46,6 +46,7 @@
           "target_hour": "Target hour",
           "recoverycalc_hour": "Heating stop hour",
           "sensor_interior_temperature": "Interior temperature sensor",
+          "weather_entity": "Weather source (outdoor temperature)",
           "phone_alarm_selector": "Phone alarm sensor",
           "tsp": "Set Point"
         },
@@ -54,6 +55,7 @@
           "target_hour": "Wake up time (e.g. 6:00)",
           "recoverycalc_hour": "Time when heating stops (e.g. 23:00)",
           "sensor_interior_temperature": "Room temperature sensor (e.g. sensor.room_temperature)",
+          "weather_entity": "Weather integration providing outdoor temperature and wind speed (e.g. weather.home, weather.meteo_france).",
           "phone_alarm_selector": "Phone next alarm sensor (e.g. sensor.nexus_next_alarm)",
           "tsp": "Target temperature (13-26°C)"
         }
