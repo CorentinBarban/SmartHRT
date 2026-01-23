@@ -36,23 +36,7 @@ from .const import (
     FORECAST_HOURS,
     TEMP_DECREASE_THRESHOLD,
     DEFAULT_RECOVERYCALC_HOUR,
-    STORAGE_KEY_RCTH,
-    STORAGE_KEY_RPTH,
-    STORAGE_KEY_RCTH_LW,
-    STORAGE_KEY_RCTH_HW,
-    STORAGE_KEY_RPTH_LW,
-    STORAGE_KEY_RPTH_HW,
-    STORAGE_KEY_LAST_RCTH_ERROR,
-    STORAGE_KEY_LAST_RPTH_ERROR,
-    STORAGE_KEY_CURRENT_STATE,
-    STORAGE_KEY_RECOVERY_CALC_MODE,
-    STORAGE_KEY_RP_CALC_MODE,
-    STORAGE_KEY_TEMP_LAG_DETECTION_ACTIVE,
-    STORAGE_KEY_RECOVERY_START_HOUR,
-    STORAGE_KEY_TIME_RECOVERY_CALC,
-    STORAGE_KEY_TEMP_RECOVERY_CALC,
-    STORAGE_KEY_TEXT_RECOVERY_CALC,
-    STORAGE_KEY_STOP_LAG_DURATION,
+    PERSISTED_FIELDS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -166,22 +150,12 @@ class SmartHRTCoordinator:
             hass, self.STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}"
         )
 
-        # Lecture des options avec fallback sur data pour la rétrocompatibilité
-        # Les valeurs dynamiques (tsp, target_hour, recoverycalc_hour) sont dans options
-        # Les valeurs statiques (name, sensors) restent dans data
         self.data = SmartHRTData(
             name=entry.data.get(CONF_NAME, "SmartHRT"),
-            tsp=entry.options.get(CONF_TSP, entry.data.get(CONF_TSP, DEFAULT_TSP)),
-            target_hour=self._parse_time(
-                entry.options.get(
-                    CONF_TARGET_HOUR, entry.data.get(CONF_TARGET_HOUR, "06:00:00")
-                )
-            ),
+            tsp=entry.data.get(CONF_TSP, DEFAULT_TSP),
+            target_hour=self._parse_time(entry.data.get(CONF_TARGET_HOUR, "06:00:00")),
             recoverycalc_hour=self._parse_time(
-                entry.options.get(
-                    CONF_RECOVERYCALC_HOUR,
-                    entry.data.get(CONF_RECOVERYCALC_HOUR, DEFAULT_RECOVERYCALC_HOUR),
-                )
+                entry.data.get(CONF_RECOVERYCALC_HOUR, DEFAULT_RECOVERYCALC_HOUR)
             ),
         )
 
@@ -243,64 +217,31 @@ class SmartHRTCoordinator:
         This ensures that learned thermal constants (RCth, RPth) and the
         current state machine state survive Home Assistant restarts,
         as specified in the requirements.
+
+        Uses PERSISTED_FIELDS mapping for automatic serialization,
+        reducing maintenance burden when adding new fields.
         """
         stored_data = await self._store.async_load()
         if stored_data:
             _LOGGER.info("Restoring learned data and state from storage")
-            # Coefficients thermiques
-            self.data.rcth = stored_data.get(STORAGE_KEY_RCTH, DEFAULT_RCTH)
-            self.data.rpth = stored_data.get(STORAGE_KEY_RPTH, DEFAULT_RPTH)
-            self.data.rcth_lw = stored_data.get(STORAGE_KEY_RCTH_LW, DEFAULT_RCTH)
-            self.data.rcth_hw = stored_data.get(STORAGE_KEY_RCTH_HW, DEFAULT_RCTH)
-            self.data.rpth_lw = stored_data.get(STORAGE_KEY_RPTH_LW, DEFAULT_RPTH)
-            self.data.rpth_hw = stored_data.get(STORAGE_KEY_RPTH_HW, DEFAULT_RPTH)
-            self.data.last_rcth_error = stored_data.get(
-                STORAGE_KEY_LAST_RCTH_ERROR, 0.0
-            )
-            self.data.last_rpth_error = stored_data.get(
-                STORAGE_KEY_LAST_RPTH_ERROR, 0.0
-            )
 
-            # État de la machine à états
-            self.data.current_state = stored_data.get(
-                STORAGE_KEY_CURRENT_STATE, SmartHRTState.HEATING_ON
-            )
-            self.data.recovery_calc_mode = stored_data.get(
-                STORAGE_KEY_RECOVERY_CALC_MODE, False
-            )
-            self.data.rp_calc_mode = stored_data.get(STORAGE_KEY_RP_CALC_MODE, False)
-            self.data.temp_lag_detection_active = stored_data.get(
-                STORAGE_KEY_TEMP_LAG_DETECTION_ACTIVE, False
-            )
-            self.data.stop_lag_duration = stored_data.get(
-                STORAGE_KEY_STOP_LAG_DURATION, 0.0
-            )
+            for storage_key, attr_name, default_value, field_type in PERSISTED_FIELDS:
+                stored_value = stored_data.get(storage_key)
 
-            # Données de session (timestamps et températures)
-            recovery_start_iso = stored_data.get(STORAGE_KEY_RECOVERY_START_HOUR)
-            if recovery_start_iso:
-                try:
-                    self.data.recovery_start_hour = datetime.fromisoformat(
-                        recovery_start_iso
-                    )
-                except (ValueError, TypeError):
-                    self.data.recovery_start_hour = None
-
-            time_recovery_calc_iso = stored_data.get(STORAGE_KEY_TIME_RECOVERY_CALC)
-            if time_recovery_calc_iso:
-                try:
-                    self.data.time_recovery_calc = datetime.fromisoformat(
-                        time_recovery_calc_iso
-                    )
-                except (ValueError, TypeError):
-                    self.data.time_recovery_calc = None
-
-            self.data.temp_recovery_calc = stored_data.get(
-                STORAGE_KEY_TEMP_RECOVERY_CALC, 17.0
-            )
-            self.data.text_recovery_calc = stored_data.get(
-                STORAGE_KEY_TEXT_RECOVERY_CALC, 0.0
-            )
+                if stored_value is None:
+                    # Use default value if not in storage
+                    setattr(self.data, attr_name, default_value)
+                elif field_type == "datetime":
+                    # Parse ISO format datetime strings
+                    try:
+                        setattr(
+                            self.data, attr_name, datetime.fromisoformat(stored_value)
+                        )
+                    except (ValueError, TypeError):
+                        setattr(self.data, attr_name, default_value)
+                else:
+                    # Direct assignment for float, bool, str
+                    setattr(self.data, attr_name, stored_value)
 
             _LOGGER.debug(
                 "Restored: state=%s, rcth=%.2f, rpth=%.2f, recovery_calc_mode=%s",
@@ -317,37 +258,22 @@ class SmartHRTCoordinator:
 
         Called after each state transition and learning cycle to persist
         the updated coefficients and state.
+
+        Uses PERSISTED_FIELDS mapping for automatic serialization,
+        reducing maintenance burden when adding new fields.
         """
-        data_to_store = {
-            # Coefficients thermiques
-            STORAGE_KEY_RCTH: self.data.rcth,
-            STORAGE_KEY_RPTH: self.data.rpth,
-            STORAGE_KEY_RCTH_LW: self.data.rcth_lw,
-            STORAGE_KEY_RCTH_HW: self.data.rcth_hw,
-            STORAGE_KEY_RPTH_LW: self.data.rpth_lw,
-            STORAGE_KEY_RPTH_HW: self.data.rpth_hw,
-            STORAGE_KEY_LAST_RCTH_ERROR: self.data.last_rcth_error,
-            STORAGE_KEY_LAST_RPTH_ERROR: self.data.last_rpth_error,
-            # État de la machine à états
-            STORAGE_KEY_CURRENT_STATE: self.data.current_state,
-            STORAGE_KEY_RECOVERY_CALC_MODE: self.data.recovery_calc_mode,
-            STORAGE_KEY_RP_CALC_MODE: self.data.rp_calc_mode,
-            STORAGE_KEY_TEMP_LAG_DETECTION_ACTIVE: self.data.temp_lag_detection_active,
-            STORAGE_KEY_STOP_LAG_DURATION: self.data.stop_lag_duration,
-            # Données de session
-            STORAGE_KEY_RECOVERY_START_HOUR: (
-                self.data.recovery_start_hour.isoformat()
-                if self.data.recovery_start_hour
-                else None
-            ),
-            STORAGE_KEY_TIME_RECOVERY_CALC: (
-                self.data.time_recovery_calc.isoformat()
-                if self.data.time_recovery_calc
-                else None
-            ),
-            STORAGE_KEY_TEMP_RECOVERY_CALC: self.data.temp_recovery_calc,
-            STORAGE_KEY_TEXT_RECOVERY_CALC: self.data.text_recovery_calc,
-        }
+        data_to_store = {}
+
+        for storage_key, attr_name, _default_value, field_type in PERSISTED_FIELDS:
+            value = getattr(self.data, attr_name)
+
+            if field_type == "datetime":
+                # Serialize datetime to ISO format string
+                data_to_store[storage_key] = value.isoformat() if value else None
+            else:
+                # Direct storage for float, bool, str
+                data_to_store[storage_key] = value
+
         await self._store.async_save(data_to_store)
         _LOGGER.debug("Saved learned data and state to storage")
 

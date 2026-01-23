@@ -64,6 +64,32 @@ TEMP_DECREASE_THRESHOLD = 0.2  # °C drop threshold to detect actual cooling sta
 DEFAULT_RECOVERYCALC_HOUR = "23:00:00"
 
 # Storage keys for RestoreEntity persistence
+# Format: (storage_key, data_attribute, default_value, type)
+# Types: "float", "bool", "str", "datetime" (for isoformat serialization)
+PERSISTED_FIELDS: list[tuple[str, str, object, str]] = [
+    # Coefficients thermiques
+    ("rcth", "rcth", DEFAULT_RCTH, "float"),
+    ("rpth", "rpth", DEFAULT_RPTH, "float"),
+    ("rcth_lw", "rcth_lw", DEFAULT_RCTH, "float"),
+    ("rcth_hw", "rcth_hw", DEFAULT_RCTH, "float"),
+    ("rpth_lw", "rpth_lw", DEFAULT_RPTH, "float"),
+    ("rpth_hw", "rpth_hw", DEFAULT_RPTH, "float"),
+    ("last_rcth_error", "last_rcth_error", 0.0, "float"),
+    ("last_rpth_error", "last_rpth_error", 0.0, "float"),
+    # État de la machine à états
+    ("current_state", "current_state", "heating_on", "str"),
+    ("recovery_calc_mode", "recovery_calc_mode", False, "bool"),
+    ("rp_calc_mode", "rp_calc_mode", False, "bool"),
+    ("temp_lag_detection_active", "temp_lag_detection_active", False, "bool"),
+    ("stop_lag_duration", "stop_lag_duration", 0.0, "float"),
+    # Données de session
+    ("recovery_start_hour", "recovery_start_hour", None, "datetime"),
+    ("time_recovery_calc", "time_recovery_calc", None, "datetime"),
+    ("temp_recovery_calc", "temp_recovery_calc", 17.0, "float"),
+    ("text_recovery_calc", "text_recovery_calc", 0.0, "float"),
+]
+
+# Legacy storage keys (kept for backward compatibility imports)
 STORAGE_KEY_RCTH = "rcth"
 STORAGE_KEY_RPTH = "rpth"
 STORAGE_KEY_RCTH_LW = "rcth_lw"
