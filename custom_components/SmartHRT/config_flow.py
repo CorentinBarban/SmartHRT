@@ -19,6 +19,7 @@ from .const import (
     CONF_TARGET_HOUR,
     CONF_RECOVERYCALC_HOUR,
     CONF_SENSOR_INTERIOR_TEMP,
+    CONF_WEATHER_ENTITY,
     CONF_PHONE_ALARM,
     CONF_TSP,
     DEFAULT_TSP,
@@ -123,6 +124,10 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_SENSOR_INTERIOR_TEMP): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain=SENSOR_DOMAIN),
                 ),
+                # Entité météo (ADR-002: sélection explicite)
+                vol.Required(CONF_WEATHER_ENTITY): selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain="weather"),
+                ),
                 # Capteur d'alarme du téléphone
                 vol.Optional(CONF_PHONE_ALARM): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain=SENSOR_DOMAIN),
@@ -170,7 +175,7 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 # Clés stockées dans 'data' (configuration statique - ne change pas)
-STATIC_KEYS = {CONF_NAME, CONF_SENSOR_INTERIOR_TEMP, CONF_PHONE_ALARM}
+STATIC_KEYS = {CONF_NAME, CONF_SENSOR_INTERIOR_TEMP, CONF_WEATHER_ENTITY, CONF_PHONE_ALARM}
 # Clés stockées dans 'options' (réglages dynamiques - modifiables sans rechargement)
 DYNAMIC_KEYS = {CONF_TARGET_HOUR, CONF_RECOVERYCALC_HOUR, CONF_TSP}
 

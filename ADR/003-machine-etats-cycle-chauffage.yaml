@@ -1,0 +1,22 @@
+id: 003
+title: "Machine à états explicite pour le cycle de chauffage"
+status: "Accepté (Rétroactif)"
+date: "2024-01-23"
+context: |
+  La logique de chauffage intelligent implique plusieurs phases distinctes : surveillance, détection de chute de température, attente, relance, et chauffe active. Gérer cela avec une multitude de booléens indépendants (`is_heating`, `is_waiting`, etc.) rend le code difficile à maintenir et sujet aux bugs d'états incohérents.
+decision: |
+  Implémenter une machine à états finis explicite dans le `Coordinator`.
+  Les états définis sont :
+  1. `HEATING_ON` : Chauffage actif (journée).
+  2. `DETECTING_LAG` : Attente de la baisse effective de température (-0.2°C).
+  3. `MONITORING` : Surveillance nocturne (calculs récurrents).
+  4. `RECOVERY` : Instant de la relance (calcul RCth).
+  5. `HEATING_PROCESS` : Montée en température (calcul RPth).
+
+  Cette structure est visible dans la classe `SmartHRTState` et utilisée dans `SmartHRTCoordinator`.
+consequences:
+  positive:
+    - Transitions claires et déterministes.
+    - Facilité de débogage (on sait exactement dans quelle phase on est).
+  negative:
+    - Rigidifie légèrement le flux logique (nécessite de bien définir les transitions).

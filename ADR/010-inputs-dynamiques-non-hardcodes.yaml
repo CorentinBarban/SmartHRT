@@ -1,0 +1,15 @@
+id: 010
+title: "Inputs dynamiques et non hardcodés"
+status: "Accepté"
+date: "2026-01-23"
+type: "Fonctionnel"
+context: |
+  Les utilisateurs doivent pouvoir choisir leurs capteurs et entités (température, météo, mode nuit) sans modification du code source. Le hardcoding limite la flexibilité et l'adoption.
+decision: |
+  Tous les capteurs et entités nécessaires doivent être sélectionnables via le config_flow/options_flow de l'intégration.
+consequences:
+  positive:
+    - Adaptabilité à tous les contextes domotiques.
+    - Facilité d'intégration pour l'utilisateur.
+  negative:
+    - Complexifie légèrement la configuration initiale.

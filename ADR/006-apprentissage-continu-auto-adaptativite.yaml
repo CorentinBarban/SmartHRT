@@ -1,0 +1,20 @@
+id: 006
+title: "Apprentissage Continu (Auto-Adaptativité)"
+status: "Accepté"
+date: "2024-01-23"
+type: "Fonctionnel"
+context: |
+  Il est impossible pour un utilisateur de connaître les coefficients thermiques exacts de sa maison (RCth : résistance capacité thermique, RPth : puissance thermique). De plus, ces valeurs changent avec le vieillissement de l'isolation ou les saisons.
+decision: |
+  Le système recalcule ses propres coefficients après chaque cycle de chauffe complet.
+  1. À la fin de la relance (Target Hour ou Consigne atteinte), il compare la courbe théorique avec la courbe réelle mesurée.
+  2. Il ajuste les coefficients stockés (`rcth`, `rpth`) en appliquant un **facteur de relaxation** (par défaut 2.0) pour lisser les changements et éviter une instabilité due à un événement ponctuel (fenêtre ouverte).
+
+  (DEFAULT_RELAXATION_FACTOR)
+  (Méthode `_update_coefficients`)
+consequences:
+  positive:
+    - Le système devient plus précis avec le temps ("Learning").
+    - Pas de configuration complexe pour l'utilisateur initialement (valeurs par défaut `50.0`).
+  negative:
+    - Les premiers jours d'utilisation peuvent être imprécis (chauffage trop tôt ou trop tard) le temps que le système apprenne.

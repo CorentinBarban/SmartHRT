@@ -1,0 +1,15 @@
+id: 009
+title: "Persistance des coefficients d'apprentissage"
+status: "Accepté"
+date: "2026-01-23"
+type: "Fonctionnel"
+context: |
+  Le système apprend les caractéristiques thermiques du logement (RCth, RPth, etc.) au fil du temps. Si ces valeurs ne sont pas sauvegardées entre les redémarrages de Home Assistant, tout l'apprentissage est perdu et le confort s'en trouve dégradé.
+decision: |
+  Les coefficients thermiques doivent être persistés dans le stockage local de Home Assistant (Store ou RestoreEntity) afin d'être restaurés automatiquement au redémarrage.
+consequences:
+  positive:
+    - L'apprentissage est conservé même après un redémarrage.
+    - L'utilisateur bénéficie d'un système de plus en plus précis.
+  negative:
+    - Complexifie la gestion de la sauvegarde/restauration.

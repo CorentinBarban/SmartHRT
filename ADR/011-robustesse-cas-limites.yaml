@@ -1,0 +1,18 @@
+id: 011
+title: "Robustesse et gestion des cas limites"
+status: "Accepté"
+date: "2026-01-23"
+type: "Fonctionnel"
+context: |
+  Les situations réelles peuvent présenter des cas où le calcul n'est pas possible (pas de refroidissement, consigne déjà atteinte, etc.). Sans gestion explicite, le système peut produire des erreurs ou des résultats aberrants.
+decision: |
+  Le code doit gérer explicitement :
+  - L'absence de refroidissement détecté.
+  - L'absence de besoin de chauffage.
+  - Les bornes min/max pour éviter les valeurs aberrantes (division par zéro, etc.).
+consequences:
+  positive:
+    - Système plus fiable et résilient.
+    - Moins de bugs en production.
+  negative:
+    - Ajoute des vérifications supplémentaires dans le code.

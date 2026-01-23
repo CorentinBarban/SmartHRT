@@ -1,0 +1,19 @@
+id: 008
+title: "Validation de l'Arrêt par Détection de Lag (-0.2°C)"
+status: "Accepté"
+date: "2024-01-23"
+type: "Fonctionnel"
+context: |
+  Pour calculer l'isolation (RCth), le système doit savoir quand le bâtiment commence à refroidir naturellement. Cependant, après l'arrêt du radiateur, la chaleur résiduelle peut faire stagner, voire monter légèrement la température ambiante avant qu'elle ne baisse (inertie du capteur ou du radiateur).
+decision: |
+  Le début de la phase de refroidissement (`monitoring`) n'est pas acté à l'instant t de l'arrêt du chauffage.
+  Le système entre dans un état transitoire `DETECTING_LAG` et attend que la température intérieure baisse effectivement de **0.2°C** par rapport à la température enregistrée à l'arrêt.
+  Ce n'est qu'à ce moment que le calcul de refroidissement commence, en prenant en compte ce délai (lag).
+
+  (Classe `SmartHRTState`, constante `TEMP_DECREASE_THRESHOLD`)
+consequences:
+  positive:
+    - Élimine les faux positifs dus au bruit des capteurs.
+    - Calcul du coefficient d'isolation (RCth) beaucoup plus physiquement juste car basé sur la pente de refroidissement réelle.
+  negative:
+    - Retarde le début de l'analyse nocturne.

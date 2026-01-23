@@ -24,6 +24,7 @@ from .const import (
     CONF_TARGET_HOUR,
     CONF_RECOVERYCALC_HOUR,
     CONF_SENSOR_INTERIOR_TEMP,
+    CONF_WEATHER_ENTITY,
     CONF_PHONE_ALARM,
     CONF_TSP,
     DEFAULT_TSP,
@@ -160,6 +161,7 @@ class SmartHRTCoordinator:
         )
 
         self._interior_temp_sensor_id = entry.data.get(CONF_SENSOR_INTERIOR_TEMP)
+        self._weather_entity_id = entry.data.get(CONF_WEATHER_ENTITY)
         self._phone_alarm_sensor_id = entry.data.get(CONF_PHONE_ALARM)
 
     @staticmethod
@@ -639,17 +641,21 @@ class SmartHRTCoordinator:
     # ─────────────────────────────────────────────────────────────────────────
 
     def _update_weather_data(self) -> None:
-        """Mise à jour des données météo actuelles"""
-        weather_entities = [
-            s
-            for s in self._hass.states.async_all("weather")
-            if s.attributes.get("temperature") is not None
-        ]
+        """Mise à jour des données météo actuelles.
 
-        if not weather_entities:
+        ADR-002: Utilise l'entité météo configurée explicitement par l'utilisateur
+        au lieu de scanner automatiquement toutes les entités weather.
+        """
+        if not self._weather_entity_id:
+            _LOGGER.debug("No weather entity configured, skipping weather update")
             return
 
-        weather = weather_entities[0]
+        weather = self._hass.states.get(self._weather_entity_id)
+        if weather is None:
+            _LOGGER.warning(
+                "Weather entity %s not found", self._weather_entity_id
+            )
+            return
 
         if (temp := weather.attributes.get("temperature")) is not None:
             self.data.exterior_temp = float(temp)
@@ -669,19 +675,15 @@ class SmartHRTCoordinator:
             )
 
     async def _update_weather_forecasts(self) -> None:
-        """Mise à jour des prévisions météo (température et vent)
-        Équivalent des sensors wind_speed_forecast_avg et temperature_forecast_avg du YAML
-        """
-        weather_entities = [
-            s
-            for s in self._hass.states.async_all("weather")
-            if s.attributes.get("temperature") is not None
-        ]
+        """Mise à jour des prévisions météo (température et vent).
 
-        if not weather_entities:
+        ADR-002: Utilise l'entité météo configurée explicitement par l'utilisateur.
+        """
+        if not self._weather_entity_id:
+            _LOGGER.debug("No weather entity configured, skipping forecast update")
             return
 
-        entity_id = weather_entities[0].entity_id
+        entity_id = self._weather_entity_id
 
         try:
             # Appeler le service weather.get_forecasts

@@ -1,0 +1,18 @@
+id: 012
+title: "Exposition des entités et services"
+status: "Accepté"
+date: "2026-01-23"
+type: "Fonctionnel"
+context: |
+  Pour permettre l'automatisation et le suivi, le système doit exposer ses états internes et fournir des services pour l'utilisateur ou d'autres automatisations.
+decision: |
+  L'intégration doit créer :
+  - Des sensors (recovery_start_time, time_to_recovery)
+  - Des attributs (valeurs actuelles, erreur du dernier cycle)
+  - Des services (reset_learning, trigger_calculation)
+consequences:
+  positive:
+    - Intégration facile dans des automatisations avancées.
+    - Transparence pour l'utilisateur.
+  negative:
+    - Multiplie le nombre d'entités exposées.

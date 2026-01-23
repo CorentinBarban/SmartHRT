@@ -1,0 +1,22 @@
+id: 005
+title: "Stratégie de Pilotage : Anticipation vs Réaction"
+status: "Accepté"
+date: "2024-01-23"
+type: "Fonctionnel"
+context: |
+  Les thermostats classiques fonctionnent par hystérésis (ON si T < Consigne) ou PID (modulation en fonction de l'erreur actuelle).
+  Cependant, pour le confort au réveil, l'utilisateur souhaite que la température cible soit *déjà atteinte* à l'heure H, et non que le chauffage *démarre* à l'heure H.
+decision: |
+  Le système fonctionne sur un modèle prédictif d'inertie thermique.
+  Au lieu de réagir à la température actuelle, SmartHRT calcule la **durée nécessaire** pour passer de la température intérieure actuelle ($T_{int}$) à la consigne ($T_{sp}$) en tenant compte de la température extérieure ($T_{ext}$).
+
+  La formule inverse le modèle exponentiel de Newton pour déterminer l'heure de démarrage optimale :
+  `Start_Time = Target_Time - Duration(Tint, Text, Tsp, Coefficients)`
+
+  (Méthode `calculate_recovery_time`)
+consequences:
+  positive:
+    - Confort optimal: il fait chaud exactement à l'heure demandée.
+    - Économie d'énergie: le chauffage ne démarre pas plus tôt que nécessaire.
+  negative:
+    - Nécessite une calibration précise des coefficients thermiques pour être efficace.

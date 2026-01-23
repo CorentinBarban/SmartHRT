@@ -1,0 +1,15 @@
+id: 013
+title: "Utilisation de l'historique du vent pour le calcul"
+status: "Accepté"
+date: "2026-01-23"
+type: "Fonctionnel"
+context: |
+  La vitesse du vent instantanée n'est pas représentative de la réalité thermique d'un bâtiment. Seule une moyenne sur plusieurs heures permet d'estimer correctement l'impact du vent sur les pertes thermiques.
+decision: |
+  Les calculs de refroidissement et de chauffe doivent utiliser la moyenne du vent sur la période pertinente (4h pour le refroidissement, durée du cycle pour la chauffe), et non la valeur instantanée.
+consequences:
+  positive:
+    - Précision accrue des calculs.
+    - Meilleure adaptation aux conditions réelles.
+  negative:
+    - Peut nécessiter l'accès à l'historique (recorder) ou à des sensors statistiques.

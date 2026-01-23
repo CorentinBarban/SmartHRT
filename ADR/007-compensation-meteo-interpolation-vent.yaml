@@ -1,0 +1,21 @@
+id: 007
+title: "Compensation Météorologique par Interpolation du Vent"
+status: "Accepté"
+date: "2024-01-23"
+type: "Fonctionnel"
+context: |
+  La déperdition thermique d'un bâtiment ne dépend pas uniquement de la température extérieure, mais fortement du vent (effet de refroidissement éolien et infiltration). Utiliser un coefficient thermique unique pour toutes les météos rend le calcul faux les jours de tempête.
+decision: |
+  SmartHRT maintient deux jeux de coefficients distincts :
+  - Coefficients par vent faible (`_lw` pour Low Wind, < 10 km/h).
+  - Coefficients par vent fort (`_hw` pour High Wind, > 60 km/h).
+
+  Pour chaque calcul, le système effectue une **interpolation linéaire** entre ces deux extrêmes en fonction de la vitesse du vent actuelle (ou prévue).
+
+  (Méthode `_interpolate`)
+  (WIND_LOW, WIND_HIGH)
+consequences:
+  positive:
+    - Grande précision des prévisions de chauffe quelles que soient les conditions météo.
+  negative:
+    - Complexifie le modèle de données (4 coefficients à stocker au lieu de 2).

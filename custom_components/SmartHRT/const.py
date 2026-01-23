@@ -16,6 +16,7 @@ CONF_DEVICE_ID = "device_id"
 CONF_TARGET_HOUR = "target_hour"
 CONF_RECOVERYCALC_HOUR = "recoverycalc_hour"
 CONF_SENSOR_INTERIOR_TEMP = "sensor_interior_temperature"
+CONF_WEATHER_ENTITY = "weather_entity"
 CONF_PHONE_ALARM = "phone_alarm_selector"
 CONF_TSP = "tsp"
 

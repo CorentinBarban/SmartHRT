@@ -1,0 +1,22 @@
+id: 004
+title: "Stratégie hybride de persistance des données"
+status: "Accepté (Rétroactif)"
+date: "2024-01-23"
+context: |
+  SmartHRT manipule trois types de données :
+  1. Configuration statique (Nom, Capteurs).
+  2. Réglages utilisateurs dynamiques (Heures, Consigne).
+  3. Données apprises par le système (Coefficients thermiques RCth/RPth, État courant).
+
+  Les mécanismes standard de Home Assistant (`ConfigEntry`) ne sont pas adaptés pour stocker des données qui changent fréquemment (comme les coefficients appris) sans déclencher des rechargements d'intégration inutiles.
+decision: |
+  Adopter une stratégie de stockage hybride :
+  - **ConfigEntry (Data/Options)** : Pour la configuration utilisateur (inputs). Géré par `config_flow.py`.
+  - **Custom Storage (JSON)** : Pour les données apprises (machine learning) et l'état interne. Utilisation de `homeassistant.helpers.storage.Store` avec une sérialisation définie par `PERSISTED_FIELDS` dans `const.py`.
+consequences:
+  positive:
+    - Persistance des apprentissages à travers les redémarrages de HA.
+    - Séparation propre entre "ce que l'utilisateur veut" et "ce que le système a appris".
+    - Évite de polluer le registre de configuration de Home Assistant.
+  negative:
+    - Nécessite de gérer manuellement la sauvegarde/restauration dans le code (`_save_learned_data` / `_restore_learned_data`).

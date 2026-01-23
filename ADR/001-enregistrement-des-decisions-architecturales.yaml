@@ -1,0 +1,17 @@
+id: 001
+title: "Enregistrement des décisions architecturales"
+status: "Accepté"
+date: "2024-01-23"
+context: |
+  Le projet SmartHRT évolue et implique des choix techniques complexes (algorithmes thermiques, intégration Home Assistant, gestion d'états). L'absence de documentation sur les décisions passées rend l'intégration de nouveaux contributeurs difficile et risque de provoquer des régressions conceptuelles.
+decision: |
+  Nous utiliserons les ADR (Architecture Decision Records) pour documenter les changements architecturaux significatifs.
+  - Format : YAML (pour être lisible par machine et humain).
+  - Emplacement : Dossier `doc/adr` à la racine du projet.
+  - Cycle de vie : Proposé -> Accepté / Rejeté -> Obsolète.
+consequences:
+  positive:
+    - Historique clair des choix techniques.
+    - Facilite la revue de code pour les nouvelles fonctionnalités.
+  negative:
+    - Légère surcharge administrative lors de la conception.

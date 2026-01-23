@@ -1,0 +1,17 @@
+id: 002
+title: "Sélection explicite de l'entité météo"
+status: "Accepté"
+date: "2024-01-23"
+context: |
+  Actuellement, SmartHRT découvre automatiquement la première entité météo disponible via `hass.states.async_all("weather")`. Cela crée de l'indéterminisme si plusieurs fournisseurs météo sont installés et ne permet pas à l'utilisateur de choisir la source la plus fiable pour son domicile.
+decision: |
+  Rendre la configuration de l'entité météo explicite via `config_flow` et `options_flow`.
+  - Ajout d'un champ `weather_entity` dans la configuration.
+  - Modification du coordinateur pour cibler spécifiquement cette entité.
+  - Mise en place d'un fallback pour la rétrocompatibilité (si non configuré, garder le comportement auto).
+consequences:
+  positive:
+    - Contrôle utilisateur total.
+    - Performance accrue (pas de scan de toutes les entités).
+  negative:
+    - Nécessite une reconfiguration pour les utilisateurs existants souhaitant changer de source.
