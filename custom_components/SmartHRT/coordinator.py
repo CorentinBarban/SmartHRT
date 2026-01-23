@@ -4,12 +4,10 @@ import logging
 import math
 from datetime import datetime, timedelta, time as dt_time
 from dataclasses import dataclass, field
-from typing import Callable, Any
+from typing import Callable
 from collections import deque
 
-import voluptuous as vol
-
-from homeassistant.core import HomeAssistant, callback, ServiceCall, SupportsResponse
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.event import (
     async_track_time_interval,
@@ -34,14 +32,6 @@ from .const import (
     DEFAULT_RELAXATION_FACTOR,
     WIND_HIGH,
     WIND_LOW,
-    SERVICE_CALCULATE_RECOVERY_TIME,
-    SERVICE_CALCULATE_RECOVERY_UPDATE_TIME,
-    SERVICE_CALCULATE_RCTH_FAST,
-    SERVICE_ON_HEATING_STOP,
-    SERVICE_ON_RECOVERY_START,
-    SERVICE_ON_RECOVERY_END,
-    SERVICE_RESET_LEARNING,
-    SERVICE_TRIGGER_CALCULATION,
     DATA_COORDINATOR,
     FORECAST_HOURS,
     TEMP_DECREASE_THRESHOLD,
@@ -66,18 +56,6 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-# Liste des services disponibles
-SERVICES = [
-    SERVICE_CALCULATE_RECOVERY_TIME,
-    SERVICE_CALCULATE_RECOVERY_UPDATE_TIME,
-    SERVICE_CALCULATE_RCTH_FAST,
-    SERVICE_ON_HEATING_STOP,
-    SERVICE_ON_RECOVERY_START,
-    SERVICE_ON_RECOVERY_END,
-    SERVICE_RESET_LEARNING,
-    SERVICE_TRIGGER_CALCULATION,
-]
 
 
 # Machine à états explicite selon les spécifications
@@ -229,7 +207,6 @@ class SmartHRTCoordinator:
         await self._update_initial_states()
         self._setup_listeners()
         self._setup_time_triggers()
-        await self._register_services()
         await self._update_weather_forecasts()
 
         # Calcul initial de l'heure de relance
@@ -462,7 +439,6 @@ class SmartHRTCoordinator:
 
     async def async_unload(self) -> None:
         """Déchargement du coordinateur"""
-        await self._unregister_services()
         self._cancel_time_triggers()
         # Annuler le trigger de recovery_update
         if self._unsub_recovery_update:
@@ -471,196 +447,6 @@ class SmartHRTCoordinator:
         for unsub in self._unsub_listeners:
             unsub()
         self._unsub_listeners.clear()
-
-    # ─────────────────────────────────────────────────────────────────────────
-    # Services
-    # ─────────────────────────────────────────────────────────────────────────
-
-    async def _register_services(self) -> None:
-        """Enregistre les services Home Assistant"""
-        if self._hass.services.has_service(DOMAIN, SERVICE_CALCULATE_RECOVERY_TIME):
-            _LOGGER.debug("Services déjà enregistrés")
-            return
-
-        schema = vol.Schema({vol.Optional("entry_id"): str})
-
-        handlers = {
-            SERVICE_CALCULATE_RECOVERY_TIME: self._handle_calculate_recovery_time,
-            SERVICE_CALCULATE_RECOVERY_UPDATE_TIME: self._handle_calculate_recovery_update_time,
-            SERVICE_CALCULATE_RCTH_FAST: self._handle_calculate_rcth_fast,
-            SERVICE_ON_HEATING_STOP: self._handle_on_heating_stop,
-            SERVICE_ON_RECOVERY_START: self._handle_on_recovery_start,
-            SERVICE_ON_RECOVERY_END: self._handle_on_recovery_end,
-            SERVICE_RESET_LEARNING: self._handle_reset_learning,
-            SERVICE_TRIGGER_CALCULATION: self._handle_trigger_calculation,
-        }
-
-        for service_name, handler in handlers.items():
-            self._hass.services.async_register(
-                DOMAIN,
-                service_name,
-                handler,
-                schema=schema,
-                supports_response=SupportsResponse.OPTIONAL,
-            )
-            _LOGGER.debug("Service enregistré: %s.%s", DOMAIN, service_name)
-
-    async def _unregister_services(self) -> None:
-        """Désenregistre les services si dernière instance"""
-        if DOMAIN not in self._hass.data:
-            return
-
-        remaining = sum(
-            1
-            for data in self._hass.data[DOMAIN].values()
-            if isinstance(data, dict) and DATA_COORDINATOR in data
-        )
-
-        if remaining <= 1:
-            for service_name in SERVICES:
-                if self._hass.services.has_service(DOMAIN, service_name):
-                    self._hass.services.async_remove(DOMAIN, service_name)
-            _LOGGER.debug("Services SmartHRT désenregistrés")
-
-    def _get_coordinator(self, entry_id: str | None) -> "SmartHRTCoordinator | None":
-        """Récupère le coordinator depuis un appel de service"""
-        if DOMAIN not in self._hass.data:
-            return None
-
-        if entry_id and entry_id in self._hass.data[DOMAIN]:
-            return self._hass.data[DOMAIN][entry_id].get(DATA_COORDINATOR)
-
-        for data in self._hass.data[DOMAIN].values():
-            if isinstance(data, dict) and DATA_COORDINATOR in data:
-                return data[DATA_COORDINATOR]
-        return None
-
-    async def _handle_calculate_recovery_time(
-        self, call: ServiceCall
-    ) -> dict[str, Any]:
-        coord = self._get_coordinator(call.data.get("entry_id"))
-        if not coord:
-            return {"success": False, "error": "Coordinator not found"}
-        coord.calculate_recovery_time()
-        return {
-            "recovery_start_hour": (
-                coord.data.recovery_start_hour.isoformat()
-                if coord.data.recovery_start_hour
-                else None
-            ),
-            "success": True,
-        }
-
-    async def _handle_calculate_recovery_update_time(
-        self, call: ServiceCall
-    ) -> dict[str, Any]:
-        coord = self._get_coordinator(call.data.get("entry_id"))
-        if not coord:
-            return {"success": False, "error": "Coordinator not found"}
-        result = coord.calculate_recovery_update_time()
-        if result:
-            coord.data.recovery_update_hour = result
-            coord._schedule_recovery_update(result)
-            coord._notify_listeners()
-        return {
-            "recovery_update_hour": result.isoformat() if result else None,
-            "success": True,
-        }
-
-    async def _handle_calculate_rcth_fast(self, call: ServiceCall) -> dict[str, Any]:
-        coord = self._get_coordinator(call.data.get("entry_id"))
-        if not coord:
-            return {"success": False, "error": "Coordinator not found"}
-        coord.calculate_rcth_fast()
-        return {"rcth_fast": coord.data.rcth_fast, "success": True}
-
-    async def _handle_on_heating_stop(self, call: ServiceCall) -> dict[str, Any]:
-        coord = self._get_coordinator(call.data.get("entry_id"))
-        if not coord:
-            return {"success": False, "error": "Coordinator not found"}
-        coord.on_heating_stop()
-        return {
-            "time_recovery_calc": (
-                coord.data.time_recovery_calc.isoformat()
-                if coord.data.time_recovery_calc
-                else None
-            ),
-            "success": True,
-        }
-
-    async def _handle_on_recovery_start(self, call: ServiceCall) -> dict[str, Any]:
-        coord = self._get_coordinator(call.data.get("entry_id"))
-        if not coord:
-            return {"success": False, "error": "Coordinator not found"}
-        coord.on_recovery_start()
-        return {
-            "time_recovery_start": (
-                coord.data.time_recovery_start.isoformat()
-                if coord.data.time_recovery_start
-                else None
-            ),
-            "rcth_calculated": coord.data.rcth_calculated,
-            "success": True,
-        }
-
-    async def _handle_on_recovery_end(self, call: ServiceCall) -> dict[str, Any]:
-        coord = self._get_coordinator(call.data.get("entry_id"))
-        if not coord:
-            return {"success": False, "error": "Coordinator not found"}
-        coord.on_recovery_end()
-        return {
-            "time_recovery_end": (
-                coord.data.time_recovery_end.isoformat()
-                if coord.data.time_recovery_end
-                else None
-            ),
-            "rpth_calculated": coord.data.rpth_calculated,
-            "success": True,
-        }
-
-    async def _handle_reset_learning(self, call: ServiceCall) -> dict[str, Any]:
-        """Reset all learned thermal coefficients to defaults.
-
-        This service allows users to restart the learning process if
-        coefficients become inaccurate (e.g., after home modifications).
-        """
-        coord = self._get_coordinator(call.data.get("entry_id"))
-        if not coord:
-            return {"success": False, "error": "Coordinator not found"}
-
-        await coord.reset_learning()
-        return {
-            "rcth": coord.data.rcth,
-            "rpth": coord.data.rpth,
-            "rcth_lw": coord.data.rcth_lw,
-            "rcth_hw": coord.data.rcth_hw,
-            "rpth_lw": coord.data.rpth_lw,
-            "rpth_hw": coord.data.rpth_hw,
-            "success": True,
-            "message": "Learning reset to defaults",
-        }
-
-    async def _handle_trigger_calculation(self, call: ServiceCall) -> dict[str, Any]:
-        """Manually trigger a recovery time calculation.
-
-        Useful for forcing an immediate recalculation after parameter changes.
-        """
-        coord = self._get_coordinator(call.data.get("entry_id"))
-        if not coord:
-            return {"success": False, "error": "Coordinator not found"}
-
-        await coord._hass.async_add_executor_job(coord.calculate_recovery_time)
-        coord._notify_listeners()
-
-        return {
-            "recovery_start_hour": (
-                coord.data.recovery_start_hour.isoformat()
-                if coord.data.recovery_start_hour
-                else None
-            ),
-            "time_to_recovery_hours": coord.get_time_to_recovery_hours(),
-            "success": True,
-        }
 
     # ─────────────────────────────────────────────────────────────────────────
     # État initial et callbacks
