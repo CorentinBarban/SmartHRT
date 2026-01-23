@@ -1,4 +1,9 @@
-"""Initialisation du package de l'intégration SmartHRT"""
+"""Initialisation du package de l'intégration SmartHRT.
+
+ADR implémentées dans ce module:
+- ADR-001: Architecture globale (setup/async_unload_entry)
+- ADR-012: Exposition entités pour Lovelace (forward_entry_setups)
+"""
 
 import logging
 
@@ -44,7 +49,11 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Creation des entités à partir d'une configEntry"""
+    """Creation des entités à partir d'une configEntry.
+
+    ADR-001: Point d'entrée principal de l'intégration.
+    ADR-012: Configure les plateformes (sensor, number, time, switch) pour Lovelace.
+    """
 
     _LOGGER.debug(
         "Appel de async_setup_entry entry: entry_id='%s', data='%s'",

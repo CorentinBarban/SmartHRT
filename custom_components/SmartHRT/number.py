@@ -1,4 +1,10 @@
-"""Implements the SmartHRT number entities"""
+"""Implements the SmartHRT number entities.
+
+ADR implémentées dans ce module:
+- ADR-006: Apprentissage continu (SmartHRTRelaxationNumber pour le facteur)
+- ADR-007: Compensation météo (RCth/RPth LW/HW pour interpolation vent)
+- ADR-012: Exposition entités pour Lovelace (numbers comme entités HA)
+"""
 
 import logging
 
@@ -177,7 +183,11 @@ class SmartHRTRPthNumber(SmartHRTBaseNumber):
 
 
 class SmartHRTRCthLWNumber(SmartHRTBaseNumber):
-    """Entité number pour RCth low wind"""
+    """Entité number pour RCth low wind.
+
+    ADR-007: Compensation météo - coefficient de refroidissement par vent faible.
+    Utilisé pour l'interpolation linéaire selon la vitesse du vent.
+    """
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
@@ -289,7 +299,11 @@ class SmartHRTRPthHWNumber(SmartHRTBaseNumber):
 
 
 class SmartHRTRelaxationNumber(SmartHRTBaseNumber):
-    """Entité number pour le facteur de relaxation"""
+    """Entité number pour le facteur de relaxation.
+
+    ADR-006: Apprentissage continu - contrôle la vitesse de convergence.
+    Plus la valeur est élevée, plus l'apprentissage est lent mais stable.
+    """
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry

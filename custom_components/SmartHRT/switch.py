@@ -1,4 +1,10 @@
-"""Implements the SmartHRT switch entities"""
+"""Implements the SmartHRT switch entities.
+
+ADR implémentées dans ce module:
+- ADR-003: Activation/désactivation de la machine à états (SmartHeatingSwitch)
+- ADR-006: Mode adaptatif pour l'apprentissage (AdaptiveSwitch)
+- ADR-012: Exposition entités pour Lovelace (switches comme entités HA)
+"""
 
 import logging
 
@@ -78,7 +84,11 @@ class SmartHRTBaseSwitch(SwitchEntity):
 
 
 class SmartHRTSmartHeatingSwitch(SmartHRTBaseSwitch):
-    """Switch pour activer/désactiver le mode chauffage intelligent"""
+    """Switch pour activer/désactiver le mode chauffage intelligent.
+
+    ADR-003: Active/désactive la machine à états complète.
+    Quand désactivé, aucun calcul de relance n'est effectué.
+    """
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
@@ -107,7 +117,11 @@ class SmartHRTSmartHeatingSwitch(SmartHRTBaseSwitch):
 
 
 class SmartHRTAdaptiveSwitch(SmartHRTBaseSwitch):
-    """Switch pour activer/désactiver le mode adaptatif (auto-calibration)"""
+    """Switch pour activer/désactiver le mode adaptatif (auto-calibration).
+
+    ADR-006: Active/désactive l'apprentissage continu des coefficients.
+    Quand activé, les RCth/RPth sont mis à jour après chaque cycle.
+    """
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry

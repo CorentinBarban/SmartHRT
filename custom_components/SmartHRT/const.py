@@ -1,4 +1,9 @@
-"""Les constantes pour l'intégration SmartHRT"""
+"""Les constantes pour l'intégration SmartHRT.
+
+ADR implémentées dans ce module:
+- ADR-004: Définition PERSISTED_FIELDS pour persistance hybride
+- ADR-009: Mapping centralisé des champs persistés (coefficients)
+"""
 
 from homeassistant.const import Platform
 
@@ -35,7 +40,8 @@ DEFAULT_RPTH_MIN = 0.0
 DEFAULT_RPTH_MAX = 19999.0
 DEFAULT_RELAXATION_FACTOR = 2.0
 
-# Wind thresholds (km/h)
+# ADR-007: Compensation météo - seuils de vent pour interpolation
+# WIND_LOW: vent faible (utilise rcth_lw), WIND_HIGH: vent fort (utilise rcth_hw)
 WIND_HIGH = 60.0
 WIND_LOW = 10.0
 
@@ -58,15 +64,17 @@ SERVICE_TRIGGER_CALCULATION = "trigger_calculation"
 # Weather forecast settings
 FORECAST_HOURS = 3
 
-# Temperature detection thresholds
-TEMP_DECREASE_THRESHOLD = 0.2  # °C drop threshold to detect actual cooling start
+# ADR-008: Validation arrêt par détection lag
+# Seuil de baisse de température pour confirmer l'arrêt réel du chauffage
+TEMP_DECREASE_THRESHOLD = 0.2  # °C
 
 # Default recoverycalc hour (23:00)
 DEFAULT_RECOVERYCALC_HOUR = "23:00:00"
 
-# Storage keys for RestoreEntity persistence
-# Format: (storage_key, data_attribute, default_value, type)
-# Types: "float", "bool", "str", "datetime" (for isoformat serialization)
+# ADR-004 & ADR-009: Mapping centralisé pour persistance hybride
+# Chaque tuple définit: (clé stockage, attribut data, valeur par défaut, type)
+# Les types supportés: "float", "bool", "str", "datetime" (sérialisé en isoformat)
+# Ce mapping est utilisé par coordinator._save/_restore_learned_data()
 PERSISTED_FIELDS: list[tuple[str, str, object, str]] = [
     # Coefficients thermiques
     ("rcth", "rcth", DEFAULT_RCTH, "float"),

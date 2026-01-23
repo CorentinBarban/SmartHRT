@@ -1,4 +1,10 @@
-"""Le Config Flow pour SmartHRT"""
+"""Le Config Flow pour SmartHRT.
+
+ADR implémentées dans ce module:
+- ADR-002: Sélection explicite de l'entité météo (weather_entity selector)
+- ADR-010: Inputs dynamiques configurables (ConfigFlow multi-step)
+- ADR-011: Robustesse des calculs (validation des entrées)
+"""
 
 import logging
 from typing import Any
@@ -120,11 +126,12 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(
                     CONF_RECOVERYCALC_HOUR, default="23:00:00"
                 ): selector.TimeSelector(),
-                # Capteur de température intérieure
+                # Capteur de température intérieure (ADR-010: inputs dynamiques)
                 vol.Required(CONF_SENSOR_INTERIOR_TEMP): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain=SENSOR_DOMAIN),
                 ),
-                # Entité météo (ADR-002: sélection explicite)
+                # ADR-002: Sélection explicite de l'entité météo
+                # L'utilisateur choisit son entité weather au lieu d'une auto-détection
                 vol.Required(CONF_WEATHER_ENTITY): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain="weather"),
                 ),

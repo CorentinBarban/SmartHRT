@@ -1,4 +1,17 @@
-"""Coordinator pour SmartHRT - Gère la logique de chauffage intelligent"""
+"""Coordinator pour SmartHRT - Gère la logique de chauffage intelligent.
+
+ADR implémentées dans ce module:
+- ADR-002: Sélection explicite de l'entité météo (weather_entity_id)
+- ADR-003: Machine à états explicite (SmartHRTState)
+- ADR-004: Stratégie hybride de persistance (_save/_restore_learned_data)
+- ADR-005: Stratégie de pilotage anticipation (calculate_recovery_time)
+- ADR-006: Apprentissage continu (_update_coefficients, relaxation_factor)
+- ADR-007: Compensation météo interpolation vent (_interpolate, rcth_lw/hw)
+- ADR-008: Validation arrêt par détection lag (TEMP_DECREASE_THRESHOLD)
+- ADR-009: Persistance coefficients (PERSISTED_FIELDS, Store)
+- ADR-013: Historique vent pour calcul (wind_speed_history, wind_speed_avg)
+- ADR-014: Format des dates (dt_util.now(), dt_util.as_local())
+"""
 
 import logging
 import math
@@ -43,9 +56,10 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-# Machine à états explicite selon les spécifications
+# ADR-003: Machine à états explicite
+# Les 5 états modélisent le cycle thermique journalier complet
 class SmartHRTState:
-    """États de la machine à états SmartHRT.
+    """États de la machine à états SmartHRT (ADR-003).
 
     Cycle de vie:
     HEATING_ON → DETECTING_LAG → MONITORING → RECOVERY → HEATING_PROCESS → HEATING_ON
@@ -122,7 +136,8 @@ class SmartHRTData:
     # Alarme téléphone
     phone_alarm: str | None = None
 
-    # Historique pour calcul de moyenne de vent
+    # ADR-013: Historique vent pour calcul de moyenne sur 4h
+    # Permet de lisser les variations de vent pour un calcul plus stable
     wind_speed_history: deque = field(
         default_factory=lambda: deque(maxlen=240)
     )  # 4h à 1 sample/min
@@ -146,7 +161,8 @@ class SmartHRTCoordinator:
         self._unsub_recovery_update: Callable | None = (
             None  # Tracker pour recovery_update
         )
-        # Persistent storage for learned coefficients
+        # ADR-004 & ADR-009: Stratégie hybride de persistance
+        # Les coefficients appris (RCth, RPth) et l'état survivent aux redémarrages
         self._store: Store = Store(
             hass, self.STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}"
         )
@@ -161,6 +177,7 @@ class SmartHRTCoordinator:
         )
 
         self._interior_temp_sensor_id = entry.data.get(CONF_SENSOR_INTERIOR_TEMP)
+        # ADR-002: Entité météo sélectionnée explicitement par l'utilisateur
         self._weather_entity_id = entry.data.get(CONF_WEATHER_ENTITY)
         self._phone_alarm_sensor_id = entry.data.get(CONF_PHONE_ALARM)
 
@@ -215,6 +232,9 @@ class SmartHRTCoordinator:
 
     async def _restore_learned_data(self) -> None:
         """Restore learned coefficients and state from persistent storage.
+
+        ADR-004: Stratégie hybride de persistance
+        ADR-009: Persistance des coefficients thermiques
 
         This ensures that learned thermal constants (RCth, RPth) and the
         current state machine state survive Home Assistant restarts,
@@ -773,11 +793,15 @@ class SmartHRTCoordinator:
             pass
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Interpolation thermique
+    # ADR-007: Compensation météo - Interpolation linéaire selon le vent
     # ─────────────────────────────────────────────────────────────────────────
 
     def _interpolate(self, low: float, high: float, wind_kmh: float) -> float:
-        """Interpole une valeur en fonction du vent"""
+        """Interpole une valeur en fonction du vent (ADR-007).
+
+        Utilise rcth_lw/rcth_hw pour adapter le coefficient thermique
+        selon la vitesse du vent (entre WIND_LOW et WIND_HIGH km/h).
+        """
         wind_clamped = max(WIND_LOW, min(WIND_HIGH, wind_kmh))
         ratio = (WIND_HIGH - wind_clamped) / (WIND_HIGH - WIND_LOW)
         return max(0.1, high + (low - high) * ratio)
@@ -789,13 +813,14 @@ class SmartHRTCoordinator:
         return self._interpolate(self.data.rpth_lw, self.data.rpth_hw, wind_kmh)
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Calculs thermiques
+    # ADR-005: Stratégie de pilotage - Calculs thermiques d'anticipation
     # ─────────────────────────────────────────────────────────────────────────
 
     def calculate_recovery_time(self) -> None:
-        """Calcule l'heure de démarrage de la relance
-        Équivalent du script calculate_recovery_time du YAML
-        Utilise les prévisions météo pour le calcul
+        """Calcule l'heure de démarrage de la relance (ADR-005).
+
+        Équivalent du script calculate_recovery_time du YAML.
+        Utilise les prévisions météo et 20 itérations pour affiner la prédiction.
         """
         # Utiliser 17°C par défaut si la température intérieure n'est pas disponible (comme dans le YAML)
         tint = self.data.interior_temp if self.data.interior_temp is not None else 17.0
@@ -996,7 +1021,13 @@ class SmartHRTCoordinator:
             self._update_coefficients("rpth")
 
     def _update_coefficients(self, coef_type: str) -> None:
-        """Met à jour les coefficients avec relaxation"""
+        """Met à jour les coefficients avec relaxation (ADR-006).
+
+        ADR-006: Apprentissage continu
+        - Calcule l'erreur entre valeur mesurée et interpolée
+        - Applique une formule de relaxation pour éviter les oscillations
+        - Met à jour rcth_lw/hw ou rpth_lw/hw selon le vent actuel
+        """
         wind_kmh = self.data.wind_speed * 3.6
         x = (wind_kmh - WIND_LOW) / (WIND_HIGH - WIND_LOW) - 0.5
         relax = self.data.relaxation_factor
@@ -1069,7 +1100,8 @@ class SmartHRTCoordinator:
         if self.data.interior_temp is None:
             return
 
-        # Détection du lag de température (équivalent de l'automation detect_temperature_lag)
+        # ADR-008: Validation arrêt par détection lag de température
+        # Attend une baisse de 0.2°C pour confirmer l'arrêt réel du chauffage
         if self.data.temp_lag_detection_active:
             temp_threshold = self.data.temp_recovery_calc - TEMP_DECREASE_THRESHOLD
 

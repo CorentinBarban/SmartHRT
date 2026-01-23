@@ -1,4 +1,9 @@
-"""Implements the SmartHRT time entities"""
+"""Implements the SmartHRT time entities.
+
+ADR implémentées dans ce module:
+- ADR-012: Exposition entités pour Lovelace (time comme entités HA)
+- ADR-014: Format des dates en fuseau local (dt_util.as_local())
+"""
 
 import logging
 from datetime import time as dt_time

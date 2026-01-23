@@ -1,4 +1,9 @@
-"""Implements the SmartHRT sensors component"""
+"""Implements the SmartHRT sensors component.
+
+ADR implémentées dans ce module:
+- ADR-012: Exposition entités pour Lovelace (sensors comme entités HA)
+- ADR-014: Format des dates en fuseau local (dt_util.as_local())
+"""
 
 import logging
 
