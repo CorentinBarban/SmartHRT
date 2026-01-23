@@ -39,7 +39,14 @@ def mock_hass():
     hass.config_entries.async_forward_entry_setups = AsyncMock()
     hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
     hass.config_entries.async_reload = AsyncMock()
-    hass.async_create_task = MagicMock()
+
+    # async_create_task must properly handle coroutines to avoid warnings
+    def mock_create_task(coro, *args, **kwargs):
+        """Close coroutine to avoid 'never awaited' warning."""
+        coro.close()
+        return MagicMock()
+
+    hass.async_create_task = MagicMock(side_effect=mock_create_task)
     # Add config attribute for Store
     hass.config = MagicMock()
     hass.config.path = MagicMock(return_value="/tmp/test_storage")
