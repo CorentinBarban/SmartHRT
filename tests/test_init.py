@@ -145,10 +145,45 @@ class TestUpdateListener:
     """Tests pour update_listener."""
 
     @pytest.mark.asyncio
-    async def test_update_listener(self, mock_hass, mock_config_entry):
-        """Test que l'update listener recharge l'entrée."""
+    async def test_update_listener_applies_options(self, mock_hass, mock_config_entry):
+        """Test que l'update listener applique les options au coordinateur."""
+        from unittest.mock import MagicMock
+        from custom_components.SmartHRT.const import (
+            CONF_TSP,
+            CONF_TARGET_HOUR,
+            CONF_RECOVERYCALC_HOUR,
+        )
+
+        # Créer un mock du coordinateur
+        mock_coordinator = MagicMock()
+        mock_coordinator._parse_time = lambda x: x  # Simplify for test
+        mock_coordinator.set_tsp = MagicMock()
+        mock_coordinator.set_target_hour = MagicMock()
+        mock_coordinator.set_recoverycalc_hour = MagicMock()
+
+        # Configurer les options du config_entry
+        mock_config_entry.options = {
+            CONF_TSP: 21.0,
+            CONF_TARGET_HOUR: "07:00:00",
+            CONF_RECOVERYCALC_HOUR: "22:00:00",
+        }
+
+        # Configurer hass.data
+        mock_hass.data[DOMAIN] = {
+            mock_config_entry.entry_id: {DATA_COORDINATOR: mock_coordinator}
+        }
+
         await update_listener(mock_hass, mock_config_entry)
 
-        mock_hass.config_entries.async_reload.assert_called_once_with(
-            mock_config_entry.entry_id
-        )
+        # Vérifier que les setters ont été appelés
+        mock_coordinator.set_tsp.assert_called_once_with(21.0)
+        mock_coordinator.set_target_hour.assert_called_once()
+        mock_coordinator.set_recoverycalc_hour.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_update_listener_no_coordinator(self, mock_hass, mock_config_entry):
+        """Test que l'update listener gère l'absence de coordinateur."""
+        mock_hass.data[DOMAIN] = {mock_config_entry.entry_id: {}}
+
+        # Ne devrait pas lever d'exception
+        await update_listener(mock_hass, mock_config_entry)

@@ -166,12 +166,22 @@ class SmartHRTCoordinator:
             hass, self.STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}"
         )
 
+        # Lecture des options avec fallback sur data pour la rétrocompatibilité
+        # Les valeurs dynamiques (tsp, target_hour, recoverycalc_hour) sont dans options
+        # Les valeurs statiques (name, sensors) restent dans data
         self.data = SmartHRTData(
             name=entry.data.get(CONF_NAME, "SmartHRT"),
-            tsp=entry.data.get(CONF_TSP, DEFAULT_TSP),
-            target_hour=self._parse_time(entry.data.get(CONF_TARGET_HOUR, "06:00:00")),
+            tsp=entry.options.get(CONF_TSP, entry.data.get(CONF_TSP, DEFAULT_TSP)),
+            target_hour=self._parse_time(
+                entry.options.get(
+                    CONF_TARGET_HOUR, entry.data.get(CONF_TARGET_HOUR, "06:00:00")
+                )
+            ),
             recoverycalc_hour=self._parse_time(
-                entry.data.get(CONF_RECOVERYCALC_HOUR, DEFAULT_RECOVERYCALC_HOUR)
+                entry.options.get(
+                    CONF_RECOVERYCALC_HOUR,
+                    entry.data.get(CONF_RECOVERYCALC_HOUR, DEFAULT_RECOVERYCALC_HOUR),
+                )
             ),
         )
 

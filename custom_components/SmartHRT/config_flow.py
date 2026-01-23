@@ -169,16 +169,30 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
         )  # pyright: ignore[reportReturnType]
 
 
+# Clés stockées dans 'data' (configuration statique - ne change pas)
+STATIC_KEYS = {CONF_NAME, CONF_SENSOR_INTERIOR_TEMP, CONF_PHONE_ALARM}
+# Clés stockées dans 'options' (réglages dynamiques - modifiables sans rechargement)
+DYNAMIC_KEYS = {CONF_TARGET_HOUR, CONF_RECOVERYCALC_HOUR, CONF_TSP}
+
+
 class SmartHRTOptionsFlow(OptionsFlow):
     """La classe qui implémente le option flow pour SmartHRT.
-    Elle doit dériver de OptionsFlow"""
+    Elle doit dériver de OptionsFlow.
+
+    Les réglages dynamiques sont stockés dans 'options' pour permettre
+    leur modification sans rechargement complet de l'intégration.
+    """
 
     def __init__(self, config_entry: ConfigEntry) -> None:
         """Initialisation de l'option flow. On a le ConfigEntry existant en entrée"""
         super().__init__()
         self._config_entry = config_entry
-        # On initialise les user_inputs avec les données du configEntry
-        self._user_inputs: dict[str, Any] = dict(config_entry.data)
+        # On initialise les user_inputs en fusionnant data et options
+        # options a priorité sur data pour les clés dynamiques
+        self._user_inputs: dict[str, Any] = {
+            **config_entry.data,
+            **config_entry.options,
+        }
 
     async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
         """Gestion de l'étape 'init'. Point d'entrée du optionsFlow."""
@@ -235,16 +249,28 @@ class SmartHRTOptionsFlow(OptionsFlow):
         return await self.async_end()  # pyright: ignore[reportReturnType]
 
     async def async_end(self) -> FlowResult:
-        """Finalization of the ConfigEntry creation"""
+        """Finalization of the ConfigEntry modification.
+
+        Sépare les données en:
+        - data: configuration statique (capteurs, nom)
+        - options: réglages dynamiques (heures, consigne)
+
+        Seules les options sont mises à jour ici, permettant une
+        application des changements sans rechargement complet.
+        """
+        # Extraire les options dynamiques
+        new_options = {
+            key: self._user_inputs[key]
+            for key in DYNAMIC_KEYS
+            if key in self._user_inputs
+        }
+
         _LOGGER.info(
-            "Recreation de l'entry %s. La nouvelle config est maintenant : %s",
+            "Mise à jour des options de l'entry %s. Nouvelles options : %s",
             self._config_entry.entry_id,
-            self._user_inputs,
+            new_options,
         )
-        # Modification des data de la configEntry
-        # (et non pas ajout d'un objet options dans la configEntry)
-        self.hass.config_entries.async_update_entry(
-            self._config_entry, data=self._user_inputs
-        )
-        # Retourne un entry vide pour finaliser le flow
-        return self.async_create_entry(title="", data={})
+
+        # Retourne les nouvelles options - Home Assistant les stockera automatiquement
+        # dans config_entry.options et déclenchera update_listener
+        return self.async_create_entry(title="", data=new_options)
