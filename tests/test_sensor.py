@@ -1,6 +1,6 @@
 """Tests pour les sensors SmartHRT."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time as dt_time
 from unittest.mock import MagicMock, patch, AsyncMock
 
 import pytest
@@ -19,6 +19,9 @@ from custom_components.SmartHRT.sensor import (
     SmartHRTRecoveryStartSensor,
     SmartHRTRCthSensor,
     SmartHRTRPthSensor,
+    SmartHRTRecoveryStartTimestampSensor,
+    SmartHRTTargetHourTimestampSensor,
+    SmartHRTRecoveryCalcHourTimestampSensor,
     async_setup_entry,
 )
 from custom_components.SmartHRT.const import DOMAIN, DEVICE_MANUFACTURER
@@ -263,3 +266,68 @@ class TestAsyncSetupEntry:
         assert "SmartHRTInteriorTempSensor" in entity_types
         assert "SmartHRTExteriorTempSensor" in entity_types
         assert "SmartHRTWindSpeedSensor" in entity_types
+        assert "SmartHRTRecoveryStartTimestampSensor" in entity_types
+        assert "SmartHRTTargetHourTimestampSensor" in entity_types
+        assert "SmartHRTRecoveryCalcHourTimestampSensor" in entity_types
+
+
+class TestSmartHRTTimestampSensors:
+    """Tests pour les sensors timestamp utilisés dans les automatisations."""
+
+    def test_recovery_start_timestamp_sensor(
+        self, mock_coordinator_with_data, mock_config_entry
+    ):
+        """Test du sensor timestamp de relance."""
+        recovery_time = dt_util.now() + timedelta(hours=3)
+        mock_coordinator_with_data.data.recovery_start_hour = recovery_time
+
+        sensor = SmartHRTRecoveryStartTimestampSensor(
+            mock_coordinator_with_data, mock_config_entry
+        )
+
+        assert sensor._attr_name == "Heure de relance"
+        assert sensor.device_class == SensorDeviceClass.TIMESTAMP
+        assert sensor.native_value == recovery_time
+        assert sensor.icon == "mdi:clock-start"
+
+    def test_target_hour_timestamp_sensor(
+        self, mock_coordinator_with_data, mock_config_entry
+    ):
+        """Test du sensor timestamp d'heure cible."""
+        mock_coordinator_with_data.data.target_hour = dt_time(6, 30, 0)
+
+        sensor = SmartHRTTargetHourTimestampSensor(
+            mock_coordinator_with_data, mock_config_entry
+        )
+
+        assert sensor._attr_name == "Heure cible (déclencheur)"
+        assert sensor.device_class == SensorDeviceClass.TIMESTAMP
+        assert sensor.icon == "mdi:clock-end"
+
+        # Vérifie que le timestamp retourné est bien un datetime
+        value = sensor.native_value
+        assert value is not None
+        assert isinstance(value, datetime)
+        assert value.hour == 6
+        assert value.minute == 30
+
+    def test_recoverycalc_hour_timestamp_sensor(
+        self, mock_coordinator_with_data, mock_config_entry
+    ):
+        """Test du sensor timestamp de coupure chauffage."""
+        mock_coordinator_with_data.data.recoverycalc_hour = dt_time(23, 0, 0)
+
+        sensor = SmartHRTRecoveryCalcHourTimestampSensor(
+            mock_coordinator_with_data, mock_config_entry
+        )
+
+        assert sensor._attr_name == "Heure coupure chauffage (déclencheur)"
+        assert sensor.device_class == SensorDeviceClass.TIMESTAMP
+        assert sensor.icon == "mdi:clock-in"
+
+        # Vérifie que le timestamp retourné est bien un datetime
+        value = sensor.native_value
+        assert value is not None
+        assert isinstance(value, datetime)
+        assert value.hour == 23
+        assert value.minute == 0

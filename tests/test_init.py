@@ -187,3 +187,28 @@ class TestUpdateListener:
 
         # Ne devrait pas lever d'exception
         await update_listener(mock_hass, mock_config_entry)
+
+
+class TestRemoveObsoleteEntities:
+    """Tests pour la suppression des entités obsolètes (ADR-016)."""
+
+    @pytest.mark.asyncio
+    async def test_remove_obsolete_entities_no_entities(
+        self, mock_hass, mock_config_entry
+    ):
+        """Test que la fonction ne fait rien si les entités n'existent pas."""
+        from custom_components.SmartHRT import _remove_obsolete_entities
+
+        # Mock du registre d'entités
+        with patch("custom_components.SmartHRT.er.async_get") as mock_get_registry:
+            mock_registry = MagicMock()
+            mock_get_registry.return_value = mock_registry
+
+            # Simuler que les entités n'existent pas
+            mock_registry.async_get_entity_id.return_value = None
+
+            # Appeler la fonction de nettoyage
+            await _remove_obsolete_entities(mock_hass, mock_config_entry)
+
+            # Vérifier qu'aucune suppression n'a été tentée
+            mock_registry.async_remove.assert_not_called()

@@ -764,10 +764,12 @@ class SmartHRTCoordinator:
             return
 
         temp = self.data.exterior_temp
-        wind_kmh = self.data.wind_speed * 3.6
+        wind_ms = self.data.wind_speed  # en m/s
+        wind_kmh = wind_ms * 3.6
 
-        # Formule de windchill (JAG/TI) - active si temp < 10°C et vent > 4.8 km/h
-        if temp < 10 and wind_kmh > 4.8:
+        # Formule de windchill (JAG/TI) - active si temp < 10°C et vent > 1.34 m/s (4.824 km/h)
+        # Seuil identique au YAML: wind_speed > 1.34 (m/s)
+        if temp < 10 and wind_ms > 1.34:
             self.data.windchill = round(
                 13.12
                 + 0.6215 * temp

@@ -167,11 +167,11 @@ class TestWindchill:
         """Test du windchill sans vent."""
         coord = mock_coordinator_with_data
         coord.data.exterior_temp = 5.0
-        coord.data.wind_speed = 1.0  # < 4.8 km/h
+        coord.data.wind_speed = 1.0  # < 1.34 m/s (4.824 km/h)
 
         coord._calculate_windchill()
 
-        # Pas de windchill si vent < 4.8 km/h
+        # Pas de windchill si vent <= 1.34 m/s
         assert coord.data.windchill == 5.0
 
     def test_windchill_no_temp(self, mock_coordinator_with_data):

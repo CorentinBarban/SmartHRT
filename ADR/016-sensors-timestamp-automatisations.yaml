@@ -1,0 +1,82 @@
+id: 016
+title: "Sensors timestamp pour déclencheurs d'automatisations"
+status: "Accepté"
+date: "2026-01-24"
+type: "Fonctionnel"
+context: |
+  Les entités `time` de Home Assistant ne peuvent pas être utilisées directement comme déclencheurs 
+  avec `platform: time` et `at:` dans les automatisations. Cette limitation empêche les utilisateurs 
+  de créer facilement des automatisations qui se déclenchent aux heures calculées par SmartHRT 
+  (heure de relance, heure de coupure chauffage, heure cible).
+
+  La syntaxe `at: time.entity_id` n'est supportée que pour les helpers `input_datetime` et non 
+  pour les entités time custom. Pour permettre les déclenchements horaires, il faut exposer des 
+  sensors avec `device_class: timestamp` qui retournent un datetime timezone-aware.
+
+  De plus, les entités time en lecture seule (recovery_start_hour, recovery_update_hour) créaient 
+  une duplication inutile avec les sensors timestamp.
+decision: |
+  Créer trois sensors avec device_class TIMESTAMP pour exposer les heures calculées 
+  en tant que déclencheurs utilisables dans les automatisations :
+
+  1. `sensor.<name>_recovery_start` : Heure de début de relance (déclencheur chauffage)
+  2. `sensor.<name>_target_hour` : Heure cible/réveil (déclencheur fin de relance)
+  3. `sensor.<name>_recoverycalc_hour` : Heure de coupure chauffage le soir
+
+  Ces sensors retournent un `datetime` timezone-aware compatible avec :
+  ```yaml
+  trigger:
+    - platform: time
+      at: sensor.<name>_recovery_start
+  ```
+
+  **Suppression des entités time en lecture seule** :
+  - `time.recoverystart_hour` - Supprimée (remplacée par sensor.recovery_start)
+  - `time.recoveryupdate_hour` - Supprimée (valeur calculée, pas nécessaire en UI)
+
+  **Entités time conservées** (modifiables par l'utilisateur) :
+  - `time.target_hour` - Permet à l'utilisateur de définir l'heure cible
+  - `time.recoverycalc_hour` - Permet à l'utilisateur de définir l'heure de coupure
+
+  Les sensors timestamp ont des unique_id sans suffixe "_timestamp" pour simplification.
+consequences:
+  positive:
+    - Les utilisateurs peuvent créer des automatisations simples avec `platform: time`
+    - Cohérence avec les patterns Home Assistant standards
+    - Découvrabilité: les sensors timestamp apparaissent dans l'UI d'automatisation
+    - Pas de breaking change: les entités time modifiables restent fonctionnelles
+    - Suppression de la duplication: les valeurs calculées ne sont exposées qu'une seule fois
+    - Réduction du nombre total d'entités créées
+  negative:
+    - Trois sensors supplémentaires à maintenir et tester
+    - Breaking change mineur: time.recoverystart_hour et time.recoveryupdate_hour supprimées
+  mitigation:
+    - Suppression des entités time en lecture seule pour éviter la duplication
+    - Documentation claire dans le README expliquant l'usage des sensors vs time modifiables
+    - Entités time conservées uniquement pour target_hour et recoverycalc_hour (modifiables)
+    - Tests unitaires complets pour valider les sensors timestamp
+    - Nettoyage automatique des entités obsolètes lors du rechargement de l'intégration
+implementation:
+  cleanup_obsolete_entities: |
+    La fonction `_remove_obsolete_entities()` dans `__init__.py` supprime automatiquement
+    les entités time obsolètes du registre Home Assistant lors du setup de l'intégration.
+    Cela évite que les anciennes entités restent visibles comme "unavailable" dans l'UI.
+
+    Entités supprimées automatiquement :
+    - time.<name>_recoverystart_hour
+    - time.<name>_recoveryupdate_hour
+references:
+  - "Home Assistant automation triggers: https://www.home-assistant.io/docs/automation/trigger/"
+  - "SensorDeviceClass.TIMESTAMP documentation"
+examples:
+  - |
+    Automatisation pour démarrer le chauffage:
+    ```yaml
+    automation:
+      - alias: "SmartHRT - Démarrer chauffage"
+        trigger:
+          - platform: time
+            at: sensor.smarthrt_recovery_start
+        action:
+          - service: climate.turn_on
+    ```

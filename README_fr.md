@@ -6,11 +6,11 @@
 [![GitHub Release](https://img.shields.io/github/v/release/corentinBarban/smartHRT?include_prereleases)](https://github.com/corentinBarban/SmartHRT/releases)
 
 ---
+
 > [!NOTE]
 > **Ce repository est un fork du projet original [SmartHRT](https://github.com/ebozonne/smarthrt).**
 > Il transforme le package YAML original en une **Intégration Home Assistant (Custom Component)** native en Python.
->
-> 
+
 ## 📋 Table des matières
 
 1. [Présentation](#-présentation)
@@ -154,19 +154,22 @@ Cette interpolation permet de tenir compte de l'augmentation des pertes thermiqu
 
 ### Sensors
 
-| Entité                         | Description                      |
-| ------------------------------ | -------------------------------- |
-| `sensor.<name>_interior_temp`  | Température intérieure           |
-| `sensor.<name>_exterior_temp`  | Température extérieure           |
-| `sensor.<name>_wind_speed`     | Vitesse du vent (m/s)            |
-| `sensor.<name>_windchill`      | Température ressentie            |
-| `sensor.<name>_recovery_start` | Heure de relance calculée        |
-| `sensor.<name>_rcth_sensor`    | Coefficient RCth                 |
-| `sensor.<name>_rpth_sensor`    | Coefficient RPth                 |
-| `sensor.<name>_rcth_fast`      | RCth dynamique (suivi nuit)      |
-| `sensor.<name>_wind_forecast`  | Prévision vent moyenne 3h        |
-| `sensor.<name>_temp_forecast`  | Prévision température moyenne 3h |
-| `sensor.<name>_phone_alarm`    | Prochaine alarme téléphone       |
+| Entité                            | Description                                                 |
+| --------------------------------- | ----------------------------------------------------------- |
+| `sensor.<name>_interior_temp`     | Température intérieure                                      |
+| `sensor.<name>_exterior_temp`     | Température extérieure                                      |
+| `sensor.<name>_wind_speed`        | Vitesse du vent (m/s)                                       |
+| `sensor.<name>_windchill`         | Température ressentie                                       |
+| `sensor.<name>_recovery_start`    | Heure de relance calculée (format HH:MM)                    |
+| `sensor.<name>_rcth_sensor`       | Coefficient RCth                                            |
+| `sensor.<name>_rpth_sensor`       | Coefficient RPth                                            |
+| `sensor.<name>_rcth_fast`         | RCth dynamique (suivi nuit)                                 |
+| `sensor.<name>_wind_forecast`     | Prévision vent moyenne 3h                                   |
+| `sensor.<name>_temp_forecast`     | Prévision température moyenne 3h                            |
+| `sensor.<name>_phone_alarm`       | Prochaine alarme téléphone                                  |
+| `sensor.<name>_recovery_start`    | **Déclencheur** - Heure de relance (automatisations)        |
+| `sensor.<name>_target_hour`       | **Déclencheur** - Heure cible/réveil (automatisations)      |
+| `sensor.<name>_recoverycalc_hour` | **Déclencheur** - Heure coupure chauffage (automatisations) |
 
 ### Numbers (modifiables)
 
@@ -188,13 +191,12 @@ Cette interpolation permet de tenir compte de l'augmentation des pertes thermiqu
 | `switch.<name>_smartheating_mode` | Active/désactive le chauffage intelligent |
 | `switch.<name>_adaptive_mode`     | Active/désactive l'auto-calibration       |
 
-### Time
+### Time (modifiables)
 
-| Entité                           | Description                |
-| -------------------------------- | -------------------------- |
-| `time.<name>_target_hour`        | Heure cible (réveil)       |
-| `time.<name>_recoverycalc_hour`  | Heure de coupure chauffage |
-| `time.<name>_recoverystart_hour` | Heure de relance calculée  |
+| Entité                          | Description                |
+| ------------------------------- | -------------------------- |
+| `time.<name>_target_hour`       | Heure cible (réveil)       |
+| `time.<name>_recoverycalc_hour` | Heure de coupure chauffage |
 
 ---
 
@@ -294,12 +296,31 @@ automation:
   - alias: "SmartHRT - Arrêter chauffage soir"
     trigger:
       - platform: time
-        at: time.smarthrt_recoverycalc_hour
+        at: sensor.smarthrt_recoverycalc_hour
     action:
       - service: climate.turn_off
         target:
           entity_id: climate.salon
 ```
+
+### Se réveiller à l'heure cible
+
+```yaml
+automation:
+  - alias: "SmartHRT - Actions réveil"
+    trigger:
+      - platform: time
+        at: sensor.smarthrt_target_hour
+    action:
+      - service: light.turn_on
+        target:
+          entity_id: light.chambre
+      - service: media_player.play_media
+        target:
+          entity_id: media_player.radio
+```
+
+> **Note** : Les sensors `sensor.*_recovery_start`, `sensor.*_target_hour` et `sensor.*_recoverycalc_hour` avec `device_class: timestamp` sont utilisables comme déclencheurs d'automatisations. Les entités `time.*` du même nom permettent la modification manuelle des heures configurables.
 
 ---
 
@@ -367,4 +388,3 @@ Désactivez le `Mode adaptatif` et modifiez les entités `number.*_rcth` et `num
 ## 📄 Licence
 
 Ce projet est sous licence GNU GENERAL PUBLIC LICENSE. Voir le fichier [LICENCE](LICENCE) pour plus de détails.
-

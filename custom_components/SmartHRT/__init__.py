@@ -3,12 +3,14 @@
 ADR implémentées dans ce module:
 - ADR-001: Architecture globale (setup/async_unload_entry)
 - ADR-012: Exposition entités pour Lovelace (forward_entry_setups)
+- ADR-016: Nettoyage des entités time obsolètes
 """
 
 import logging
 
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN, PLATFORMS, DATA_COORDINATOR
 from .coordinator import SmartHRTCoordinator
@@ -49,6 +51,32 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
+async def _remove_obsolete_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Supprime les entités time obsolètes du registre (ADR-016).
+
+    Les entités time en lecture seule (recoverystart_hour, recoveryupdate_hour)
+    ont été supprimées et remplacées par des sensors timestamp.
+    Cette fonction nettoie le registre des anciennes entités.
+    """
+    entity_reg = er.async_get(hass)
+
+    # Liste des entités obsolètes à supprimer
+    obsolete_unique_ids = [
+        f"{entry.entry_id}_recoverystart_hour",  # time.recoverystart_hour
+        f"{entry.entry_id}_recoveryupdate_hour",  # time.recoveryupdate_hour
+    ]
+
+    for unique_id in obsolete_unique_ids:
+        entity_id = entity_reg.async_get_entity_id("time", DOMAIN, unique_id)
+        if entity_id:
+            _LOGGER.info(
+                "Suppression de l'entité obsolète: %s (unique_id: %s)",
+                entity_id,
+                unique_id,
+            )
+            entity_reg.async_remove(entity_id)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Creation des entités à partir d'une configEntry.
 
@@ -75,6 +103,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Enregistrement de l'écouteur de changement 'update_listener'
     entry.async_on_unload(entry.add_update_listener(update_listener))
+
+    # Nettoyer les entités obsolètes (ADR-016)
+    await _remove_obsolete_entities(hass, entry)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

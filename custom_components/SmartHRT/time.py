@@ -40,8 +40,6 @@ async def async_setup_entry(
     entities = [
         SmartHRTTargetHourTime(coordinator, entry),
         SmartHRTRecoveryCalcHourTime(coordinator, entry),
-        SmartHRTRecoveryStartHourTime(coordinator, entry),
-        SmartHRTRecoveryUpdateHourTime(coordinator, entry),
     ]
     async_add_entities(entities, True)
 
@@ -134,69 +132,3 @@ class SmartHRTRecoveryCalcHourTime(SmartHRTBaseTime):
         """Mise à jour de l'heure de coupure"""
         _LOGGER.info("Recovery calc hour changed to: %s", value)
         self._coordinator.set_recoverycalc_hour(value)
-
-
-class SmartHRTRecoveryStartHourTime(SmartHRTBaseTime):
-    """Entité time pour l'heure calculée de démarrage relance (lecture seule).
-
-    ADR-014: L'heure est convertie dans le fuseau horaire local pour l'affichage.
-    """
-
-    def __init__(
-        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
-    ) -> None:
-        super().__init__(coordinator, config_entry)
-        self._attr_name = "Heure relance calculée"
-        self._attr_unique_id = f"{self._device_id}_recoverystart_hour"
-
-    @property
-    def native_value(self) -> dt_time | None:
-        """Retourne l'heure de relance calculée en heure locale"""
-        if self._coordinator.data.recovery_start_hour:
-            # ADR-014: Conversion en heure locale pour l'affichage
-            local_dt = dt_util.as_local(self._coordinator.data.recovery_start_hour)
-            return local_dt.time()
-        return None
-
-    @property
-    def icon(self) -> str | None:
-        return "mdi:clock-out"
-
-    async def async_set_value(self, value: dt_time) -> None:
-        """Cette valeur est calculée automatiquement - pas de modification manuelle"""
-        _LOGGER.warning(
-            "Recovery start hour is calculated automatically and cannot be set manually"
-        )
-
-
-class SmartHRTRecoveryUpdateHourTime(SmartHRTBaseTime):
-    """Entité time pour l'heure de mise à jour du calcul de relance (lecture seule).
-
-    ADR-014: L'heure est convertie dans le fuseau horaire local pour l'affichage.
-    """
-
-    def __init__(
-        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
-    ) -> None:
-        super().__init__(coordinator, config_entry)
-        self._attr_name = "Heure prochaine mise à jour calcul"
-        self._attr_unique_id = f"{self._device_id}_recoveryupdate_hour"
-
-    @property
-    def native_value(self) -> dt_time | None:
-        """Retourne l'heure de prochaine mise à jour du calcul en heure locale"""
-        if self._coordinator.data.recovery_update_hour:
-            # ADR-014: Conversion en heure locale pour l'affichage
-            local_dt = dt_util.as_local(self._coordinator.data.recovery_update_hour)
-            return local_dt.time()
-        return None
-
-    @property
-    def icon(self) -> str | None:
-        return "mdi:update"
-
-    async def async_set_value(self, value: dt_time) -> None:
-        """Cette valeur est calculée automatiquement - pas de modification manuelle"""
-        _LOGGER.warning(
-            "Recovery update hour is calculated automatically and cannot be set manually"
-        )

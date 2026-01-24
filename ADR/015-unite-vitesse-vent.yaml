@@ -1,0 +1,32 @@
+id: 015
+title: "Unité standardisée pour les calculs de vitesse du vent"
+status: "Accepté"
+date: "2026-01-24"
+type: "Technique"
+context: |
+  Les sources de données météo fournissent la vitesse du vent en km/h, tandis que la formule standard de windchill (JAG/TI) utilise km/h pour le calcul mais définit son seuil d'activation en m/s (vent > 1.34 m/s). 
+  Cette dualité peut entraîner des erreurs de conversion et des incohérences entre les différentes parties du code.
+decision: |
+  Toutes les vitesses de vent sont stockées et manipulées en interne en mètres par seconde (m/s).
+
+  - À l'entrée : les données météo (typiquement en km/h) sont converties en m/s via division par 3.6
+  - Pour les calculs : les formules utilisant km/h effectuent la conversion (* 3.6) au moment du calcul
+  - Pour le windchill : le seuil d'activation est vérifié en m/s (> 1.34 m/s) conformément à la formule originale du YAML
+
+  Cette convention s'applique à :
+  - `data.wind_speed` : vitesse instantanée (m/s)
+  - `data.wind_speed_avg` : moyenne historique (m/s)
+  - `data.wind_speed_history` : historique glissant (m/s)
+
+  Exception : `data.wind_speed_forecast_avg` reste en km/h car utilisé directement dans les interpolations.
+consequences:
+  positive:
+    - Cohérence des unités dans tout le code interne
+    - Correspondance exacte avec la formule windchill du fichier thermal_recovery_time.yaml
+    - Réduction des risques d'erreur de conversion
+  negative:
+    - Nécessite une attention particulière lors de l'ajout de nouvelles sources de données météo
+    - Les formules utilisant km/h doivent explicitement convertir avec * 3.6
+references:
+  - "thermal_recovery_time.yaml : sensor.wind_speed et sensor.windchill"
+  - "coordinator.py : _calculate_windchill(), _update_weather_data()"

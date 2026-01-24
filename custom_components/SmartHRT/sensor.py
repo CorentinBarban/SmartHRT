@@ -6,6 +6,7 @@ ADR implémentées dans ce module:
 """
 
 import logging
+from datetime import timedelta
 
 from homeassistant.const import UnitOfTemperature, UnitOfSpeed, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
@@ -61,6 +62,10 @@ async def async_setup_entry(
         SmartHRTStopLagDurationSensor(coordinator, entry),
         SmartHRTTimeToRecoverySensor(coordinator, entry),
         SmartHRTStateSensor(coordinator, entry),
+        # Sensors timestamp pour déclencheurs d'automatisations
+        SmartHRTRecoveryStartTimestampSensor(coordinator, entry),
+        SmartHRTTargetHourTimestampSensor(coordinator, entry),
+        SmartHRTRecoveryCalcHourTimestampSensor(coordinator, entry),
     ]
 
     async_add_entities(entities, True)
@@ -696,3 +701,104 @@ class SmartHRTStateSensor(SmartHRTBaseSensor):
             "rp_calc_mode": self._coordinator.data.rp_calc_mode,
             "temp_lag_detection_active": self._coordinator.data.temp_lag_detection_active,
         }
+
+
+class SmartHRTRecoveryStartTimestampSensor(SmartHRTBaseSensor):
+    """Sensor timestamp pour l'heure de relance (utilisable dans les automatisations)."""
+
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "Heure de relance"
+        self._attr_unique_id = f"{self._device_id}_recovery_start"
+
+    @property
+    def native_value(self):
+        """Retourne le datetime de relance (timezone-aware)."""
+        if self._coordinator.data.recovery_start_hour:
+            # Retourner le datetime tel quel (timezone-aware)
+            return self._coordinator.data.recovery_start_hour
+        return None
+
+    @property
+    def device_class(self) -> SensorDeviceClass | None:
+        return SensorDeviceClass.TIMESTAMP
+
+    @property
+    def icon(self) -> str | None:
+        return "mdi:clock-start"
+
+
+class SmartHRTTargetHourTimestampSensor(SmartHRTBaseSensor):
+    """Sensor timestamp pour l'heure cible/réveil (utilisable dans les automatisations)."""
+
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "Heure cible (déclencheur)"
+        self._attr_unique_id = f"{self._device_id}_target_hour"
+
+    @property
+    def native_value(self):
+        """Retourne le datetime de l'heure cible (timezone-aware)."""
+        if self._coordinator.data.target_hour:
+            # Créer un datetime pour aujourd'hui ou demain
+            now = dt_util.now()
+            target_dt = now.replace(
+                hour=self._coordinator.data.target_hour.hour,
+                minute=self._coordinator.data.target_hour.minute,
+                second=0,
+                microsecond=0,
+            )
+            # Si l'heure est déjà passée, prendre demain
+            if target_dt <= now:
+                target_dt = target_dt + timedelta(days=1)
+            return target_dt
+        return None
+
+    @property
+    def device_class(self) -> SensorDeviceClass | None:
+        return SensorDeviceClass.TIMESTAMP
+
+    @property
+    def icon(self) -> str | None:
+        return "mdi:clock-end"
+
+
+class SmartHRTRecoveryCalcHourTimestampSensor(SmartHRTBaseSensor):
+    """Sensor timestamp pour l'heure de calcul/coupure chauffage (utilisable dans les automatisations)."""
+
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "Heure coupure chauffage (déclencheur)"
+        self._attr_unique_id = f"{self._device_id}_recoverycalc_hour"
+
+    @property
+    def native_value(self):
+        """Retourne le datetime de l'heure de coupure chauffage (timezone-aware)."""
+        if self._coordinator.data.recoverycalc_hour:
+            # Créer un datetime pour aujourd'hui ou demain
+            now = dt_util.now()
+            calc_dt = now.replace(
+                hour=self._coordinator.data.recoverycalc_hour.hour,
+                minute=self._coordinator.data.recoverycalc_hour.minute,
+                second=0,
+                microsecond=0,
+            )
+            # Si l'heure est déjà passée, prendre demain
+            if calc_dt <= now:
+                calc_dt = calc_dt + timedelta(days=1)
+            return calc_dt
+        return None
+
+    @property
+    def device_class(self) -> SensorDeviceClass | None:
+        return SensorDeviceClass.TIMESTAMP
+
+    @property
+    def icon(self) -> str | None:
+        return "mdi:clock-in"

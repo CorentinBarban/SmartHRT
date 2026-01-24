@@ -1,0 +1,137 @@
+id: 017
+title: "Format et structure des release notes"
+status: "Accepté"
+date: "2026-01-24"
+type: "Processus"
+context: |
+  SmartHRT est une intégration Home Assistant qui évolue rapidement avec des corrections de bugs,
+  nouvelles fonctionnalités, et changements architecturaux (ADR). Les utilisateurs ont besoin de
+  comprendre rapidement :
+  - Ce qui a changé entre les versions
+  - Les éventuels breaking changes nécessitant des actions
+  - Les nouvelles fonctionnalités disponibles
+  - Les bugs corrigés
+
+  Sans format standardisé, les release notes deviennent incohérentes et difficiles à exploiter.
+decision: |
+  Adoption d'un format structuré pour les release notes, inspiré de "Keep a Changelog" avec
+  des adaptations spécifiques aux intégrations Home Assistant.
+
+  **Structure obligatoire :**
+
+  ```markdown
+  # Version X.Y.Z - YYYY-MM-DD
+
+  ## 🚨 Breaking Changes
+  [Si applicable - section obligatoire même si vide avec "Aucun"]
+
+  - Description du changement incompatible
+  - Action requise pour l'utilisateur
+
+  ## ✨ Nouvelles fonctionnalités
+
+  - Description de la fonctionnalité
+  - Référence ADR si applicable (ADR-XXX)
+
+  ## 🐛 Corrections de bugs
+
+  - Description du bug corrigé
+  - Impact sur l'utilisateur
+
+  ## 🔧 Améliorations techniques
+
+  - Refactoring, optimisations, améliorations internes
+  - Référence ADR si applicable
+
+  ## 📚 Documentation
+
+  - Mises à jour de la documentation
+  - Nouveaux exemples
+
+  ## ⚠️ Deprecated (si applicable)
+
+  - Fonctionnalités marquées comme obsolètes
+  - Date de suppression prévue
+  ```
+
+  **Règles de rédaction :**
+
+  1. **Langage clair** : Écrire pour l'utilisateur final, pas pour les développeurs
+  2. **Actions concrètes** : Pour les breaking changes, indiquer exactement quoi faire
+  3. **Références** : Lier aux ADR, issues GitHub, ou pull requests concernés
+  4. **Emojis** : Utiliser des emojis pour faciliter le scan visuel
+  5. **Ordre chronologique** : Version la plus récente en haut
+
+  **Exemples de breaking changes :**
+  - ✅ "Les entités `time.recoverystart_hour` et `time.recoveryupdate_hour` sont supprimées. 
+       Utilisez `sensor.*_recovery_start` à la place dans vos automatisations."
+  - ❌ "Suppression de entités time obsolètes"
+
+  **Versioning sémantique :**
+  - **MAJOR (X.0.0)** : Breaking changes
+  - **MINOR (X.Y.0)** : Nouvelles fonctionnalités (rétrocompatibles)
+  - **PATCH (X.Y.Z)** : Corrections de bugs uniquement
+consequences:
+  positive:
+    - Les utilisateurs comprennent immédiatement l'impact d'une mise à jour
+    - Facilite la décision de mettre à jour ou d'attendre
+    - Améliore la confiance dans l'intégration (transparence)
+    - Réduit les issues GitHub liées aux breaking changes non documentés
+    - Format structuré facilite l'automatisation (changelog automatique)
+  negative:
+    - Temps supplémentaire lors de la préparation d'une release
+    - Nécessite discipline pour maintenir le format
+  mitigation:
+    - Template de release notes dans le dépôt (RELEASE_TEMPLATE.md)
+    - Checklist pré-release incluant la vérification des notes
+    - Génération semi-automatique à partir des commits conventionnels
+references:
+  - "Keep a Changelog: https://keepachangelog.com/"
+  - "Semantic Versioning: https://semver.org/"
+  - "Home Assistant release notes guidelines"
+examples:
+  - |
+    # Version 2.1.0 - 2026-01-24
+
+    ## 🚨 Breaking Changes
+
+    **Suppression des entités time en lecture seule (ADR-016)**
+    - Les entités `time.<name>_recoverystart_hour` et `time.<name>_recoveryupdate_hour` 
+      sont supprimées et remplacées par des sensors timestamp.
+    - **Action requise** : Mettez à jour vos automatisations pour utiliser :
+      - `sensor.<name>_recovery_start` au lieu de `time.<name>_recoverystart_hour`
+    - Le nettoyage est automatique au rechargement de l'intégration.
+
+    ## ✨ Nouvelles fonctionnalités
+
+    **Sensors timestamp pour automatisations (ADR-016)**
+    - Nouveaux sensors utilisables comme déclencheurs avec `platform: time`:
+      - `sensor.<name>_recovery_start` - Heure de relance du chauffage
+      - `sensor.<name>_target_hour` - Heure cible/réveil
+      - `sensor.<name>_recoverycalc_hour` - Heure de coupure chauffage
+    - Exemple d'utilisation :
+      ```yaml
+      automation:
+        trigger:
+          - platform: time
+            at: sensor.smarthrt_recovery_start
+      ```
+
+    ## 🐛 Corrections de bugs
+
+    **Correction du calcul de température ressentie (ADR-015)**
+    - Le seuil de vent pour activer le windchill est maintenant exactement 
+      1.34 m/s (au lieu de 1.33 m/s approximatif)
+    - Impact : Calculs de température ressentie plus précis selon la formule JAG/TI
+
+    ## 🔧 Améliorations techniques
+
+    - Suppression de la duplication entre entités `time.*` et `sensor.*_timestamp`
+    - Nettoyage automatique des entités obsolètes du registre (ADR-016)
+    - Standardisation des unités de vitesse du vent en m/s (ADR-015)
+
+    ## 📚 Documentation
+
+    - Ajout de l'ADR-015 sur les unités de vitesse du vent
+    - Ajout de l'ADR-016 sur les sensors timestamp
+    - Mise à jour du README avec exemples d'automatisations corrigés
