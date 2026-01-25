@@ -16,7 +16,6 @@ from custom_components.SmartHRT.sensor import (
     SmartHRTExteriorTempSensor,
     SmartHRTWindSpeedSensor,
     SmartHRTWindchillSensor,
-    SmartHRTRecoveryStartSensor,
     SmartHRTRCthSensor,
     SmartHRTRPthSensor,
     SmartHRTRecoveryStartTimestampSensor,
@@ -145,53 +144,6 @@ class TestSmartHRTWindchillSensor:
         assert sensor.native_value == 3.5
 
 
-class TestSmartHRTRecoveryStartSensor:
-    """Tests pour le sensor d'heure de relance."""
-
-    def test_properties(self, mock_coordinator, mock_config_entry):
-        """Test des propriétés du sensor."""
-        sensor = SmartHRTRecoveryStartSensor(mock_coordinator, mock_config_entry)
-
-        assert sensor._attr_name == "Heure de relance"
-        assert sensor.icon == "mdi:radiator"
-
-    def test_native_value(self, mock_coordinator_with_data, mock_config_entry):
-        """Test de la valeur native."""
-        recovery_time = dt_util.now() + timedelta(hours=2)
-        mock_coordinator_with_data.data.recovery_start_hour = recovery_time
-        sensor = SmartHRTRecoveryStartSensor(
-            mock_coordinator_with_data, mock_config_entry
-        )
-
-        expected = recovery_time.strftime("%H:%M")
-        assert sensor.native_value == expected
-
-    def test_native_value_none(self, mock_coordinator, mock_config_entry):
-        """Test quand l'heure de relance est None."""
-        mock_coordinator.data.recovery_start_hour = None
-        sensor = SmartHRTRecoveryStartSensor(mock_coordinator, mock_config_entry)
-
-        assert sensor.native_value is None
-
-    def test_extra_state_attributes(
-        self, mock_coordinator_with_data, mock_config_entry
-    ):
-        """Test des attributs supplémentaires."""
-        from datetime import time as dt_time
-
-        recovery_time = dt_util.now() + timedelta(hours=2)
-        mock_coordinator_with_data.data.recovery_start_hour = recovery_time
-        mock_coordinator_with_data.data.target_hour = dt_time(6, 0, 0)
-        sensor = SmartHRTRecoveryStartSensor(
-            mock_coordinator_with_data, mock_config_entry
-        )
-
-        attrs = sensor.extra_state_attributes
-
-        assert "datetime" in attrs
-        assert attrs["target_hour"] == "06:00"
-
-
 class TestSmartHRTRCthSensor:
     """Tests pour le sensor RCth."""
 
@@ -287,7 +239,8 @@ class TestSmartHRTTimestampSensors:
 
         assert sensor._attr_name == "Heure de relance"
         assert sensor.device_class == SensorDeviceClass.TIMESTAMP
-        assert sensor.native_value == recovery_time
+        # Le sensor retourne le datetime localisé
+        assert sensor.native_value == dt_util.as_local(recovery_time)
         assert sensor.icon == "mdi:clock-start"
 
     def test_target_hour_timestamp_sensor(
@@ -300,7 +253,7 @@ class TestSmartHRTTimestampSensors:
             mock_coordinator_with_data, mock_config_entry
         )
 
-        assert sensor._attr_name == "Heure cible (déclencheur)"
+        assert sensor._attr_name == "Heure cible"
         assert sensor.device_class == SensorDeviceClass.TIMESTAMP
         assert sensor.icon == "mdi:clock-end"
 
@@ -321,7 +274,7 @@ class TestSmartHRTTimestampSensors:
             mock_coordinator_with_data, mock_config_entry
         )
 
-        assert sensor._attr_name == "Heure coupure chauffage (déclencheur)"
+        assert sensor._attr_name == "Heure coupure chauffage"
         assert sensor.device_class == SensorDeviceClass.TIMESTAMP
         assert sensor.icon == "mdi:clock-in"
 

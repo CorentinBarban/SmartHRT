@@ -120,10 +120,11 @@ class TestAsyncSetupEntry:
 
         await async_setup_entry(mock_hass, mock_config_entry, mock_add_entities)
 
-        # Vérifier que 2 entités ont été ajoutées (les modifiables)
-        assert len(entities_added) == 2
+        # Vérifier que 3 entités ont été ajoutées (2 modifiables + 1 lecture seule)
+        assert len(entities_added) == 3
 
         # Vérifier les types d'entités
         entity_types = [type(e).__name__ for e in entities_added]
         assert "SmartHRTTargetHourTime" in entity_types
         assert "SmartHRTRecoveryCalcHourTime" in entity_types
+        assert "SmartHRTRecoveryStartTime" in entity_types

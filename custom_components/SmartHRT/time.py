@@ -40,6 +40,7 @@ async def async_setup_entry(
     entities = [
         SmartHRTTargetHourTime(coordinator, entry),
         SmartHRTRecoveryCalcHourTime(coordinator, entry),
+        SmartHRTRecoveryStartTime(coordinator, entry),
     ]
     async_add_entities(entities, True)
 
@@ -132,3 +133,32 @@ class SmartHRTRecoveryCalcHourTime(SmartHRTBaseTime):
         """Mise à jour de l'heure de coupure"""
         _LOGGER.info("Recovery calc hour changed to: %s", value)
         self._coordinator.set_recoverycalc_hour(value)
+
+
+class SmartHRTRecoveryStartTime(SmartHRTBaseTime):
+    """Entité time pour l'heure de relance (lecture seule)"""
+
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "Heure de relance"
+        self._attr_unique_id = f"{self._device_id}_recovery_start_time"
+
+    @property
+    def native_value(self) -> dt_time | None:
+        """Retourne l'heure de relance depuis le coordinator"""
+        if self._coordinator.data.recovery_start_hour:
+            local_time = dt_util.as_local(self._coordinator.data.recovery_start_hour)
+            return local_time.time()
+        return None
+
+    @property
+    def icon(self) -> str | None:
+        return "mdi:radiator"
+
+    async def async_set_value(self, value: dt_time) -> None:
+        """Cette entité est en lecture seule (calculée automatiquement)"""
+        _LOGGER.warning(
+            "SmartHRT Recovery Start time is read-only and calculated automatically"
+        )

@@ -52,27 +52,33 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def _remove_obsolete_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Supprime les entités time obsolètes du registre (ADR-016).
+    """Supprime les entités obsolètes du registre (ADR-016).
 
     Les entités time en lecture seule (recoverystart_hour, recoveryupdate_hour)
     ont été supprimées et remplacées par des sensors timestamp.
+    Le sensor recovery_start_sensor (texte) a été supprimé car redondant.
     Cette fonction nettoie le registre des anciennes entités.
     """
     entity_reg = er.async_get(hass)
 
-    # Liste des entités obsolètes à supprimer
-    obsolete_unique_ids = [
-        f"{entry.entry_id}_recoverystart_hour",  # time.recoverystart_hour
-        f"{entry.entry_id}_recoveryupdate_hour",  # time.recoveryupdate_hour
+    # Liste des entités obsolètes à supprimer (unique_id, platform)
+    obsolete_entities = [
+        (f"{entry.entry_id}_recoverystart_hour", "time"),  # time.recoverystart_hour
+        (f"{entry.entry_id}_recoveryupdate_hour", "time"),  # time.recoveryupdate_hour
+        (
+            f"{entry.entry_id}_recovery_start_sensor",
+            "sensor",
+        ),  # sensor avec label (texte)
     ]
 
-    for unique_id in obsolete_unique_ids:
-        entity_id = entity_reg.async_get_entity_id("time", DOMAIN, unique_id)
+    for unique_id, platform in obsolete_entities:
+        entity_id = entity_reg.async_get_entity_id(platform, DOMAIN, unique_id)
         if entity_id:
             _LOGGER.info(
-                "Suppression de l'entité obsolète: %s (unique_id: %s)",
+                "Suppression de l'entité obsolète: %s (unique_id: %s, platform: %s)",
                 entity_id,
                 unique_id,
+                platform,
             )
             entity_reg.async_remove(entity_id)
 

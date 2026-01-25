@@ -47,7 +47,6 @@ async def async_setup_entry(
         SmartHRTExteriorTempSensor(coordinator, entry),
         SmartHRTWindSpeedSensor(coordinator, entry),
         SmartHRTWindchillSensor(coordinator, entry),
-        SmartHRTRecoveryStartSensor(coordinator, entry),
         SmartHRTRCthSensor(coordinator, entry),
         SmartHRTRPthSensor(coordinator, entry),
         SmartHRTRCthFastSensor(coordinator, entry),
@@ -73,6 +72,12 @@ async def async_setup_entry(
 
 class SmartHRTBaseSensor(SensorEntity):
     """Classe de base pour les sensors SmartHRT"""
+
+    _attr_name: str | None = None
+    _attr_icon: str | None = None
+    _attr_device_class: SensorDeviceClass | None = None
+    _attr_state_class: SensorStateClass | None = None
+    _attr_native_unit_of_measurement: str | None = None
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
@@ -116,76 +121,72 @@ class SmartHRTBaseSensor(SensorEntity):
         self.async_write_ha_state()
 
 
-class SmartHRTInteriorTempSensor(SmartHRTBaseSensor):
+class SmartHRTTemperatureSensor(SmartHRTBaseSensor):
+    """Classe de base pour les sensors de température"""
+
+    _attr_device_class = SensorDeviceClass.TEMPERATURE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
+
+
+class SmartHRTWindSensor(SmartHRTBaseSensor):
+    """Classe de base pour les sensors de vent"""
+
+    _attr_device_class = SensorDeviceClass.WIND_SPEED
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_icon = "mdi:weather-windy"
+
+
+class SmartHRTTimestampSensor(SmartHRTBaseSensor):
+    """Classe de base pour les sensors timestamp"""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+
+class SmartHRTInteriorTempSensor(SmartHRTTemperatureSensor):
     """Sensor de température intérieure"""
+
+    _attr_name = "Température intérieure"
+    _attr_icon = "mdi:home-thermometer"
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Température intérieure"
         self._attr_unique_id = f"{self._device_id}_interior_temp"
 
     @property
     def native_value(self) -> float | None:
         return self._coordinator.data.interior_temp
 
-    @property
-    def icon(self) -> str | None:
-        return "mdi:home-thermometer"
 
-    @property
-    def device_class(self) -> SensorDeviceClass | None:
-        return SensorDeviceClass.TEMPERATURE
-
-    @property
-    def state_class(self) -> SensorStateClass | None:
-        return SensorStateClass.MEASUREMENT
-
-    @property
-    def native_unit_of_measurement(self) -> str | None:
-        return UnitOfTemperature.CELSIUS
-
-
-class SmartHRTExteriorTempSensor(SmartHRTBaseSensor):
+class SmartHRTExteriorTempSensor(SmartHRTTemperatureSensor):
     """Sensor de température extérieure"""
+
+    _attr_name = "Température extérieure"
+    _attr_icon = "mdi:thermometer"
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Température extérieure"
         self._attr_unique_id = f"{self._device_id}_exterior_temp"
 
     @property
     def native_value(self) -> float | None:
         return self._coordinator.data.exterior_temp
 
-    @property
-    def icon(self) -> str | None:
-        return "mdi:thermometer"
 
-    @property
-    def device_class(self) -> SensorDeviceClass | None:
-        return SensorDeviceClass.TEMPERATURE
-
-    @property
-    def state_class(self) -> SensorStateClass | None:
-        return SensorStateClass.MEASUREMENT
-
-    @property
-    def native_unit_of_measurement(self) -> str | None:
-        return UnitOfTemperature.CELSIUS
-
-
-class SmartHRTWindSpeedSensor(SmartHRTBaseSensor):
+class SmartHRTWindSpeedSensor(SmartHRTWindSensor):
     """Sensor de vitesse du vent"""
+
+    _attr_name = "Vitesse du vent"
+    _attr_native_unit_of_measurement = UnitOfSpeed.METERS_PER_SECOND
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Vitesse du vent"
         self._attr_unique_id = f"{self._device_id}_wind_speed"
 
     @property
@@ -196,87 +197,22 @@ class SmartHRTWindSpeedSensor(SmartHRTBaseSensor):
             else None
         )
 
-    @property
-    def icon(self) -> str | None:
-        return "mdi:weather-windy"
 
-    @property
-    def device_class(self) -> SensorDeviceClass | None:
-        return SensorDeviceClass.WIND_SPEED
-
-    @property
-    def state_class(self) -> SensorStateClass | None:
-        return SensorStateClass.MEASUREMENT
-
-    @property
-    def native_unit_of_measurement(self) -> str | None:
-        return UnitOfSpeed.METERS_PER_SECOND
-
-
-class SmartHRTWindchillSensor(SmartHRTBaseSensor):
+class SmartHRTWindchillSensor(SmartHRTTemperatureSensor):
     """Sensor de température ressentie (windchill)"""
+
+    _attr_name = "Température ressentie"
+    _attr_icon = "mdi:snowflake-thermometer"
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Température ressentie"
         self._attr_unique_id = f"{self._device_id}_windchill"
 
     @property
     def native_value(self) -> float | None:
         return self._coordinator.data.windchill
-
-    @property
-    def icon(self) -> str | None:
-        return "mdi:snowflake-thermometer"
-
-    @property
-    def device_class(self) -> SensorDeviceClass | None:
-        return SensorDeviceClass.TEMPERATURE
-
-    @property
-    def native_unit_of_measurement(self) -> str | None:
-        return UnitOfTemperature.CELSIUS
-
-
-class SmartHRTRecoveryStartSensor(SmartHRTBaseSensor):
-    """Sensor de l'heure de démarrage de la relance.
-
-    ADR-014: Les dates sont converties en heure locale pour l'affichage.
-    """
-
-    def __init__(
-        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
-    ) -> None:
-        super().__init__(coordinator, config_entry)
-        self._attr_name = "Heure de relance"
-        self._attr_unique_id = f"{self._device_id}_recovery_start"
-
-    @property
-    def native_value(self) -> str | None:
-        if self._coordinator.data.recovery_start_hour:
-            # ADR-014: Conversion en heure locale pour l'affichage
-            local_time = dt_util.as_local(self._coordinator.data.recovery_start_hour)
-            return local_time.strftime("%H:%M")
-        return None
-
-    @property
-    def icon(self) -> str | None:
-        return "mdi:radiator"
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        """Attributs supplémentaires"""
-        recovery = self._coordinator.data.recovery_start_hour
-        if recovery:
-            # ADR-014: Conversion en heure locale pour l'affichage
-            local_recovery = dt_util.as_local(recovery)
-            return {
-                "datetime": local_recovery.isoformat(),
-                "target_hour": self._coordinator.data.target_hour.strftime("%H:%M"),
-            }
-        return {}
 
 
 class SmartHRTRCthSensor(SmartHRTBaseSensor):
@@ -380,76 +316,50 @@ class SmartHRTRCthFastSensor(SmartHRTBaseSensor):
         return UnitOfTime.HOURS
 
 
-class SmartHRTWindSpeedForecastSensor(SmartHRTBaseSensor):
+class SmartHRTWindSpeedForecastSensor(SmartHRTWindSensor):
     """Sensor de prévision de vitesse du vent (moyenne sur 3h)"""
+
+    _attr_name = "Prévision vent"
+    _attr_native_unit_of_measurement = "km/h"
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Prévision vent"
         self._attr_unique_id = f"{self._device_id}_wind_forecast"
 
     @property
     def native_value(self) -> float | None:
         return round(self._coordinator.data.wind_speed_forecast_avg, 1)
 
-    @property
-    def icon(self) -> str | None:
-        return "mdi:weather-windy"
 
-    @property
-    def device_class(self) -> SensorDeviceClass | None:
-        return SensorDeviceClass.WIND_SPEED
-
-    @property
-    def state_class(self) -> SensorStateClass | None:
-        return SensorStateClass.MEASUREMENT
-
-    @property
-    def native_unit_of_measurement(self) -> str | None:
-        return "km/h"
-
-
-class SmartHRTTemperatureForecastSensor(SmartHRTBaseSensor):
+class SmartHRTTemperatureForecastSensor(SmartHRTTemperatureSensor):
     """Sensor de prévision de température (moyenne sur 3h)"""
+
+    _attr_name = "Prévision température"
+    _attr_icon = "mdi:thermometer"
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Prévision température"
         self._attr_unique_id = f"{self._device_id}_temp_forecast"
 
     @property
     def native_value(self) -> float | None:
         return round(self._coordinator.data.temperature_forecast_avg, 1)
 
-    @property
-    def icon(self) -> str | None:
-        return "mdi:thermometer"
 
-    @property
-    def device_class(self) -> SensorDeviceClass | None:
-        return SensorDeviceClass.TEMPERATURE
-
-    @property
-    def state_class(self) -> SensorStateClass | None:
-        return SensorStateClass.MEASUREMENT
-
-    @property
-    def native_unit_of_measurement(self) -> str | None:
-        return UnitOfTemperature.CELSIUS
-
-
-class SmartHRTWindSpeedAvgSensor(SmartHRTBaseSensor):
+class SmartHRTWindSpeedAvgSensor(SmartHRTWindSensor):
     """Sensor de vitesse du vent moyenne sur 4h"""
+
+    _attr_name = "Vent moyen (4h)"
+    _attr_native_unit_of_measurement = UnitOfSpeed.METERS_PER_SECOND
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Vent moyen (4h)"
         self._attr_unique_id = f"{self._device_id}_wind_avg"
 
     @property
@@ -459,22 +369,6 @@ class SmartHRTWindSpeedAvgSensor(SmartHRTBaseSensor):
             if self._coordinator.data.wind_speed_avg
             else None
         )
-
-    @property
-    def icon(self) -> str | None:
-        return "mdi:weather-windy"
-
-    @property
-    def device_class(self) -> SensorDeviceClass | None:
-        return SensorDeviceClass.WIND_SPEED
-
-    @property
-    def state_class(self) -> SensorStateClass | None:
-        return SensorStateClass.MEASUREMENT
-
-    @property
-    def native_unit_of_measurement(self) -> str | None:
-        return UnitOfSpeed.METERS_PER_SECOND
 
 
 class SmartHRTNightStateSensor(SmartHRTBaseSensor):
@@ -703,41 +597,36 @@ class SmartHRTStateSensor(SmartHRTBaseSensor):
         }
 
 
-class SmartHRTRecoveryStartTimestampSensor(SmartHRTBaseSensor):
+class SmartHRTRecoveryStartTimestampSensor(SmartHRTTimestampSensor):
     """Sensor timestamp pour l'heure de relance (utilisable dans les automatisations)."""
+
+    _attr_name = "Heure de relance"
+    _attr_icon = "mdi:clock-start"
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Heure de relance"
-        self._attr_unique_id = f"{self._device_id}_recovery_start"
+        self._attr_unique_id = f"{self._device_id}_recovery_start_timestamp"
 
     @property
     def native_value(self):
         """Retourne le datetime de relance (timezone-aware)."""
         if self._coordinator.data.recovery_start_hour:
-            # Retourner le datetime tel quel (timezone-aware)
-            return self._coordinator.data.recovery_start_hour
+            return dt_util.as_local(self._coordinator.data.recovery_start_hour)
         return None
 
-    @property
-    def device_class(self) -> SensorDeviceClass | None:
-        return SensorDeviceClass.TIMESTAMP
 
-    @property
-    def icon(self) -> str | None:
-        return "mdi:clock-start"
-
-
-class SmartHRTTargetHourTimestampSensor(SmartHRTBaseSensor):
+class SmartHRTTargetHourTimestampSensor(SmartHRTTimestampSensor):
     """Sensor timestamp pour l'heure cible/réveil (utilisable dans les automatisations)."""
+
+    _attr_name = "Heure cible"
+    _attr_icon = "mdi:clock-end"
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Heure cible (déclencheur)"
         self._attr_unique_id = f"{self._device_id}_target_hour"
 
     @property
@@ -758,23 +647,17 @@ class SmartHRTTargetHourTimestampSensor(SmartHRTBaseSensor):
             return target_dt
         return None
 
-    @property
-    def device_class(self) -> SensorDeviceClass | None:
-        return SensorDeviceClass.TIMESTAMP
 
-    @property
-    def icon(self) -> str | None:
-        return "mdi:clock-end"
-
-
-class SmartHRTRecoveryCalcHourTimestampSensor(SmartHRTBaseSensor):
+class SmartHRTRecoveryCalcHourTimestampSensor(SmartHRTTimestampSensor):
     """Sensor timestamp pour l'heure de calcul/coupure chauffage (utilisable dans les automatisations)."""
+
+    _attr_name = "Heure coupure chauffage"
+    _attr_icon = "mdi:clock-in"
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Heure coupure chauffage (déclencheur)"
         self._attr_unique_id = f"{self._device_id}_recoverycalc_hour"
 
     @property
@@ -794,11 +677,3 @@ class SmartHRTRecoveryCalcHourTimestampSensor(SmartHRTBaseSensor):
                 calc_dt = calc_dt + timedelta(days=1)
             return calc_dt
         return None
-
-    @property
-    def device_class(self) -> SensorDeviceClass | None:
-        return SensorDeviceClass.TIMESTAMP
-
-    @property
-    def icon(self) -> str | None:
-        return "mdi:clock-in"
