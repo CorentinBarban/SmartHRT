@@ -55,7 +55,6 @@ async def async_setup_entry(
         SmartHRTTemperatureForecastSensor(coordinator, entry),
         SmartHRTWindSpeedAvgSensor(coordinator, entry),
         SmartHRTNightStateSensor(coordinator, entry),
-        SmartHRTPhoneAlarmSensor(coordinator, entry),
         SmartHRTRecoveryCalcModeSensor(coordinator, entry),
         SmartHRTRPCalcModeSensor(coordinator, entry),
         SmartHRTStopLagDurationSensor(coordinator, entry),
@@ -394,47 +393,6 @@ class SmartHRTNightStateSensor(SmartHRTBaseSensor):
         return (
             "mdi:weather-night" if self.native_value == 1 else "mdi:white-balance-sunny"
         )
-
-
-class SmartHRTPhoneAlarmSensor(SmartHRTBaseSensor):
-    """Sensor de l'alarme du téléphone.
-
-    ADR-014: L'heure est convertie dans le fuseau horaire local pour l'affichage.
-    """
-
-    def __init__(
-        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
-    ) -> None:
-        super().__init__(coordinator, config_entry)
-        self._attr_name = "Alarme téléphone"
-        self._attr_unique_id = f"{self._device_id}_phone_alarm"
-
-    @property
-    def native_value(self) -> str | None:
-        """Retourne l'heure de l'alarme du téléphone en heure locale."""
-        if not self._coordinator.data.phone_alarm:
-            return None
-        try:
-            # ADR-014: Conversion en heure locale pour l'affichage
-            from datetime import datetime
-
-            alarm_dt = datetime.fromisoformat(self._coordinator.data.phone_alarm)
-            local_alarm = dt_util.as_local(alarm_dt)
-            return local_alarm.strftime("%Y-%m-%d %H:%M")
-        except (ValueError, TypeError):
-            # Si le format n'est pas valide, retourner la valeur brute
-            return self._coordinator.data.phone_alarm
-
-    @property
-    def icon(self) -> str | None:
-        return "mdi:alarm"
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        """Attributs supplémentaires avec la valeur ISO originale."""
-        return {
-            "iso_value": self._coordinator.data.phone_alarm,
-        }
 
 
 class SmartHRTRecoveryCalcModeSensor(SmartHRTBaseSensor):

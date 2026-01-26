@@ -76,7 +76,6 @@ SmartHRT automatically creates **Sensors**, **Numbers**, **Switches** and **Time
 
 **Frequently asked questions**:
 
-- How to sync with my phone alarm?
 - What to do during holidays?
 - Why aren't predictions accurate in the first few days?
 - How to manually adjust coefficients?

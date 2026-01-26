@@ -322,35 +322,6 @@
 
 ## FAQ
 
-### How to set phone alarm as target time?
-
-**Answer**:
-
-1. **Activate next alarm sensor** in Companion App
-   - Settings → Companion App → Manage Sensors
-   - Activate `sensor.yourphone_next_alarm`
-
-2. **Copy sensor name** (e.g., `sensor.clt_l29_next_alarm`)
-
-3. **Add to SmartHRT** during configuration
-   - Set "Phone alarm sensor" to this entity
-   - SmartHRT will auto-sync target hour to next alarm
-
-4. **Alternative**: Use automation to sync
-   ```yaml
-   automation:
-     - alias: "SmartHRT - Sync Phone Alarm"
-       trigger:
-         - platform: state
-           entity_id: sensor.phone_next_alarm
-       action:
-         - service: time.set_value
-           target:
-             entity_id: time.living_room_target_hour
-           data:
-             time: "{{ states('sensor.phone_next_alarm')[11:16] }}"
-   ```
-
 ### What are the stages from heating stop to wake-up?
 
 **Answer**:

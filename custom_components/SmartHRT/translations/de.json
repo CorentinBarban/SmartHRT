@@ -20,14 +20,12 @@
           "target_hour": "Zielzeit",
           "recoverycalc_hour": "Heizung Abschaltzeit",
           "sensor_interior_temperature": "Innentemperatursensor",
-          "phone_alarm_selector": "Telefon-Wecker-Sensor",
           "tsp": "Solltemperatur (Set Point)"
         },
         "data_description": {
           "target_hour": "Gewünschte Aufwachzeit (z.B.: 6:00)",
           "recoverycalc_hour": "Abschaltzeit der Heizung am Abend (z.B.: 23:00)",
           "sensor_interior_temperature": "Raumtemperatursensor (z.B.: sensor.room_temperature)",
-          "phone_alarm_selector": "Nächster Telefon-Wecker-Sensor (z.B.: sensor.nexus_next_alarm)",
           "tsp": "Gewünschte Temperatur (13-26°C)"
         }
       }
@@ -44,7 +42,6 @@
           "target_hour": "Zielzeit",
           "recoverycalc_hour": "Heizung Abschaltzeit",
           "sensor_interior_temperature": "Innentemperatursensor",
-          "phone_alarm_selector": "Telefon-Wecker-Sensor",
           "tsp": "Solltemperatur (Set Point)"
         },
         "data_description": {
@@ -52,7 +49,6 @@
           "target_hour": "Gewünschte Aufwachzeit (z.B.: 6:00)",
           "recoverycalc_hour": "Abschaltzeit der Heizung am Abend (z.B.: 23:00)",
           "sensor_interior_temperature": "Raumtemperatursensor (z.B.: sensor.room_temperature)",
-          "phone_alarm_selector": "Nächster Telefon-Wecker-Sensor (z.B.: sensor.nexus_next_alarm)",
           "tsp": "Gewünschte Temperatur (13-26°C)"
         }
       }

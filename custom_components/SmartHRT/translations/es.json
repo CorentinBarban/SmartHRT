@@ -20,14 +20,12 @@
           "target_hour": "Hora objetivo",
           "recoverycalc_hour": "Hora de apagado de calefacción",
           "sensor_interior_temperature": "Sensor de temperatura interior",
-          "phone_alarm_selector": "Sensor de alarma del teléfono",
           "tsp": "Temperatura deseada (Set Point)"
         },
         "data_description": {
           "target_hour": "Hora de despertar deseada (ej: 6:00)",
           "recoverycalc_hour": "Hora de apagado de la calefacción por la noche (ej: 23:00)",
           "sensor_interior_temperature": "Sensor de temperatura de la habitación (ej: sensor.room_temperature)",
-          "phone_alarm_selector": "Sensor de la próxima alarma del teléfono (ej: sensor.nexus_next_alarm)",
           "tsp": "Temperatura deseada (13-26°C)"
         }
       }
@@ -44,7 +42,6 @@
           "target_hour": "Hora objetivo",
           "recoverycalc_hour": "Hora de apagado de calefacción",
           "sensor_interior_temperature": "Sensor de temperatura interior",
-          "phone_alarm_selector": "Sensor de alarma del teléfono",
           "tsp": "Temperatura deseada (Set Point)"
         },
         "data_description": {
@@ -52,7 +49,6 @@
           "target_hour": "Hora de despertar deseada (ej: 6:00)",
           "recoverycalc_hour": "Hora de apagado de la calefacción por la noche (ej: 23:00)",
           "sensor_interior_temperature": "Sensor de temperatura de la habitación (ej: sensor.room_temperature)",
-          "phone_alarm_selector": "Sensor de la próxima alarma del teléfono (ej: sensor.nexus_next_alarm)",
           "tsp": "Temperatura deseada (13-26°C)"
         }
       }

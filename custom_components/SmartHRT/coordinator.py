@@ -38,7 +38,6 @@ from .const import (
     CONF_RECOVERYCALC_HOUR,
     CONF_SENSOR_INTERIOR_TEMP,
     CONF_WEATHER_ENTITY,
-    CONF_PHONE_ALARM,
     CONF_TSP,
     DEFAULT_TSP,
     DEFAULT_RCTH,
@@ -133,9 +132,6 @@ class SmartHRTData:
     # Délai de lag avant baisse température
     stop_lag_duration: float = 0.0  # secondes
 
-    # Alarme téléphone
-    phone_alarm: str | None = None
-
     # ADR-013: Historique vent pour calcul de moyenne sur 4h
     # Permet de lisser les variations de vent pour un calcul plus stable
     wind_speed_history: deque = field(
@@ -179,7 +175,6 @@ class SmartHRTCoordinator:
         self._interior_temp_sensor_id = entry.data.get(CONF_SENSOR_INTERIOR_TEMP)
         # ADR-002: Entité météo sélectionnée explicitement par l'utilisateur
         self._weather_entity_id = entry.data.get(CONF_WEATHER_ENTITY)
-        self._phone_alarm_sensor_id = entry.data.get(CONF_PHONE_ALARM)
 
     @staticmethod
     def _parse_time(time_str: str) -> dt_time:
@@ -301,9 +296,7 @@ class SmartHRTCoordinator:
 
     def _setup_listeners(self) -> None:
         """Configure les listeners pour les capteurs"""
-        sensors = [
-            s for s in [self._interior_temp_sensor_id, self._phone_alarm_sensor_id] if s
-        ]
+        sensors = [s for s in [self._interior_temp_sensor_id] if s]
 
         if sensors:
             self._unsub_listeners.append(
@@ -420,12 +413,6 @@ class SmartHRTCoordinator:
                 except ValueError:
                     pass
 
-        if self._phone_alarm_sensor_id:
-            state = self._hass.states.get(self._phone_alarm_sensor_id)
-            if state and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
-                self.data.phone_alarm = state.state
-                self._update_target_from_alarm()
-
         self._update_weather_data()
 
     @callback
@@ -443,9 +430,6 @@ class SmartHRTCoordinator:
                 self._check_temperature_thresholds()
             except ValueError:
                 pass
-        elif entity_id == self._phone_alarm_sensor_id:
-            self.data.phone_alarm = new_state.state
-            self._update_target_from_alarm()
 
         self._notify_listeners()
 
@@ -779,20 +763,6 @@ class SmartHRTCoordinator:
             )
         else:
             self.data.windchill = temp
-
-    def _update_target_from_alarm(self) -> None:
-        """Met à jour l'heure cible depuis l'alarme"""
-        if not self.data.phone_alarm:
-            return
-        try:
-            alarm_dt = datetime.fromisoformat(self.data.phone_alarm)
-            tomorrow = (dt_util.now() + timedelta(days=1)).date()
-            if alarm_dt.date() in (dt_util.now().date(), tomorrow):
-                self.data.target_hour = alarm_dt.time()
-                self.calculate_recovery_time()
-                self._notify_listeners()
-        except (ValueError, TypeError):
-            pass
 
     # ─────────────────────────────────────────────────────────────────────────
     # ADR-007: Compensation météo - Interpolation linéaire selon le vent

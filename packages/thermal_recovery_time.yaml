@@ -55,9 +55,6 @@ input_boolean:
 input_text:
   sensor_interior_temperature:
     name: Interior temperature sensor label (e.g. sensor.room_temperature)
-  phone_alarm_selector:
-    name: Phone next alarm label (e.g. sensor.nexus_next_alarm)
-    icon: mdi:alarm
 
 input_number:
   rcth:
@@ -199,11 +196,6 @@ input_number:
 template:
   - sensor:
       # removed from sensor:platform:template (syntx will be removed 2026.6)
-      - name: "Phone nxt alarm"
-        unique_id: "phone_nxt_alarm"
-        icon: mdi:alarm
-        state: >
-          {{ states(states('input_text.phone_alarm_selector')) }}
       - name: "interior_temperature"
         unique_id: interior_temperature
         state: "{{ states(states.input_text.sensor_interior_temperature.state) }}"
@@ -791,30 +783,4 @@ automation:
               - action: input_boolean.turn_off
                 target:
                   entity_id: input_boolean.rp_calc_mode
-    mode: single
-
-  - id: Recovery_target_alarm2
-    alias: Recovery_target_alarm2
-    description: "detect phone alarm and set it to the target hour for recovery"
-    triggers:
-      - trigger: state
-        entity_id:
-          - sensor.phone_nxt_alarm
-    conditions:
-      - condition: template
-        value_template: "{{ states('sensor.phone_nxt_alarm') != 'unknown' }}"
-      - condition: template
-        value_template: >
-          {% set alarm_time = states('sensor.phone_nxt_alarm') | as_datetime %}
-          {% set tomorrow = (now() + timedelta(days=1)).date() %}
-          {{ alarm_time.date() == now().date() or alarm_time.date() == tomorrow }}
-    actions:
-      - action: input_datetime.set_datetime
-        target:
-          entity_id: input_datetime.target_hour
-        data:
-          time: >
-            {% set alarm_time = states('sensor.phone_nxt_alarm') %}
-            {% set alarm_time = alarm_time | as_datetime | as_local %}
-            {{ alarm_time.strftime('%H:%M:%S') }}
     mode: single

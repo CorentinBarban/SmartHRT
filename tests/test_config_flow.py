@@ -16,7 +16,6 @@ from custom_components.SmartHRT.const import (
     CONF_TARGET_HOUR,
     CONF_RECOVERYCALC_HOUR,
     CONF_SENSOR_INTERIOR_TEMP,
-    CONF_PHONE_ALARM,
     CONF_TSP,
 )
 
@@ -129,26 +128,6 @@ class TestSmartHRTConfigFlow:
             mock_create.assert_called_once()
             call_args = mock_create.call_args
             assert call_args[1]["title"] == "Test SmartHRT"
-
-    @pytest.mark.asyncio
-    async def test_async_step_sensors_with_phone_alarm(self, config_flow):
-        """Test de async_step_sensors avec alarme téléphone."""
-        config_flow._user_inputs = {CONF_NAME: "Test SmartHRT"}
-
-        user_input = {
-            CONF_TARGET_HOUR: "06:00:00",
-            CONF_RECOVERYCALC_HOUR: "23:00:00",
-            CONF_SENSOR_INTERIOR_TEMP: "sensor.interior_temp",
-            CONF_PHONE_ALARM: "sensor.phone_alarm",
-            CONF_TSP: 19.0,
-        }
-
-        with patch.object(config_flow, "async_create_entry") as mock_create:
-            mock_create.return_value = {"type": FlowResultType.CREATE_ENTRY}
-
-            result = await config_flow.async_step_sensors(user_input)
-
-            assert config_flow._user_inputs[CONF_PHONE_ALARM] == "sensor.phone_alarm"
 
 
 class TestSmartHRTOptionsFlow:

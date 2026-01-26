@@ -11,7 +11,6 @@ from custom_components.SmartHRT.const import (
     CONF_TARGET_HOUR,
     CONF_RECOVERYCALC_HOUR,
     CONF_SENSOR_INTERIOR_TEMP,
-    CONF_PHONE_ALARM,
     CONF_TSP,
     DEFAULT_TSP,
     DEFAULT_TSP_MIN,
@@ -64,7 +63,6 @@ class TestConfigurationKeys:
         assert CONF_TARGET_HOUR == "target_hour"
         assert CONF_RECOVERYCALC_HOUR == "recoverycalc_hour"
         assert CONF_SENSOR_INTERIOR_TEMP == "sensor_interior_temperature"
-        assert CONF_PHONE_ALARM == "phone_alarm_selector"
         assert CONF_TSP == "tsp"
 
 

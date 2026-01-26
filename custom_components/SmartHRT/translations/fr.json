@@ -21,7 +21,6 @@
           "recoverycalc_hour": "Heure de coupure chauffage",
           "sensor_interior_temperature": "Capteur de température intérieure",
           "weather_entity": "Source météo (température extérieure)",
-          "phone_alarm_selector": "Capteur alarme téléphone",
           "tsp": "Consigne (Set Point)"
         },
         "data_description": {
@@ -29,7 +28,6 @@
           "recoverycalc_hour": "Heure d'arrêt du chauffage le soir (ex: 23:00)",
           "sensor_interior_temperature": "Capteur de température de la pièce (ex: sensor.room_temperature)",
           "weather_entity": "Intégration météo fournissant la température extérieure et la vitesse du vent (ex: weather.home, weather.meteo_france).",
-          "phone_alarm_selector": "Capteur de la prochaine alarme du téléphone (ex: sensor.nexus_next_alarm)",
           "tsp": "Température de consigne souhaitée (13-26°C)"
         }
       }
@@ -47,7 +45,6 @@
           "recoverycalc_hour": "Heure de coupure chauffage",
           "sensor_interior_temperature": "Capteur de température intérieure",
           "weather_entity": "Source météo (température extérieure)",
-          "phone_alarm_selector": "Capteur alarme téléphone",
           "tsp": "Consigne (Set Point)"
         },
         "data_description": {
@@ -56,7 +53,6 @@
           "recoverycalc_hour": "Heure d'arrêt du chauffage le soir (ex: 23:00)",
           "sensor_interior_temperature": "Capteur de température de la pièce (ex: sensor.room_temperature)",
           "weather_entity": "Intégration météo fournissant la température extérieure et la vitesse du vent (ex: weather.home, weather.meteo_france).",
-          "phone_alarm_selector": "Capteur de la prochaine alarme du téléphone (ex: sensor.nexus_next_alarm)",
           "tsp": "Température de consigne souhaitée (13-26°C)"
         }
       }

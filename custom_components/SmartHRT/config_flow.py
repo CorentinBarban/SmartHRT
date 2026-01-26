@@ -26,7 +26,6 @@ from .const import (
     CONF_RECOVERYCALC_HOUR,
     CONF_SENSOR_INTERIOR_TEMP,
     CONF_WEATHER_ENTITY,
-    CONF_PHONE_ALARM,
     CONF_TSP,
     DEFAULT_TSP,
     DEFAULT_TSP_MIN,
@@ -135,10 +134,6 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_WEATHER_ENTITY): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain="weather"),
                 ),
-                # Capteur d'alarme du téléphone
-                vol.Optional(CONF_PHONE_ALARM): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain=SENSOR_DOMAIN),
-                ),
                 # Consigne de température (Set Point)
                 vol.Required(CONF_TSP, default=DEFAULT_TSP): selector.NumberSelector(
                     selector.NumberSelectorConfig(
@@ -186,7 +181,6 @@ STATIC_KEYS = {
     CONF_NAME,
     CONF_SENSOR_INTERIOR_TEMP,
     CONF_WEATHER_ENTITY,
-    CONF_PHONE_ALARM,
 }
 # Clés stockées dans 'options' (réglages dynamiques - modifiables sans rechargement)
 DYNAMIC_KEYS = {CONF_TARGET_HOUR, CONF_RECOVERYCALC_HOUR, CONF_TSP}
@@ -229,10 +223,6 @@ class SmartHRTOptionsFlow(OptionsFlow):
                 # ADR-002: Sélection explicite de l'entité météo
                 vol.Required(CONF_WEATHER_ENTITY): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain="weather")
-                ),
-                # Capteur d'alarme du téléphone
-                vol.Optional(CONF_PHONE_ALARM): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain=SENSOR_DOMAIN)
                 ),
                 # Consigne de température (Set Point)
                 vol.Required(CONF_TSP, default=DEFAULT_TSP): selector.NumberSelector(

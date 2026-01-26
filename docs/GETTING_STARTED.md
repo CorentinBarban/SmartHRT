@@ -39,7 +39,6 @@ Name: Living Room
 | **Heating stop hour**    | 23:00                            | When you stop heating (evening)    |
 | **Interior temp sensor** | `sensor.living_room_temperature` | Your room's thermometer            |
 | **Weather source**       | `weather.home`                   | For temperature and wind forecasts |
-| **Phone alarm**          | `sensor.phone_next_alarm`        | (Optional) Auto-sync wake-up time  |
 | **Target temperature**   | 20.0                             | Desired room temperature (°C)      |
 
 > 💡 **Tip**: Find sensor names by going to **Developer Tools** → **States**
@@ -168,7 +167,6 @@ All parameters can be modified after installation.
 
 - **Interior temperature sensor**: Your room's thermometer
 - **Weather source**: For outdoor temp & wind forecasts
-- **Phone alarm sensor** (optional): Auto-sync wake-up time
 
 #### Thermal Settings
 
@@ -227,15 +225,6 @@ If automatic calibration doesn't work well:
 ### The recovery time seems wrong
 
 **Answer**: First 2-3 cycles are rough. System needs to learn your home's thermal characteristics. After a week, accuracy improves significantly.
-
-### How do I sync with my phone alarm?
-
-**Answer**: Enable phone alarm sensor in your phone integration:
-
-- Android: Use Home Assistant Companion App → Notifications
-- iPhone: Use HomeKit or third-party alarm app with sensor
-
-Then configure "Phone alarm sensor" in SmartHRT options.
 
 ### Heating starts too early/late
 
