@@ -7,6 +7,7 @@ ADR implémentées dans ce module:
 
 import logging
 from datetime import timedelta
+from typing import Any
 
 from homeassistant.const import UnitOfTemperature, UnitOfSpeed, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
@@ -18,6 +19,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.helpers.device_registry import DeviceInfo, DeviceEntryType
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -60,6 +62,7 @@ async def async_setup_entry(
         SmartHRTStopLagDurationSensor(coordinator, entry),
         SmartHRTTimeToRecoverySensor(coordinator, entry),
         SmartHRTStateSensor(coordinator, entry),
+        SmartHRTInstanceInfoSensor(coordinator, entry),
         # Sensors timestamp pour déclencheurs d'automatisations
         SmartHRTRecoveryStartTimestampSensor(coordinator, entry),
         SmartHRTTargetHourTimestampSensor(coordinator, entry),
@@ -552,6 +555,39 @@ class SmartHRTStateSensor(SmartHRTBaseSensor):
             "recovery_calc_mode": self._coordinator.data.recovery_calc_mode,
             "rp_calc_mode": self._coordinator.data.rp_calc_mode,
             "temp_lag_detection_active": self._coordinator.data.temp_lag_detection_active,
+        }
+
+
+class SmartHRTInstanceInfoSensor(SmartHRTBaseSensor):
+    """Sensor de diagnostic exposant l'entry_id de l'instance SmartHRT.
+
+    Utile pour identifier l'instance dans les appels de services,
+    particulièrement quand plusieurs instances sont configurées.
+    """
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(
+        self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "ID Instance"
+        self._attr_icon = "mdi:identifier"
+        self._attr_unique_id = f"{self._device_id}_instance_info"
+
+    @property
+    def native_value(self) -> str:
+        """Retourne l'entry_id de l'instance."""
+        return self._config_entry.entry_id
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Attributs supplémentaires avec les informations d'instance."""
+        return {
+            "entry_id": self._config_entry.entry_id,
+            "instance_name": self._device_name,
+            "config_title": self._config_entry.title,
+            "usage_example": f'service: smarthrt.trigger_calculation\ndata:\n  entry_id: "{self._config_entry.entry_id}"',
         }
 
 

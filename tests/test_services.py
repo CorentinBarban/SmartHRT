@@ -45,7 +45,7 @@ class TestGetCoordinator:
         assert result is mock_coordinator
 
     def test_get_coordinator_with_invalid_entry_id(self):
-        """Test avec un entry_id invalide, retourne le premier disponible."""
+        """Test avec un entry_id invalide."""
         mock_hass = MagicMock()
         mock_coordinator = MagicMock()
         mock_hass.data = {
@@ -56,7 +56,8 @@ class TestGetCoordinator:
 
         result = _get_coordinator(mock_hass, "invalid_id")
 
-        assert result is mock_coordinator
+        # Avec la nouvelle implémentation, retourne None si l'entry_id est invalide
+        assert result is None
 
     def test_get_coordinator_first_available(self):
         """Test sans entry_id, retourne le premier coordinateur."""
@@ -72,6 +73,47 @@ class TestGetCoordinator:
         result = _get_coordinator(mock_hass, None)
 
         assert result is not None
+
+    def test_get_coordinator_multiple_instances_with_entry_id(self):
+        """Test avec plusieurs instances et entry_id spécifié."""
+        mock_hass = MagicMock()
+        mock_coordinator1 = MagicMock()
+        mock_coordinator1.name = "Instance 1"
+        mock_coordinator2 = MagicMock()
+        mock_coordinator2.name = "Instance 2"
+
+        mock_hass.data = {
+            DOMAIN: {
+                "entry1": {DATA_COORDINATOR: mock_coordinator1},
+                "entry2": {DATA_COORDINATOR: mock_coordinator2},
+            }
+        }
+
+        # Récupérer la deuxième instance spécifiquement
+        result = _get_coordinator(mock_hass, "entry2")
+
+        assert result is mock_coordinator2
+        assert result.name == "Instance 2"
+
+    def test_get_coordinator_multiple_instances_without_entry_id(self):
+        """Test avec plusieurs instances sans entry_id (warning attendu)."""
+        mock_hass = MagicMock()
+        mock_coordinator1 = MagicMock()
+        mock_coordinator2 = MagicMock()
+
+        mock_hass.data = {
+            DOMAIN: {
+                "entry1": {DATA_COORDINATOR: mock_coordinator1},
+                "entry2": {DATA_COORDINATOR: mock_coordinator2},
+            }
+        }
+
+        # Sans entry_id, retourne le premier (avec warning dans les logs)
+        result = _get_coordinator(mock_hass, None)
+
+        assert result is not None
+        # Le résultat devrait être l'un des deux coordinateurs
+        assert result in [mock_coordinator1, mock_coordinator2]
 
 
 class TestAsyncSetupServices:

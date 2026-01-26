@@ -6,9 +6,13 @@ calculate_recovery_time:
   fields:
     entry_id:
       name: Entry ID
-      description: The config entry ID (optional, uses first available if not specified).
+      description: >
+        The config entry ID for multi-instance setups. If you have multiple SmartHRT 
+        instances configured, specify the entry_id to target a specific instance. 
+        If omitted with multiple instances, the first instance will be used (with a warning).
       required: false
-      example: "abc123"
+      advanced: false
+      example: "abc123def456"
       selector:
         text:
 
@@ -20,9 +24,13 @@ calculate_recovery_update_time:
   fields:
     entry_id:
       name: Entry ID
-      description: The config entry ID (optional, uses first available if not specified).
+      description: >
+        The config entry ID for multi-instance setups. If you have multiple SmartHRT 
+        instances configured, specify the entry_id to target a specific instance. 
+        If omitted with multiple instances, the first instance will be used (with a warning).
       required: false
-      example: "abc123"
+      advanced: false
+      example: "abc123def456"
       selector:
         text:
 
@@ -35,9 +43,13 @@ calculate_rcth_fast:
   fields:
     entry_id:
       name: Entry ID
-      description: The config entry ID (optional, uses first available if not specified).
+      description: >
+        The config entry ID for multi-instance setups. If you have multiple SmartHRT 
+        instances configured, specify the entry_id to target a specific instance. 
+        If omitted with multiple instances, the first instance will be used (with a warning).
       required: false
-      example: "abc123"
+      advanced: false
+      example: "abc123def456"
       selector:
         text:
 
@@ -50,9 +62,13 @@ on_heating_stop:
   fields:
     entry_id:
       name: Entry ID
-      description: The config entry ID (optional, uses first available if not specified).
+      description: >
+        The config entry ID for multi-instance setups. If you have multiple SmartHRT 
+        instances configured, specify the entry_id to target a specific instance. 
+        If omitted with multiple instances, the first instance will be used (with a warning).
       required: false
-      example: "abc123"
+      advanced: false
+      example: "abc123def456"
       selector:
         text:
 
@@ -64,9 +80,13 @@ on_recovery_start:
   fields:
     entry_id:
       name: Entry ID
-      description: The config entry ID (optional, uses first available if not specified).
+      description: >
+        The config entry ID for multi-instance setups. If you have multiple SmartHRT 
+        instances configured, specify the entry_id to target a specific instance. 
+        If omitted with multiple instances, the first instance will be used (with a warning).
       required: false
-      example: "abc123"
+      advanced: false
+      example: "abc123def456"
       selector:
         text:
 
@@ -79,9 +99,13 @@ on_recovery_end:
   fields:
     entry_id:
       name: Entry ID
-      description: The config entry ID (optional, uses first available if not specified).
+      description: >
+        The config entry ID for multi-instance setups. If you have multiple SmartHRT 
+        instances configured, specify the entry_id to target a specific instance. 
+        If omitted with multiple instances, the first instance will be used (with a warning).
       required: false
-      example: "abc123"
+      advanced: false
+      example: "abc123def456"
       selector:
         text:
 
@@ -95,9 +119,13 @@ reset_learning:
   fields:
     entry_id:
       name: Entry ID
-      description: The config entry ID (optional, uses first available if not specified).
+      description: >
+        The config entry ID for multi-instance setups. If you have multiple SmartHRT 
+        instances configured, specify the entry_id to target a specific instance. 
+        If omitted with multiple instances, the first instance will be used (with a warning).
       required: false
-      example: "abc123"
+      advanced: false
+      example: "abc123def456"
       selector:
         text:
 
@@ -110,8 +138,12 @@ trigger_calculation:
   fields:
     entry_id:
       name: Entry ID
-      description: The config entry ID (optional, uses first available if not specified).
+      description: >
+        The config entry ID for multi-instance setups. If you have multiple SmartHRT 
+        instances configured, specify the entry_id to target a specific instance. 
+        If omitted with multiple instances, the first instance will be used (with a warning).
       required: false
-      example: "abc123"
+      advanced: false
+      example: "abc123def456"
       selector:
         text:
