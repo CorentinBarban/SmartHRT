@@ -15,7 +15,6 @@ from custom_components.SmartHRT.const import (
     CONF_TARGET_HOUR,
     CONF_RECOVERYCALC_HOUR,
     CONF_SENSOR_INTERIOR_TEMP,
-    CONF_PHONE_ALARM,
     CONF_TSP,
     DATA_COORDINATOR,
 )
@@ -68,7 +67,6 @@ def mock_config_entry():
         CONF_TARGET_HOUR: "06:00:00",
         CONF_RECOVERYCALC_HOUR: "23:00:00",
         CONF_SENSOR_INTERIOR_TEMP: "sensor.interior_temp",
-        CONF_PHONE_ALARM: "sensor.phone_alarm",
         CONF_TSP: 19.0,
     }
     entry.options = {}

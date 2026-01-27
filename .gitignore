@@ -3,3 +3,6 @@ __pycache__/
 # Devcontainer config directory
 .devcontainer/config/
 !config/configuration.yaml
+_bmad/
+_bmad-output/
+.github/agents/

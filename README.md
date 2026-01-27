@@ -11,36 +11,36 @@ SmartHRT automatically calculates when to start the heating in the morning to re
 
 ## Installation & Configuration
 
-👉 **[Quick Start](docs/GETTING_STARTED.md)** - Step-by-step guide with HACS or manual installation.
+👉 **[User Guide](docs/GUIDE.md)** - Installation, setup, and everyday use.
 
 After installation, configure the integration via **Settings → Devices & Services → SmartHRT**.
 
 ## Documentation
 
-- 🚀 [Getting Started](docs/GETTING_STARTED.md) - Installation and configuration
-- 📊 [Architecture Diagrams](docs/ARCHITECTURE_DIAGRAMS.md) - Visual schemas and workflows
-- 🏗️ [Technical Reference](docs/TECHNICAL_REFERENCE.md) - Architecture and formulas
-- 🔧 [Support](docs/SUPPORT.md) - Troubleshooting and FAQ
-- 👨‍💻 [Developer Guide](docs/DEVELOPER.md) - Contribution guide
+- 📖 **[User Guide](docs/GUIDE.md)** - Installation, configuration, automations, and troubleshooting
+- 🏗️ **[Architecture Guide](docs/ARCHITECTURE.md)** - Technical design, thermal model, state machine
+- 👨‍💻 **[Contributing Guide](docs/CONTRIBUTING.md)** - Development setup and contribution workflow
 
 ---
 
 ## 🧮 Thermal Calculation
 
-→ **[Complete technical specification](docs/TECHNICAL_REFERENCE.md#thermal-calculations)**
+→ **[Complete technical explanation](docs/ARCHITECTURE.md#thermal-model)**
 
-SmartHRT uses an inverted Newton's law of cooling formulation to calculate recovery time:
+SmartHRT uses Newton's law of cooling to calculate recovery time:
 
 **Key Parameters**:
 
-- **RCth**: Thermal time constant (dissipation)
-- **RPth**: Thermal power constant (heating)
+> - `RCth`: this combines your home's insulation (including air infiltrations) & its effective thermal mass (emitter, furniture, walls, ...)
+> - `RPth`: this combines the same insulation & the effective heating power
 
-These parameters adapt to **wind speed** via linear interpolation.
+Both RCth & RPth are necessary to determine the `recovery time`
+
+$$ recoveryTime = RC*{th} \cdot ln \left( \frac {RP*{th}-\left(T*{int}^{START}-T*{ext}\right)} {RP*{th}-\left( T*{sp}-T\_{ext}\right)} \right) $$
 
 ## 📦 Installation & Prerequisites
 
-→ **[Full installation guide](docs/GETTING_STARTED.md)**
+→ **[Full installation guide](docs/GUIDE.md#installation)**
 
 **Requirements**:
 
@@ -52,12 +52,12 @@ These parameters adapt to **wind speed** via linear interpolation.
 
 ## ⚙️ Configuration
 
-→ **[Detailed configuration guide](docs/GETTING_STARTED.md#configuration)**
+→ **[Detailed configuration guide](docs/GUIDE.md#configuration)**
 
 Required parameters are configured via the Home Assistant interface:
 
-- **Wake-up time** (`target_hour`)
-- **Heating stop time** (`recoverycalc_hour`)
+- **Wake-up time** (target hour)
+- **Heating stop time** (evening)
 - **Interior temperature sensor**
 - **Weather source** (temperature and wind)
 - **Target temperature** (°C)
@@ -66,17 +66,18 @@ Required parameters are configured via the Home Assistant interface:
 
 ## 📊 Created Entities
 
-SmartHRT automatically creates **Sensors**, **Numbers**, **Switches** and **Time** entities. See [Technical Reference](docs/TECHNICAL_REFERENCE.md) for complete documentation.
+SmartHRT automatically creates **Sensors**, **Numbers**, **Switches** and **Time** entities. See [User Guide](docs/GUIDE.md#available-sensors--controls) for complete list and descriptions.
 
 ## ❓ FAQ & Support
 
-→ **[Complete FAQ and troubleshooting](docs/SUPPORT.md)**
+→ **[Troubleshooting and FAQ](docs/GUIDE.md#faq)**
 
-**Frequently asked questions**:
+Common questions covered:
 
-- What to do during holidays?
-- Why aren't predictions accurate in the first few days?
-- How to manually adjust coefficients?
+- How long until accurate predictions?
+- Can I use it with multiple rooms?
+- What if my wake-up time changes?
+- How to manually adjust calculations?
 
 ---
 
