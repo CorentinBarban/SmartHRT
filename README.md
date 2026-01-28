@@ -5,6 +5,9 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/v/release/corentinBarban/smartHRT?include_prereleases)](https://github.com/corentinBarban/SmartHRT/releases)
 
+## 🙏 Remerciements
+@ebozonne : Auteur du code initial SmartHRT sur lequel cette intégration native est basée https://github.com/ebozonne/SmartHRT
+
 ## What is it?
 
 SmartHRT automatically calculates when to start the heating in the morning to reach your desired temperature at wake-up time. The algorithm continuously learns your home's thermal characteristics.
@@ -101,3 +104,4 @@ Common questions covered:
 ## 📄 License
 
 This project is licensed under the GNU GENERAL PUBLIC LICENSE. See the [LICENCE](LICENCE) file for details.
+
