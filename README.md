@@ -5,8 +5,9 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/v/release/corentinBarban/smartHRT?include_prereleases)](https://github.com/corentinBarban/SmartHRT/releases)
 
-## 🙏 Remerciements
-@ebozonne : Auteur du code initial SmartHRT sur lequel cette intégration native est basée https://github.com/ebozonne/SmartHRT
+## 🙏 Acknowledgments
+
+**[@ebozonne](https://github.com/ebozonne)**: Author of the [original SmartHRT code](https://github.com/ebozonne/SmartHRT) on which this native integration is based
 
 ## What is it?
 
@@ -104,4 +105,5 @@ Common questions covered:
 ## 📄 License
 
 This project is licensed under the GNU GENERAL PUBLIC LICENSE. See the [LICENCE](LICENCE) file for details.
+
 
