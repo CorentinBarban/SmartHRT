@@ -57,6 +57,8 @@ async def _remove_obsolete_entities(hass: HomeAssistant, entry: ConfigEntry) -> 
     Les entités time en lecture seule (recoverystart_hour, recoveryupdate_hour)
     ont été supprimées et remplacées par des sensors timestamp.
     Le sensor recovery_start_sensor (texte) a été supprimé car redondant.
+    Les sensors timestamp target_hour et recoverycalc_hour ont été renommés
+    pour éviter les conflits d'unique_id avec les entités time.
     Cette fonction nettoie le registre des anciennes entités.
     """
     entity_reg = er.async_get(hass)
@@ -69,6 +71,15 @@ async def _remove_obsolete_entities(hass: HomeAssistant, entry: ConfigEntry) -> 
             f"{entry.entry_id}_recovery_start_sensor",
             "sensor",
         ),  # sensor avec label (texte)
+        # Migration v1.1: sensors timestamp renommés pour éviter conflit avec time entities
+        (
+            f"{entry.entry_id}_target_hour",
+            "sensor",
+        ),  # ancien sensor timestamp -> _target_hour_timestamp
+        (
+            f"{entry.entry_id}_recoverycalc_hour",
+            "sensor",
+        ),  # ancien sensor timestamp -> _recoverycalc_hour_timestamp
     ]
 
     for unique_id, platform in obsolete_entities:

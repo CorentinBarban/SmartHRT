@@ -83,16 +83,73 @@ Accuracy improves faster with:
 
 ## Available Sensors & Controls
 
-| Entity                          | Type   | Description                        |
-| ------------------------------- | ------ | ---------------------------------- |
-| `sensor.*_interior_temperature` | Sensor | Current room temperature           |
-| `sensor.*_exterior_temperature` | Sensor | Outside temperature (from weather) |
-| `sensor.*_recovery_start_time`  | Sensor | When heating should start          |
-| `sensor.*_recovery_duration`    | Sensor | How long heating will run          |
-| `number.*_rc_thermal`           | Number | Cooling constant (adjustable)      |
-| `number.*_rp_thermal`           | Number | Heating constant (adjustable)      |
-| `switch.*_learning_mode`        | Switch | Enable/disable auto-calibration    |
-| `time.*_target_hour`            | Time   | Set your wake-up time              |
+### Sensors (Read-only)
+
+| Entity                          | Description                                      |
+| ------------------------------- | ------------------------------------------------ |
+| `sensor.*_interior_temperature` | Current room temperature                         |
+| `sensor.*_exterior_temperature` | Outside temperature (from weather)               |
+| `sensor.*_wind_speed`           | Current wind speed                               |
+| `sensor.*_windchill`            | Perceived temperature (wind chill)               |
+| `sensor.*_rcth`                 | Cooling coefficient (interpolated, with details) |
+| `sensor.*_rpth`                 | Heating coefficient (interpolated, with details) |
+| `sensor.*_time_to_recovery`     | Time remaining before heating starts (hours)     |
+| `sensor.*_state`                | Current state machine status                     |
+
+### Timestamp Sensors (For Automations)
+
+These sensors have `device_class: timestamp` and can be used as automation triggers with `platform: time`:
+
+| Entity                             | Description                          |
+| ---------------------------------- | ------------------------------------ |
+| `sensor.*_heure_de_relance`        | When heating should start (datetime) |
+| `sensor.*_heure_cible_timestamp`   | Target/wake-up time as datetime      |
+| `sensor.*_heure_coupure_timestamp` | Heating stop time as datetime        |
+
+**Example automation trigger:**
+
+```yaml
+automation:
+  trigger:
+    - platform: time
+      at: sensor.smarthrt_chambre_heure_de_relance
+  action:
+    - service: switch.turn_on
+      target:
+        entity_id: switch.heating
+```
+
+### Time Entities (User-configurable)
+
+These entities allow users to modify schedule settings via the UI:
+
+| Entity                           | Description                                   |
+| -------------------------------- | --------------------------------------------- |
+| `time.*_heure_cible`             | Set your wake-up/target time                  |
+| `time.*_heure_coupure_chauffage` | Set evening heating stop time                 |
+| `time.*_heure_de_relance`        | Calculated recovery start (read-only display) |
+
+### Number Entities (Adjustable parameters)
+
+| Entity                           | Description                          |
+| -------------------------------- | ------------------------------------ |
+| `number.*_consigne`              | Target temperature setpoint (°C)     |
+| `number.*_rcth`                  | Cooling constant - manual adjustment |
+| `number.*_rpth`                  | Heating constant - manual adjustment |
+| `number.*_rcth_vent_faible`      | Cooling constant for low wind        |
+| `number.*_rcth_vent_fort`        | Cooling constant for high wind       |
+| `number.*_rpth_vent_faible`      | Heating constant for low wind        |
+| `number.*_rpth_vent_fort`        | Heating constant for high wind       |
+| `number.*_facteur_de_relaxation` | Learning rate factor                 |
+
+### Switches (Mode controls)
+
+| Entity                    | Description                  |
+| ------------------------- | ---------------------------- |
+| `switch.*_smart_heating`  | Enable/disable smart heating |
+| `switch.*_mode_adaptatif` | Enable/disable auto-learning |
+
+> **Note:** The `*` represents your instance name (e.g., `chambre`, `salon`).
 
 ## Troubleshooting
 

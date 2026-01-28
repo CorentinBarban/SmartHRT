@@ -614,14 +614,14 @@ class SmartHRTRecoveryStartTimestampSensor(SmartHRTTimestampSensor):
 class SmartHRTTargetHourTimestampSensor(SmartHRTTimestampSensor):
     """Sensor timestamp pour l'heure cible/réveil (utilisable dans les automatisations)."""
 
-    _attr_name = "Heure cible"
+    _attr_name = "Heure cible (timestamp)"
     _attr_icon = "mdi:clock-end"
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{self._device_id}_target_hour"
+        self._attr_unique_id = f"{self._device_id}_target_hour_timestamp"
 
     @property
     def native_value(self):
@@ -645,14 +645,14 @@ class SmartHRTTargetHourTimestampSensor(SmartHRTTimestampSensor):
 class SmartHRTRecoveryCalcHourTimestampSensor(SmartHRTTimestampSensor):
     """Sensor timestamp pour l'heure de calcul/coupure chauffage (utilisable dans les automatisations)."""
 
-    _attr_name = "Heure coupure chauffage"
+    _attr_name = "Heure coupure (timestamp)"
     _attr_icon = "mdi:clock-in"
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"{self._device_id}_recoverycalc_hour"
+        self._attr_unique_id = f"{self._device_id}_recoverycalc_hour_timestamp"
 
     @property
     def native_value(self):

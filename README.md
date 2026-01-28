@@ -31,12 +31,14 @@ SmartHRT uses Newton's law of cooling to calculate recovery time:
 
 **Key Parameters**:
 
-> - `RCth`: this combines your home's insulation (including air infiltrations) & its effective thermal mass (emitter, furniture, walls, ...)
-> - `RPth`: this combines the same insulation & the effective heating power
+> - $RC_{th}$: this combines your home's insulation (including air infiltrations) & its effective thermal mass (emitter, furniture, walls, ...)
+> - $RP_{th}$: this combines the same insulation & the effective heating power
 
-Both RCth & RPth are necessary to determine the `recovery time`
+Both $RC_{th}$ & $RP_{th}$ are necessary to determine the `recovery time`
 
-$$ recoveryTime = RC*{th} \cdot ln \left( \frac {RP*{th}-\left(T*{int}^{START}-T*{ext}\right)} {RP*{th}-\left( T*{sp}-T\_{ext}\right)} \right) $$
+```math
+recoveryTime = RC_{th} \cdot ln \left( \frac {RP_{th}-\left(T_{int}^{START}-T_{ext}\right)} {RP_{th}-\left( T_{sp}-T_{ext}\right)} \right)
+```
 
 ## 📦 Installation & Prerequisites
 
