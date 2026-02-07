@@ -1415,7 +1415,7 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         self.async_set_updated_data(self.data)
 
     # ─────────────────────────────────────────────────────────────────────────
-    # ADR-039: Restauration simplifiée avec auto-correction
+    # ADR-039/049: Restauration simplifiée avec auto-correction
     # ─────────────────────────────────────────────────────────────────────────
 
     def _is_night_period(
@@ -1439,6 +1439,82 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             # Cas atypique: recoverycalc=13:30, target=17:30
             # "Nuit" = entre 13:30 et 17:30
             return recoverycalc <= current_time < target
+
+    def _determine_target_state(self, now: datetime) -> SmartHRTState:
+        """Détermine l'état cible basé sur l'heure actuelle (ADR-049).
+
+        Calcule l'état dans lequel le système devrait être selon les horaires
+        configurés, indépendamment de l'état persisté.
+
+        Logique:
+        - Si recovery_start_hour <= now < target_hour → HEATING_PROCESS (relance en cours)
+        - Si en période nocturne (après recoverycalc, avant recovery_start) → MONITORING
+        - Sinon → HEATING_ON (journée normale)
+
+        Args:
+            now: Instant actuel
+
+        Returns:
+            SmartHRTState: État cible déterminé
+        """
+        target = self.data.target_hour
+        recoverycalc = self.data.recoverycalc_hour
+        recovery_start = self.data.recovery_start_hour
+
+        if not target or not recoverycalc:
+            _LOGGER.debug(
+                "%s Horaires manquants, état par défaut HEATING_ON",
+                self._log_prefix(),
+            )
+            return SmartHRTState.HEATING_ON
+
+        current_time = now.time()
+
+        # Priorité 1: Si on a une heure de relance et qu'on est dans la période de relance
+        if recovery_start:
+            # Construire target_dt pour comparaison avec recovery_start
+            target_dt = now.replace(
+                hour=target.hour,
+                minute=target.minute,
+                second=0,
+                microsecond=0,
+            )
+            # Si target est déjà passé aujourd'hui, c'est pour demain
+            if target_dt <= now:
+                target_dt += timedelta(days=1)
+
+            # Si on est dans la période de relance: recovery_start <= now < target_dt
+            if recovery_start <= now < target_dt:
+                _LOGGER.info(
+                    "%s Période de relance détectée: recovery_start=%s <= now=%s < target=%s → HEATING_PROCESS",
+                    self._log_prefix(),
+                    recovery_start.strftime("%H:%M"),
+                    now.strftime("%H:%M"),
+                    target_dt.strftime("%H:%M"),
+                )
+                return SmartHRTState.HEATING_PROCESS
+
+        # Priorité 2: Si on est en période nocturne (refroidissement/surveillance)
+        is_night = self._is_night_period(current_time, target, recoverycalc)
+        if is_night:
+            # Vérifier si on est après recovery_start (déjà traité ci-dessus)
+            # Sinon on est en surveillance (avant la relance)
+            _LOGGER.info(
+                "%s Période nocturne détectée: current=%s, recoverycalc=%s, target=%s → MONITORING",
+                self._log_prefix(),
+                current_time.strftime("%H:%M"),
+                recoverycalc.strftime("%H:%M"),
+                target.strftime("%H:%M"),
+            )
+            return SmartHRTState.MONITORING
+
+        # Par défaut: journée normale, chauffage actif
+        _LOGGER.debug(
+            "%s Période diurne: current=%s → HEATING_ON",
+            self._log_prefix(),
+            current_time.strftime("%H:%M"),
+        )
+        return SmartHRTState.HEATING_ON
 
     def _is_state_coherent(self, persisted_state: SmartHRTState, now: datetime) -> bool:
         """Vérifie si l'état persisté est cohérent avec l'heure actuelle (ADR-039).
@@ -1523,41 +1599,78 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         # HEATING_ON: rien à faire (attend le prochain recoverycalc_hour)
 
     async def _restore_state_after_restart(self) -> None:
-        """Restaure l'état après redémarrage avec vérification minimale (ADR-039).
+        """Restaure l'état après redémarrage avec détection automatique (ADR-039, ADR-049).
 
-        Principe "Trust the Persistence, Verify Minimally" :
-        - L'état persisté est la source de vérité
-        - Vérification de cohérence minimaliste
-        - En cas d'incohérence, reset à HEATING_ON (auto-correction)
+        Principe "Infer State from Time" (ADR-049):
+        - Déterminer l'état cible basé sur l'heure actuelle
+        - L'état persisté est préféré s'il est compatible avec l'état inféré
+        - Si l'état persisté est incohérent, utiliser l'état inféré
         """
         persisted_state = self.data.current_state
         now = dt_util.now()
 
+        # ADR-049: Déterminer l'état cible basé sur l'heure actuelle
+        inferred_state = self._determine_target_state(now)
+
         _LOGGER.info(
-            "%s Restauration - État persisté: %s",
+            "%s Restauration - État persisté: %s, État inféré: %s",
             self._log_prefix(),
             persisted_state.value,
+            inferred_state.value,
         )
 
-        # Vérification de cohérence minimale
-        if not self._is_state_coherent(persisted_state, now):
-            _LOGGER.warning(
-                "%s État incohérent %s pour l'heure actuelle, reset à HEATING_ON",
+        # Définir les états compatibles (même période temporelle)
+        # DETECTING_LAG et MONITORING sont tous deux dans la période nocturne
+        # RECOVERY et HEATING_PROCESS sont tous deux dans la période de relance
+        compatible_states = {
+            SmartHRTState.MONITORING: {SmartHRTState.MONITORING, SmartHRTState.DETECTING_LAG},
+            SmartHRTState.HEATING_PROCESS: {SmartHRTState.HEATING_PROCESS, SmartHRTState.RECOVERY},
+            SmartHRTState.HEATING_ON: {SmartHRTState.HEATING_ON},
+        }
+
+        # Déterminer l'état final à utiliser
+        compatible_set = compatible_states.get(inferred_state, {inferred_state})
+
+        if persisted_state in compatible_set:
+            # L'état persisté est compatible avec l'état inféré → le garder
+            target_state = persisted_state
+            _LOGGER.debug(
+                "%s État persisté %s compatible avec inféré %s, conservation",
                 self._log_prefix(),
                 persisted_state.value,
+                inferred_state.value,
             )
-            self.force_state(SmartHRTState.HEATING_ON)
-            await self._save_learned_data()
-            self.async_set_updated_data(self.data)
-            return
+        elif inferred_state != SmartHRTState.HEATING_ON:
+            # L'état persisté n'est pas compatible, utiliser l'état inféré
+            target_state = inferred_state
+            _LOGGER.info(
+                "%s État corrigé: %s → %s (basé sur l'heure actuelle)",
+                self._log_prefix(),
+                persisted_state.value,
+                inferred_state.value,
+            )
+        else:
+            # État inféré est HEATING_ON et l'état persisté non compatible → reset
+            target_state = SmartHRTState.HEATING_ON
+            if persisted_state != SmartHRTState.HEATING_ON:
+                _LOGGER.warning(
+                    "%s État incohérent %s, reset à HEATING_ON",
+                    self._log_prefix(),
+                    persisted_state.value,
+                )
 
-        # État cohérent : reprogrammer les triggers nécessaires
+        # Appliquer l'état cible
+        if target_state != self.data.current_state:
+            self.force_state(target_state)
+            await self._save_learned_data()
+
+        # Reprogrammer les triggers nécessaires
         _LOGGER.debug(
-            "%s État %s cohérent, restauration des triggers",
+            "%s État final: %s, restauration des triggers",
             self._log_prefix(),
-            persisted_state.value,
+            target_state.value,
         )
-        self._restore_triggers_for_state(persisted_state, now)
+        self._restore_triggers_for_state(target_state, now)
         self.async_set_updated_data(self.data)
 
     def on_heating_stop(self) -> None:
