@@ -420,3 +420,135 @@ class SmartHRTData(BaseModel):
     def diagnostic(self) -> SmartHRTData:
         """Alias pour compatibilité avec l'ancien code utilisant self.data.diagnostic."""
         return self
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ConfigFlowDataModel (validation entrées utilisateur - migré depuis models.py)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class ConfigFlowDataModel(BaseModel):
+    """Modèle Pydantic pour les données du config flow (ADR-032).
+
+    Valide les entrées utilisateur lors de la configuration.
+    Séparé de SmartHRTData car les formats diffèrent:
+    - ConfigFlow: heures en string "HH:MM:SS", entity_id en string
+    - SmartHRTData: heures en dt_time, données métier validées
+    """
+
+    name: str = Field(min_length=1, max_length=100)
+    target_hour: str  # Format "HH:MM:SS"
+    recoverycalc_hour: str = Field(default="23:00:00")
+    sensor_interior_temperature: str  # Entity ID
+    weather_entity: str  # Entity ID
+    tsp: float = Field(default=DEFAULT_TSP, ge=13.0, le=26.0)
+
+    model_config = ConfigDict(extra="ignore")
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        """Valide que le nom n'est pas vide."""
+        v = v.strip()
+        if not v:
+            raise ValueError("Le nom ne peut pas être vide")
+        return v
+
+    @field_validator("target_hour", "recoverycalc_hour")
+    @classmethod
+    def validate_time_format(cls, v: str) -> str:
+        """Valide le format de l'heure."""
+        try:
+            parts = v.split(":")
+            hour = int(parts[0])
+            minute = int(parts[1]) if len(parts) > 1 else 0
+            if not (0 <= hour <= 23 and 0 <= minute <= 59):
+                raise ValueError("Heure invalide")
+        except (ValueError, IndexError) as e:
+            raise ValueError(f"Format d'heure invalide: {v}") from e
+        return v
+
+    @model_validator(mode="after")
+    def validate_time_sequence(self) -> Self:
+        """Valide que recoverycalc_hour précède target_hour (passage à minuit).
+
+        La logique: recoverycalc (23:00) doit être le soir, target (06:00) le matin.
+        Si recoverycalc < target (même journée), c'est une erreur.
+        """
+        try:
+            rc_parts = self.recoverycalc_hour.split(":")
+            tg_parts = self.target_hour.split(":")
+            rc_minutes = int(rc_parts[0]) * 60 + int(
+                rc_parts[1] if len(rc_parts) > 1 else 0
+            )
+            tg_minutes = int(tg_parts[0]) * 60 + int(
+                tg_parts[1] if len(tg_parts) > 1 else 0
+            )
+
+            # Cas invalide: recoverycalc (ex: 05:00) < target (06:00) sur même journée
+            # Cas valide: recoverycalc (23:00) > target (06:00) implique passage à minuit
+            # Ou target très tôt (avant midi) est OK même si recoverycalc proche
+            if rc_minutes < tg_minutes and tg_minutes >= 12 * 60:
+                raise ValueError(
+                    "L'heure de coupure doit précéder l'heure cible (passage à minuit)"
+                )
+        except (ValueError, IndexError):
+            pass  # Les erreurs de parsing sont gérées par validate_time_format
+        return self
+
+    @property
+    def target_hour_as_time(self) -> dt_time:
+        """Convertit target_hour en objet time (ADR-045)."""
+        parts = self.target_hour.split(":")
+        return dt_time(
+            int(parts[0]),
+            int(parts[1]) if len(parts) > 1 else 0,
+            int(parts[2]) if len(parts) > 2 else 0,
+        )
+
+    @property
+    def recoverycalc_hour_as_time(self) -> dt_time:
+        """Convertit recoverycalc_hour en objet time (ADR-045)."""
+        parts = self.recoverycalc_hour.split(":")
+        return dt_time(
+            int(parts[0]),
+            int(parts[1]) if len(parts) > 1 else 0,
+            int(parts[2]) if len(parts) > 2 else 0,
+        )
+
+
+def validate_config_flow_data(
+    data: dict[str, Any],
+) -> tuple[dict[str, Any] | None, dict[str, str]]:
+    """Valide les données du config flow.
+
+    Args:
+        data: Données saisies par l'utilisateur
+
+    Returns:
+        Tuple (données_validées, erreurs)
+        - données_validées: None si erreurs, sinon dict validé
+        - erreurs: dict {champ: code_erreur} pour affichage UI
+    """
+    import logging
+
+    _LOGGER = logging.getLogger(__name__)
+    errors: dict[str, str] = {}
+
+    try:
+        model = ConfigFlowDataModel.model_validate(data)
+        return model.model_dump(), errors
+    except Exception as e:
+        # Parser les erreurs Pydantic pour les mapper aux champs
+        error_str = str(e)
+        if "tsp" in error_str.lower():
+            errors["tsp"] = "tsp_out_of_range"
+        elif "name" in error_str.lower():
+            errors["name"] = "invalid_name"
+        elif "heure" in error_str.lower() or "time" in error_str.lower():
+            errors["base"] = "invalid_time_sequence"
+        else:
+            errors["base"] = "unknown_error"
+
+        _LOGGER.debug("Erreur de validation config flow: %s", e)
+        return None, errors

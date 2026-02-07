@@ -29,7 +29,7 @@ from .const import (
 )
 from .coordinator import SmartHRTCoordinator
 from .services import async_setup_services, async_unload_services
-from .models import ConfigFlowDataModel
+from .data_model import ConfigFlowDataModel
 
 _LOGGER = logging.getLogger(__name__)
 
