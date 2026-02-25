@@ -2,6 +2,7 @@
 
 ADR-026: Extraction du modèle thermique en Pure Python.
 ADR-031: Optimisation algorithmique avec convergence adaptative.
+ADR-054: TOUTES LES TEMPÉRATURES DOIVENT ÊTRE EN CELSIUS.
 
 Ce module contient la classe ThermalSolver qui implémente tous les calculs
 de physique thermique sans aucune dépendance à Home Assistant:
@@ -9,6 +10,10 @@ de physique thermique sans aucune dépendance à Home Assistant:
 - Interpolation selon le vent (ADR-007)
 - Apprentissage des coefficients (ADR-006)
 - Calcul du windchill
+
+IMPORTANT (ADR-054): Ce module utilise exclusivement le système métrique (Celsius).
+La conversion depuis/vers Fahrenheit est de la responsabilité de l'appelant
+(voir coordinator.py: _normalize_to_celsius).
 """
 
 from __future__ import annotations
@@ -39,12 +44,13 @@ def validate_recovery_physics(
     """Valide les contraintes physiques pour le calcul de recovery.
 
     ADR-050: Gardes physiques explicites avant les calculs.
+    ADR-054: TOUTES LES TEMPÉRATURES DOIVENT ÊTRE EN CELSIUS.
 
     Args:
-        interior_temp: Température intérieure actuelle (°C) ou None
-        exterior_temp: Température extérieure (°C) ou None
-        target_temp: Température cible (°C)
-        rcth: Constante de temps thermique
+        interior_temp: Température intérieure actuelle en °C (ou None)
+        exterior_temp: Température extérieure en °C (ou None)
+        target_temp: Température cible en °C
+        rcth: Constante de temps thermique (heures)
 
     Returns:
         PhysicsValidation avec le résultat et un message explicatif.
@@ -98,7 +104,7 @@ def validate_recovery_physics(
 
 
 class ThermalSolver:
-    """Solveur thermique Pure Python (ADR-026, ADR-031).
+    """Solveur thermique Pure Python (ADR-026, ADR-031, ADR-054).
 
     Implémente tous les calculs de physique thermique:
     - calculate_recovery_duration: temps nécessaire pour atteindre la consigne
@@ -114,6 +120,12 @@ class ThermalSolver:
     testée unitairement avec des données synthétiques.
 
     ADR-031: Optimisation algorithmique avec critère de convergence adaptatif.
+
+    IMPORTANT (ADR-054): TOUTES les méthodes de ce solveur attendent des
+    températures en CELSIUS. La conversion depuis Fahrenheit doit être
+    effectuée par l'appelant (SmartHRTCoordinator._normalize_to_celsius).
+    Les formules physiques (windchill, coefficients thermiques) sont calibrées
+    pour le système métrique et ne doivent pas être modifiées.
     """
 
     def __init__(
@@ -219,7 +231,7 @@ class ThermalSolver:
         )
 
     # ─────────────────────────────────────────────────────────────────────────
-    # ADR-005, ADR-022, ADR-031, ADR-050: Calcul du temps de relance
+    # ADR-005, ADR-022, ADR-031, ADR-050, ADR-054: Calcul du temps de relance
     # ─────────────────────────────────────────────────────────────────────────
 
     def calculate_recovery_duration(
@@ -232,6 +244,8 @@ class ThermalSolver:
 
         ADR-050: Utilise des gardes physiques explicites pour valider les
         contraintes avant le calcul au lieu de try/except génériques.
+        ADR-054: TOUTES les températures dans ThermalState DOIVENT être en °C.
+        La conversion depuis Fahrenheit est de la responsabilité de l'appelant.
 
         Utilise les prévisions météo et un algorithme itératif avec convergence
         adaptative pour affiner la prédiction. Le calcul prend en compte:
