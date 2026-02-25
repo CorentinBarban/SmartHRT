@@ -91,7 +91,7 @@ class SmartHRTSetPointNumber(SmartHRTBaseNumber):
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Consigne"
+        self._attr_translation_key = "setpoint"
         self._attr_unique_id = f"{self._device_id}_setpoint"
         self._attr_native_min_value = DEFAULT_TSP_MIN
         self._attr_native_max_value = DEFAULT_TSP_MAX
@@ -120,7 +120,7 @@ class SmartHRTRCthNumber(SmartHRTBaseNumber):
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "RCth"
+        self._attr_translation_key = "rcth"
         self._attr_unique_id = f"{self._device_id}_rcth"
         self._attr_native_min_value = DEFAULT_RCTH_MIN
         self._attr_native_max_value = DEFAULT_RCTH_MAX
@@ -148,7 +148,7 @@ class SmartHRTRPthNumber(SmartHRTBaseNumber):
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "RPth"
+        self._attr_translation_key = "rpth"
         self._attr_unique_id = f"{self._device_id}_rpth"
         self._attr_native_min_value = DEFAULT_RPTH_MIN
         self._attr_native_max_value = DEFAULT_RPTH_MAX
@@ -180,7 +180,7 @@ class SmartHRTRCthLWNumber(SmartHRTBaseNumber):
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "RCth (vent faible)"
+        self._attr_translation_key = "rcth_lw"
         self._attr_unique_id = f"{self._device_id}_rcth_lw"
         self._attr_native_min_value = DEFAULT_RCTH_MIN
         self._attr_native_max_value = DEFAULT_RCTH_MAX
@@ -208,7 +208,7 @@ class SmartHRTRCthHWNumber(SmartHRTBaseNumber):
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "RCth (vent fort)"
+        self._attr_translation_key = "rcth_hw"
         self._attr_unique_id = f"{self._device_id}_rcth_hw"
         self._attr_native_min_value = DEFAULT_RCTH_MIN
         self._attr_native_max_value = DEFAULT_RCTH_MAX
@@ -236,7 +236,7 @@ class SmartHRTRPthLWNumber(SmartHRTBaseNumber):
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "RPth (vent faible)"
+        self._attr_translation_key = "rpth_lw"
         self._attr_unique_id = f"{self._device_id}_rpth_lw"
         self._attr_native_min_value = DEFAULT_RPTH_MIN
         self._attr_native_max_value = DEFAULT_RPTH_MAX
@@ -264,7 +264,7 @@ class SmartHRTRPthHWNumber(SmartHRTBaseNumber):
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "RPth (vent fort)"
+        self._attr_translation_key = "rpth_hw"
         self._attr_unique_id = f"{self._device_id}_rpth_hw"
         self._attr_native_min_value = DEFAULT_RPTH_MIN
         self._attr_native_max_value = DEFAULT_RPTH_MAX
@@ -296,7 +296,7 @@ class SmartHRTRelaxationNumber(SmartHRTBaseNumber):
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Facteur de relaxation"
+        self._attr_translation_key = "relaxation"
         self._attr_unique_id = f"{self._device_id}_relaxation"
         self._attr_native_min_value = 0.0
         self._attr_native_max_value = 15.0

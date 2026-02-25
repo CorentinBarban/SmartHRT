@@ -114,6 +114,144 @@
           "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
         }
       }
+    },
+    "reset_learning": {
+      "name": "Lernvorgang zurücksetzen",
+      "description": "Setzt alle erlernten thermischen Koeffizienten (RCth, RPth) auf ihre Standardwerte zurück.",
+      "fields": {
+        "entry_id": {
+          "name": "Konfigurations-ID",
+          "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
+        }
+      }
+    },
+    "trigger_calculation": {
+      "name": "Berechnung auslösen",
+      "description": "Löst manuell eine sofortige Neuberechnung der Aufheizzeit aus.",
+      "fields": {
+        "entry_id": {
+          "name": "Konfigurations-ID",
+          "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "interior_temp": {
+        "name": "Innentemperatur"
+      },
+      "exterior_temp": {
+        "name": "Außentemperatur"
+      },
+      "windchill": {
+        "name": "Gefühlte Temperatur"
+      },
+      "temp_forecast": {
+        "name": "Temperaturvorhersage"
+      },
+      "wind_speed": {
+        "name": "Windgeschwindigkeit"
+      },
+      "wind_forecast": {
+        "name": "Windvorhersage"
+      },
+      "wind_avg": {
+        "name": "Durchschnittswind (4h)"
+      },
+      "rcth_sensor": {
+        "name": "RCth"
+      },
+      "rpth_sensor": {
+        "name": "RPth"
+      },
+      "rcth_fast": {
+        "name": "Dynamisches RCth"
+      },
+      "recovery_calc_mode": {
+        "name": "Aufheiz-Berechnungsmodus"
+      },
+      "rp_calc_mode": {
+        "name": "RP-Berechnungsmodus"
+      },
+      "stop_lag_duration": {
+        "name": "Stop-Verzögerungsdauer"
+      },
+      "night_state": {
+        "name": "Nachtzustand"
+      },
+      "state": {
+        "name": "Maschinenzustand",
+        "state": {
+          "initializing": "Initialisierung",
+          "heating_on": "Heizung aktiv",
+          "detecting_lag": "Lag-Erkennung",
+          "monitoring": "Überwachung",
+          "recovery": "Aufheizen",
+          "heating_process": "Temperaturanstieg",
+          "unknown": "Unbekannt"
+        }
+      },
+      "time_to_recovery": {
+        "name": "Zeit bis Aufheizen"
+      },
+      "instance_info": {
+        "name": "Instanz-ID"
+      },
+      "recovery_start_timestamp": {
+        "name": "Aufheiz-Startzeit"
+      },
+      "target_hour_timestamp": {
+        "name": "Zielzeit"
+      },
+      "recoverycalc_hour_timestamp": {
+        "name": "Heizung Abschaltzeit"
+      }
+    },
+    "number": {
+      "setpoint": {
+        "name": "Solltemperatur"
+      },
+      "rcth": {
+        "name": "RCth"
+      },
+      "rpth": {
+        "name": "RPth"
+      },
+      "rcth_lw": {
+        "name": "RCth (Schwacher Wind)"
+      },
+      "rcth_hw": {
+        "name": "RCth (Starker Wind)"
+      },
+      "rpth_lw": {
+        "name": "RPth (Schwacher Wind)"
+      },
+      "rpth_hw": {
+        "name": "RPth (Starker Wind)"
+      },
+      "relaxation": {
+        "name": "Relaxationsfaktor"
+      }
+    },
+    "time": {
+      "target_hour": {
+        "name": "Zielzeit"
+      },
+      "recoverycalc_hour": {
+        "name": "Heizung Abschaltzeit"
+      },
+      "recovery_start_time": {
+        "name": "Aufheiz-Startzeit"
+      }
+    },
+    "switch": {
+      "smartheating_mode": {
+        "name": "Intelligenter Heizmodus"
+      },
+      "adaptive_mode": {
+        "name": "Adaptiver Modus"
+      }
     }
   }
 }

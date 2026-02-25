@@ -114,6 +114,144 @@
           "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
         }
       }
+    },
+    "reset_learning": {
+      "name": "Restablecer aprendizaje",
+      "description": "Restablece todos los coeficientes térmicos aprendidos (RCth, RPth) a sus valores predeterminados.",
+      "fields": {
+        "entry_id": {
+          "name": "ID de configuración",
+          "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
+        }
+      }
+    },
+    "trigger_calculation": {
+      "name": "Activar cálculo",
+      "description": "Activa manualmente un recálculo inmediato de la hora de reinicio.",
+      "fields": {
+        "entry_id": {
+          "name": "ID de configuración",
+          "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "interior_temp": {
+        "name": "Temperatura interior"
+      },
+      "exterior_temp": {
+        "name": "Temperatura exterior"
+      },
+      "windchill": {
+        "name": "Sensación térmica"
+      },
+      "temp_forecast": {
+        "name": "Pronóstico de temperatura"
+      },
+      "wind_speed": {
+        "name": "Velocidad del viento"
+      },
+      "wind_forecast": {
+        "name": "Pronóstico del viento"
+      },
+      "wind_avg": {
+        "name": "Viento promedio (4h)"
+      },
+      "rcth_sensor": {
+        "name": "RCth"
+      },
+      "rpth_sensor": {
+        "name": "RPth"
+      },
+      "rcth_fast": {
+        "name": "RCth dinámico"
+      },
+      "recovery_calc_mode": {
+        "name": "Modo de cálculo de reinicio"
+      },
+      "rp_calc_mode": {
+        "name": "Modo de cálculo RP"
+      },
+      "stop_lag_duration": {
+        "name": "Duración del retraso de parada"
+      },
+      "night_state": {
+        "name": "Estado nocturno"
+      },
+      "state": {
+        "name": "Estado de la máquina",
+        "state": {
+          "initializing": "Inicializando",
+          "heating_on": "Calefacción activa",
+          "detecting_lag": "Detectando retraso",
+          "monitoring": "Monitoreando",
+          "recovery": "Reinicio",
+          "heating_process": "Calentando",
+          "unknown": "Desconocido"
+        }
+      },
+      "time_to_recovery": {
+        "name": "Tiempo hasta reinicio"
+      },
+      "instance_info": {
+        "name": "ID de instancia"
+      },
+      "recovery_start_timestamp": {
+        "name": "Hora de inicio de reinicio"
+      },
+      "target_hour_timestamp": {
+        "name": "Hora objetivo"
+      },
+      "recoverycalc_hour_timestamp": {
+        "name": "Hora de apagado de calefacción"
+      }
+    },
+    "number": {
+      "setpoint": {
+        "name": "Temperatura objetivo"
+      },
+      "rcth": {
+        "name": "RCth"
+      },
+      "rpth": {
+        "name": "RPth"
+      },
+      "rcth_lw": {
+        "name": "RCth (Viento bajo)"
+      },
+      "rcth_hw": {
+        "name": "RCth (Viento alto)"
+      },
+      "rpth_lw": {
+        "name": "RPth (Viento bajo)"
+      },
+      "rpth_hw": {
+        "name": "RPth (Viento alto)"
+      },
+      "relaxation": {
+        "name": "Factor de relajación"
+      }
+    },
+    "time": {
+      "target_hour": {
+        "name": "Hora objetivo"
+      },
+      "recoverycalc_hour": {
+        "name": "Hora de apagado de calefacción"
+      },
+      "recovery_start_time": {
+        "name": "Hora de inicio de reinicio"
+      }
+    },
+    "switch": {
+      "smartheating_mode": {
+        "name": "Modo calefacción inteligente"
+      },
+      "adaptive_mode": {
+        "name": "Modo adaptativo"
+      }
     }
   }
 }
