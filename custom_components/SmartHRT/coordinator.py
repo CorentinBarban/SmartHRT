@@ -32,6 +32,7 @@ ADR implémentées dans ce module:
 - ADR-040: Délégation flags à la machine à états (propriétés calculées)
 - ADR-041: Sérialisation globale via as_dict/from_dict (remplace PERSISTED_FIELDS)
 - ADR-047: Unification du modèle de données (Single Source of Truth)
+- ADR-054: Abstraction unités (_normalize_to_celsius, conversion Fahrenheit→Celsius)
 """
 
 import asyncio
@@ -53,8 +54,10 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     EVENT_HOMEASSISTANT_STARTED,
+    UnitOfTemperature,
 )
 from homeassistant.util import dt as dt_util
+from homeassistant.util.unit_conversion import TemperatureConverter
 from homeassistant.exceptions import ServiceNotFound
 
 from .const import (
@@ -189,6 +192,50 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         sont configurées, en incluant le nom et l'identifiant unique.
         """
         return f"[{self.data.name}#{self._entry.entry_id[:8]}]"
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # ADR-054: Conversion des unités de température
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _get_sensor_unit(self, entity_id: str) -> str:
+        """Récupère l'unité de température d'un capteur.
+
+        ADR-054: Détecte l'unité native du capteur pour la conversion.
+
+        Args:
+            entity_id: ID de l'entité capteur
+
+        Returns:
+            L'unité de température (CELSIUS ou FAHRENHEIT), défaut CELSIUS.
+        """
+        state = self.hass.states.get(entity_id)
+        if state and state.attributes:
+            unit = state.attributes.get("unit_of_measurement")
+            if unit == UnitOfTemperature.FAHRENHEIT:
+                return UnitOfTemperature.FAHRENHEIT
+        return UnitOfTemperature.CELSIUS
+
+    def _normalize_to_celsius(
+        self, temp: float | None, source_unit: str = UnitOfTemperature.CELSIUS
+    ) -> float | None:
+        """Convertit une température vers Celsius si nécessaire.
+
+        ADR-054: Normalisation pour le ThermalSolver qui travaille en °C.
+
+        Args:
+            temp: Température à convertir (ou None)
+            source_unit: Unité source (CELSIUS ou FAHRENHEIT)
+
+        Returns:
+            Température en Celsius (ou None si temp est None)
+        """
+        if temp is None:
+            return None
+        if source_unit == UnitOfTemperature.FAHRENHEIT:
+            return TemperatureConverter.convert(
+                temp, UnitOfTemperature.FAHRENHEIT, UnitOfTemperature.CELSIUS
+            )
+        return temp
 
     def _on_state_entered(
         self, _old_state: SmartHRTState, new_state: SmartHRTState
@@ -680,12 +727,17 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
     # ─────────────────────────────────────────────────────────────────────────
 
     async def _update_initial_states(self) -> None:
-        """Récupération des états initiaux"""
+        """Récupération des états initiaux (ADR-054: conversion vers Celsius)"""
         if self._interior_temp_sensor_id:
             state = self.hass.states.get(self._interior_temp_sensor_id)
             if state and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 try:
-                    self.data.interior_temp = float(state.state)
+                    # ADR-054: Convertir vers Celsius pour le ThermalSolver
+                    raw_temp = float(state.state)
+                    source_unit = self._get_sensor_unit(self._interior_temp_sensor_id)
+                    self.data.interior_temp = self._normalize_to_celsius(
+                        raw_temp, source_unit
+                    )
                 except ValueError:
                     pass
 
@@ -693,7 +745,10 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
     @callback
     def _on_sensor_state_change(self, event) -> None:
-        """Callback lors d'un changement d'état du capteur de température."""
+        """Callback lors d'un changement d'état du capteur de température.
+
+        ADR-054: Convertit les températures vers Celsius pour le ThermalSolver.
+        """
         new_state = event.data.get("new_state")
         if not new_state or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return
@@ -702,7 +757,12 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
         if entity_id == self._interior_temp_sensor_id:
             try:
-                self.data.interior_temp = float(new_state.state)
+                # ADR-054: Convertir vers Celsius
+                raw_temp = float(new_state.state)
+                source_unit = self._get_sensor_unit(entity_id)
+                self.data.interior_temp = self._normalize_to_celsius(
+                    raw_temp, source_unit
+                )
                 self._check_temperature_thresholds()
             except ValueError:
                 pass
@@ -981,6 +1041,7 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
         ADR-002: Utilise l'entité météo configurée explicitement par l'utilisateur
         au lieu de scanner automatiquement toutes les entités weather.
+        ADR-054: Convertit les températures vers Celsius pour le ThermalSolver.
         """
         if not self._weather_entity_id:
             _LOGGER.debug(
@@ -999,7 +1060,10 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             return
 
         if (temp := weather.attributes.get("temperature")) is not None:
-            self.data.exterior_temp = float(temp)
+            # ADR-054: Convertir vers Celsius
+            raw_temp = float(temp)
+            source_unit = self._get_sensor_unit(self._weather_entity_id)
+            self.data.exterior_temp = self._normalize_to_celsius(raw_temp, source_unit)
 
         if (wind := weather.attributes.get("wind_speed")) is not None:
             self.data.wind_speed = float(wind) / 3.6  # km/h -> m/s
@@ -1019,6 +1083,7 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         """Mise à jour des prévisions météo (température et vent).
 
         ADR-002: Utilise l'entité météo configurée explicitement par l'utilisateur.
+        ADR-054: Convertit les températures vers Celsius pour le ThermalSolver.
         """
         if not self._weather_entity_id:
             _LOGGER.debug(
@@ -1028,6 +1093,8 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             return
 
         entity_id = self._weather_entity_id
+        # ADR-054: Détecter l'unité du capteur météo pour conversion
+        source_unit = self._get_sensor_unit(entity_id)
 
         try:
             # Vérifier que le service existe avant de l'appeler
@@ -1064,7 +1131,12 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
                                 if isinstance(f, dict):
                                     temp_val = f.get("temperature")
                                     if isinstance(temp_val, (int, float)):
-                                        temps.append(float(temp_val))
+                                        # ADR-054: Convertir vers Celsius
+                                        temp_c = self._normalize_to_celsius(
+                                            float(temp_val), source_unit
+                                        )
+                                        if temp_c is not None:
+                                            temps.append(temp_c)
 
                                     wind_val = f.get("wind_speed")
                                     if isinstance(wind_val, (int, float)):

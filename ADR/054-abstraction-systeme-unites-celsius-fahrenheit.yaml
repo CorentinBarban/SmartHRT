@@ -1,0 +1,221 @@
+id: 054
+title: "Abstraction du système d'unités (Celsius/Fahrenheit)"
+status: "Accepté"
+date: "2026-02-25"
+author: "Corentin Barban"
+context: |
+  L'intégration SmartHRT a été conçue selon le système métrique (Celsius). 
+  Actuellement, le forçage de l'unité Celsius dans les capteurs provoque des doubles 
+  conversions erronées pour les utilisateurs en système impérial (Fahrenheit).
+  De plus, le moteur thermique (ThermalSolver) utilise des constantes et des formules 
+  physiques (comme le Windchill) basées exclusivement sur des seuils en Celsius.
+
+  **Problèmes identifiés :**
+
+  1. **Double conversion** : Home Assistant applique automatiquement une conversion
+     si l'unité du capteur diffère de l'unité système de l'utilisateur. En forçant
+     `native_unit_of_measurement=UnitOfTemperature.CELSIUS`, les températures déjà
+     en Fahrenheit sont converties deux fois.
+
+  2. **Incohérence d'affichage** : Les utilisateurs en Fahrenheit voient des valeurs
+     aberrantes (ex: 68°F affiché comme 20°F après double conversion).
+
+  3. **Formules physiques liées au Celsius** : Le calcul Windchill et autres
+     algorithmes thermiques utilisent des seuils et constantes calibrés en Celsius.
+     Une réécriture en Fahrenheit serait complexe et source d'erreurs.
+
+decision: |
+  Implémenter une couche d'abstraction des unités qui garantit :
+  - La neutralité des capteurs vis-à-vis du système d'unités utilisateur
+  - La standardisation interne en Celsius pour les calculs physiques
+  - La conversion automatique au runtime
+
+  **1. Neutralité des Sensors :**
+
+  Supprimer la mention explicite `native_unit_of_measurement=UnitOfTemperature.CELSIUS`
+  dans les descriptions de capteurs (`sensor.py`). Laisser Home Assistant attribuer
+  l'unité selon la configuration globale du système.
+
+  ```python
+  # sensor.py - AVANT
+  SmartHRTSensorDescription(
+      key="interior_temperature",
+      native_unit_of_measurement=UnitOfTemperature.CELSIUS,  # ❌ Forçage
+      device_class=SensorDeviceClass.TEMPERATURE,
+      ...
+  )
+
+  # sensor.py - APRÈS
+  SmartHRTSensorDescription(
+      key="interior_temperature",
+      # native_unit_of_measurement omis - HA utilise l'unité système
+      device_class=SensorDeviceClass.TEMPERATURE,
+      ...
+  )
+  ```
+
+  **2. Standardisation Interne en Celsius :**
+
+  Maintenir le `ThermalSolver` et les gardes physiques (ADR-050) exclusivement en
+  Celsius pour garantir la cohérence mathématique et la stabilité des algorithmes.
+
+  ```python
+  # thermal.py - Documentation explicite
+  def calculate_recovery_duration(
+      self,
+      interior_temp: float,    # ⚠️ DOIT être en Celsius
+      exterior_temp: float,    # ⚠️ DOIT être en Celsius
+      target_temp: float,      # ⚠️ DOIT être en Celsius
+      rcth: float,
+      wind_speed: float,
+  ) -> float | None:
+      """Calcule le temps de récupération thermique.
+      
+      ATTENTION: Toutes les températures DOIVENT être en Celsius.
+      La conversion est de la responsabilité de l'appelant (Coordinator).
+      """
+      ...
+  ```
+
+  **3. Couche de Conversion au Runtime :**
+
+  Le `SmartHRTCoordinator` doit convertir les températures entrantes (capteur
+  intérieur, météo, prévisions) en Celsius avant de les transmettre au
+  `ThermalSolver`. Les résultats calculés doivent être reconvertis dans l'unité
+  système de l'utilisateur avant d'être exposés.
+
+  ```python
+  # coordinator.py
+  from homeassistant.util.unit_conversion import TemperatureConverter
+
+  class SmartHRTCoordinator:
+      
+      def _normalize_to_celsius(self, temp: float, source_unit: str) -> float:
+          """Convertit une température vers Celsius si nécessaire."""
+          if source_unit == UnitOfTemperature.FAHRENHEIT:
+              return TemperatureConverter.convert(
+                  temp, UnitOfTemperature.FAHRENHEIT, UnitOfTemperature.CELSIUS
+              )
+          return temp
+      
+      def _denormalize_from_celsius(self, temp: float) -> float:
+          """Convertit une température de Celsius vers l'unité système."""
+          target_unit = self.hass.config.units.temperature_unit
+          if target_unit == UnitOfTemperature.FAHRENHEIT:
+              return TemperatureConverter.convert(
+                  temp, UnitOfTemperature.CELSIUS, UnitOfTemperature.FAHRENHEIT
+              )
+          return temp
+      
+      async def _async_update_data(self) -> SmartHRTData:
+          """Mise à jour avec normalisation des unités."""
+          # Récupération des données capteurs (unité système)
+          interior_raw = self._get_interior_temp()
+          exterior_raw = self._get_exterior_temp()
+          target_raw = self._get_target_temp()
+          
+          # Normalisation en Celsius pour le solver
+          interior_c = self._normalize_to_celsius(interior_raw, self._temp_unit)
+          exterior_c = self._normalize_to_celsius(exterior_raw, self._temp_unit)
+          target_c = self._normalize_to_celsius(target_raw, self._temp_unit)
+          
+          # Calcul en Celsius
+          duration = self.solver.calculate_recovery_duration(
+              interior_c, exterior_c, target_c, self.data.rcth, wind_speed
+          )
+          
+          # Résultat exposé (durée en minutes, pas de conversion)
+          ...
+  ```
+
+consequences:
+  positive:
+    - Support natif et transparent pour les utilisateurs en Fahrenheit sans bug d'affichage
+    - Maintien de la précision des calculs physiques sans réécriture des formules complexes
+    - Conformité accrue avec les standards de globalisation de Home Assistant
+    - Expérience utilisateur homogène quel que soit le système d'unités configuré
+    - Pas de modification des algorithmes thermiques prouvés (ThermalSolver)
+  negative:
+    - Légère charge CPU additionnelle due aux conversions systématiques lors des cycles de mise à jour
+    - Nécessité de valider rigoureusement le traitement des prévisions météo (forecast) selon l'unité source
+    - Risque d'oubli de conversion si un nouveau flux de données est ajouté sans passer par le Coordinator
+    - Tests unitaires à adapter pour couvrir les deux systèmes d'unités
+
+persistence:
+  principle: |
+    Les données persistées (via SmartHRTData.as_dict()) sont TOUJOURS stockées en Celsius.
+    La restauration (via SmartHRTData.from_dict()) ne modifie pas les températures.
+
+    Scénario de changement d'unité système:
+    1. Utilisateur en Celsius → données sauvegardées en °C
+    2. Utilisateur change HA en Fahrenheit et redémarre
+    3. Données restaurées: toujours en °C (unité interne)
+    4. Nouvelles lectures capteurs: converties de °F vers °C
+
+    Ce design garantit la cohérence des calculs thermiques indépendamment
+    des changements de configuration utilisateur.
+
+  fields_in_celsius:
+    - interior_temp
+    - exterior_temp
+    - windchill
+    - temperature_forecast_avg
+    - temp_recovery_calc
+    - temp_recovery_start
+    - temp_recovery_end
+    - text_recovery_calc
+    - text_recovery_start
+    - text_recovery_end
+    - tsp (température de consigne)
+
+implementation:
+  steps:
+    - component: "coordinator.py"
+      task: |
+        Utiliser `TemperatureConverter.convert` pour normaliser les données de
+        `SmartHRTData` vers Celsius avant chaque appel au solver.
+        Implémenter `_normalize_to_celsius()` et `_get_sensor_unit()`.
+        Détecter automatiquement l'unité du capteur via ses attributs.
+      status: "Implémenté"
+
+    - component: "sensor.py"
+      task: |
+        Supprimer le forçage `UnitOfTemperature.CELSIUS` explicite pour les
+        capteurs de température (interior_temp, exterior_temp, windchill, temp_forecast).
+        Laisser `device_class=SensorDeviceClass.TEMPERATURE` gérer l'unité.
+      status: "Implémenté"
+
+    - component: "thermal.py"
+      task: |
+        Documenter explicitement que toutes les méthodes d'entrée
+        (`calculate_recovery_duration`, `calculate_windchill`, etc.) exigent
+        des valeurs en Celsius.
+        Ajouter des docstrings avec avertissement sur l'unité attendue.
+      status: "Implémenté"
+
+    - component: "data_model.py"
+      task: |
+        Documenter que toutes les températures sont stockées en Celsius.
+        Ajouter les commentaires d'unité sur chaque champ de température.
+      status: "Implémenté"
+
+    - component: "tests/"
+      task: |
+        Créer des tests paramétrés couvrant les cas Celsius et Fahrenheit.
+        Valider que les conversions aller-retour sont sans perte de précision.
+        Tester les valeurs limites (ex: 0°C = 32°F, 100°C = 212°F).
+        Tester la persistance/restauration des températures en Celsius.
+      status: "Implémenté"
+
+validation:
+  criteria:
+    - Les utilisateurs en Fahrenheit voient des températures cohérentes
+    - Les calculs thermiques produisent les mêmes résultats qu'actuellement (en Celsius)
+    - Aucune régression sur les utilisateurs en Celsius
+    - Les logs affichent les températures dans l'unité système de l'utilisateur
+    - Les données persistées restent en Celsius après redémarrage
+
+related_adrs:
+  - 047 # Unification du modèle de données (SmartHRTData)
+  - 050 # Sécurisation des Calculs par Gardes Physiques
+  - 052 # Internationalisation native (i18n)
