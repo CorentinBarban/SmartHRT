@@ -79,7 +79,7 @@ class SmartHRTTargetHourTime(SmartHRTBaseTime):
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Heure cible"
+        self._attr_translation_key = "target_hour"
         self._attr_unique_id = f"{self._device_id}_target_hour"
 
     @property
@@ -104,7 +104,7 @@ class SmartHRTRecoveryCalcHourTime(SmartHRTBaseTime):
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Heure coupure chauffage"
+        self._attr_translation_key = "recoverycalc_hour"
         self._attr_unique_id = f"{self._device_id}_recoverycalc_hour"
 
     @property
@@ -129,7 +129,7 @@ class SmartHRTRecoveryStartTime(SmartHRTBaseTime):
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Heure de relance"
+        self._attr_translation_key = "recovery_start_time"
         self._attr_unique_id = f"{self._device_id}_recovery_start_time"
 
     @property

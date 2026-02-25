@@ -211,6 +211,51 @@
       "recoverycalc_hour_timestamp": {
         "name": "Heure coupure chauffage"
       }
+    },
+    "number": {
+      "setpoint": {
+        "name": "Consigne"
+      },
+      "rcth": {
+        "name": "RCth"
+      },
+      "rpth": {
+        "name": "RPth"
+      },
+      "rcth_lw": {
+        "name": "RCth (vent faible)"
+      },
+      "rcth_hw": {
+        "name": "RCth (vent fort)"
+      },
+      "rpth_lw": {
+        "name": "RPth (vent faible)"
+      },
+      "rpth_hw": {
+        "name": "RPth (vent fort)"
+      },
+      "relaxation": {
+        "name": "Facteur de relaxation"
+      }
+    },
+    "time": {
+      "target_hour": {
+        "name": "Heure cible"
+      },
+      "recoverycalc_hour": {
+        "name": "Heure coupure chauffage"
+      },
+      "recovery_start_time": {
+        "name": "Heure de relance"
+      }
+    },
+    "switch": {
+      "smartheating_mode": {
+        "name": "Mode chauffage intelligent"
+      },
+      "adaptive_mode": {
+        "name": "Mode adaptatif"
+      }
     }
   }
 }
