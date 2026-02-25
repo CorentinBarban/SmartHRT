@@ -301,14 +301,17 @@ class ThermalSolver:
             rcth=rcth,
         )
 
-        # Log de diagnostic
+        # Log de diagnostic détaillé pour non-régression (TC-PRED)
         self._logger.info(
-            "Recovery calc: tint=%.1f°C, text=%.1f°C, tsp=%.1f°C, target=%s, rcth=%.1f, validation=%s",
+            "[TC-PRED] Recovery prediction: "
+            "tint=%.2f°C, text=%.2f°C, tsp=%.2f°C, "
+            "rcth=%.2f, rpth=%.2f, target_time=%s, validation_status=%s",
             tint,
             text,
             tsp,
-            state.target_hour,
             rcth,
+            rpth,
+            state.target_hour.strftime("%H:%M:%S"),
             validation.result.name,
         )
 
@@ -415,14 +418,18 @@ class ThermalSolver:
 
         recovery_start_hour = target_dt - timedelta(seconds=int(duree_relance * 3600))
 
+        # Log final détaillé pour non-régression (TC-PRED)
         self._logger.info(
-            "Calcul relance: durée=%.2fh, start=%s, iterations=%d (tint=%.1f, text=%.1f, tsp=%.1f)",
+            "[TC-PRED] Recovery result: "
+            "duration_hours=%.2f, start_time=%s, iterations=%d, "
+            "tint=%.2f°C, text=%.2f°C, tsp=%.2f°C, rcth=%.2f",
             duree_relance,
             recovery_start_hour.strftime("%H:%M"),
             iterations,
             tint,
             text,
             tsp,
+            rcth,
         )
 
         return RecoveryResult(
@@ -763,8 +770,22 @@ class ThermalSolver:
                     (avg_text - temp_recovery_calc) / (avg_text - temp_recovery_start)
                 ),
             )
+            # Log détaillé pour non-régression (TC-CALIB-RCth)
+            self._logger.info(
+                "[TC-CALIB-RCTH] RCth calibration: "
+                "tint_start=%.2f°C, tint_end=%.2f°C, "
+                "text_start=%.2f°C, text_end=%.2f°C, "
+                "duration_minutes=%.1f, rcth_calculated=%.2f",
+                temp_recovery_calc,
+                temp_recovery_start,
+                text_recovery_calc,
+                text_recovery_start,
+                dt_hours * 60,
+                rcth,
+            )
             return rcth
-        except (ValueError, ZeroDivisionError):
+        except (ValueError, ZeroDivisionError) as e:
+            self._logger.warning("[TC-CALIB-RCTH] RCth calculation failed: %s", str(e))
             return None
 
     def calculate_rpth_at_recovery(
@@ -809,8 +830,23 @@ class ThermalSolver:
                 self.config.coef_max,
                 max(self.config.coef_min, numerator / (1 - exp_term)),
             )
+            # Log détaillé pour non-régression (TC-CALIB-RPth)
+            self._logger.info(
+                "[TC-CALIB-RPTH] RPth calibration: "
+                "tint_start=%.2f°C, tint_end=%.2f°C, "
+                "text_start=%.2f°C, text_end=%.2f°C, "
+                "duration_minutes=%.1f, rcth_interpolated=%.2f, rpth_calculated=%.2f",
+                temp_recovery_start,
+                temp_recovery_end,
+                text_recovery_start,
+                text_recovery_end,
+                dt_hours * 60,
+                rcth_interpolated,
+                rpth,
+            )
             return rpth
-        except (ValueError, ZeroDivisionError):
+        except (ValueError, ZeroDivisionError) as e:
+            self._logger.warning("[TC-CALIB-RPTH] RPth calculation failed: %s", str(e))
             return None
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -865,11 +901,15 @@ class ThermalSolver:
 
             if deviation_percent > self.config.outlier_threshold_percent:
                 outlier_detected = True
+                # Log détaillé pour non-régression (TC-SAFE)
                 self._logger.warning(
-                    "Outlier détecté pour %s: calculé=%.2f, actuel=%.2f (écart=%.1f%%)",
+                    "[TC-SAFE] Outlier détecté pour %s: "
+                    "calculated_raw=%.2f, current_memory=%.2f, "
+                    "outlier_threshold_percent=%.1f, deviation_percent=%.1f%%",
                     coef_type,
                     calculated_value,
                     current_main,
+                    self.config.outlier_threshold_percent,
                     deviation_percent,
                 )
 
@@ -892,17 +932,18 @@ class ThermalSolver:
                     threshold = self.config.outlier_threshold_percent / 100
                     max_allowed = current_main * (1 + threshold)
                     min_allowed = current_main * (1 - threshold)
-                    calculated_value = max(
-                        min_allowed, min(max_allowed, calculated_value)
-                    )
+                    clamped_value = max(min_allowed, min(max_allowed, calculated_value))
                     outlier_clamped = True
+                    # Log détaillé pour non-régression (TC-SAFE)
                     self._logger.info(
-                        "Valeur plafonnée à %.2f pour %s (min=%.2f, max=%.2f)",
-                        calculated_value,
+                        "[TC-SAFE] Valeur plafonnée pour %s: "
+                        "action=CLAMP_VALUE, clamped_to=%.2f (min=%.2f, max=%.2f)",
                         coef_type,
+                        clamped_value,
                         min_allowed,
                         max_allowed,
                     )
+                    calculated_value = clamped_value
 
         # Position relative du vent entre les bornes (centré sur 0)
         x = (wind_kmh - wind_low) / (wind_high - wind_low) - 0.5
@@ -938,10 +979,23 @@ class ThermalSolver:
         if coef_type == "rpth":
             new_main = min(coef_max, max(coef_min, new_main))
 
+        final_main = max(coef_min, new_main)
+
+        # Log final pour non-régression (TC-SAFE si outlier)
+        if outlier_detected:
+            self._logger.info(
+                "[TC-SAFE] Coefficient final pour %s: "
+                "final_%s=%.2f (après relaxation factor=%.1f)",
+                coef_type,
+                coef_type,
+                final_main,
+                relaxation_factor,
+            )
+
         return CoefficientUpdateResult(
             coef_lw=new_lw,
             coef_hw=new_hw,
-            coef_main=max(coef_min, new_main),
+            coef_main=final_main,
             error=round(err, 3),
             outlier_detected=outlier_detected,
             outlier_clamped=outlier_clamped,
