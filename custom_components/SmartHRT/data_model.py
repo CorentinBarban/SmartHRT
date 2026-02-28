@@ -206,6 +206,8 @@ class SmartHRTData(BaseModel):
     # Triggers programmés
     recovery_start_hour: DateTimeField = Field(default=None)
     recovery_update_hour: DateTimeField = Field(default=None)
+    # ADR-053: Durée estimée de la relance (pour diagnostic et Snooze)
+    recovery_duration_hours: float = Field(default=0.0, ge=0.0)
 
     # ─────────────────────────────────────────────────────────────────────────
     # Données météorologiques (ADR-038, ADR-054: températures en °C)

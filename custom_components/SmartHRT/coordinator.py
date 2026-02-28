@@ -32,6 +32,7 @@ ADR implémentées dans ce module:
 - ADR-040: Délégation flags à la machine à états (propriétés calculées)
 - ADR-041: Sérialisation globale via as_dict/from_dict (remplace PERSISTED_FIELDS)
 - ADR-047: Unification du modèle de données (Single Source of Truth)
+- ADR-053: Optimisation inter-saison (Snooze) et sécurisation apprentissage
 - ADR-054: Abstraction unités (_normalize_to_celsius, conversion Fahrenheit→Celsius)
 """
 
@@ -78,6 +79,9 @@ from .const import (
     TEMP_DECREASE_THRESHOLD,
     DEFAULT_RECOVERYCALC_HOUR,
     TimerKey,
+    # ADR-053: Seuils pour Snooze et sécurisation apprentissage
+    MIN_DURATION_THRESHOLD_HOURS,
+    MIN_LEARNING_DURATION_HOURS,
 )
 
 # ADR-051: Import du gestionnaire centralisé de timers
@@ -918,7 +922,12 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         self.hass.async_create_task(self._async_on_recovery_update_hour())
 
     async def _async_on_recovery_update_hour(self) -> None:
-        """Exécute les calculs de mise à jour (ADR-048: synchrones car < 10ms)."""
+        """Exécute les calculs de mise à jour (ADR-048: synchrones car < 10ms).
+
+        ADR-053: Implémente le Snooze intelligent - si la durée estimée de relance
+        est inférieure au seuil MIN_DURATION_THRESHOLD_HOURS (15 min), aucune
+        relance n'est programmée et le système reste silencieusement en MONITORING.
+        """
         # Sauvegarder l'heure de relance avant calcul
         prev_recovery_start = self.data.recovery_start_hour
 
@@ -930,7 +939,28 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
             # Programmer le trigger de relance si nécessaire (depuis le thread principal)
             now = dt_util.now()
-            if (
+
+            # ADR-053: Snooze intelligent - vérifier le seuil minimum d'activation
+            if self.data.recovery_duration_hours < MIN_DURATION_THRESHOLD_HOURS:
+                # Durée insuffisante → Snooze: annuler tout trigger existant
+                if self._timer_manager.is_active(TimerKey.RECOVERY_START):
+                    self._timer_manager.cancel(TimerKey.RECOVERY_START)
+                    _LOGGER.info(
+                        "%s [ADR-053 Snooze] Durée estimée %.1f min < seuil %d min "
+                        "→ relance annulée, reste en MONITORING",
+                        self._log_prefix(),
+                        self.data.recovery_duration_hours * 60,
+                        int(MIN_DURATION_THRESHOLD_HOURS * 60),
+                    )
+                else:
+                    _LOGGER.debug(
+                        "%s [ADR-053 Snooze] Durée estimée %.1f min < seuil %d min "
+                        "→ pas de relance programmée",
+                        self._log_prefix(),
+                        self.data.recovery_duration_hours * 60,
+                        int(MIN_DURATION_THRESHOLD_HOURS * 60),
+                    )
+            elif (
                 self.data.recovery_start_hour
                 and prev_recovery_start != self.data.recovery_start_hour
                 and self.data.recovery_start_hour > now
@@ -1249,9 +1279,10 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
     # ─────────────────────────────────────────────────────────────────────────
 
     def calculate_recovery_time(self) -> None:
-        """Calcule l'heure de démarrage de la relance (ADR-005, ADR-026).
+        """Calcule l'heure de démarrage de la relance (ADR-005, ADR-026, ADR-053).
 
         ADR-026: Délègue au ThermalSolver pour le calcul Pure Python.
+        ADR-053: Stocke aussi la durée estimée pour le Snooze intelligent.
         Utilise les prévisions météo et 20 itérations pour affiner la prédiction.
         """
         now = dt_util.now()
@@ -1261,6 +1292,8 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         result = self._thermal_solver.calculate_recovery_duration(state, coeffs, now)
 
         self.data.recovery_start_hour = result.recovery_start_hour
+        # ADR-053: Stocker la durée estimée pour le Snooze
+        self.data.recovery_duration_hours = result.duration_hours
 
         # Note: Le scheduling du trigger est fait dans le contexte async appelant
         # car async_track_point_in_time doit être appelé depuis le thread principal
@@ -1345,12 +1378,34 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             self._update_coefficients("rcth")
 
     def calculate_rpth_at_recovery_end(self) -> None:
-        """Calcule RPth à la fin de la relance (ADR-026: via ThermalSolver).
+        """Calcule RPth à la fin de la relance (ADR-026, ADR-053: via ThermalSolver).
+
+        ADR-053: Sécurisation de l'apprentissage - Le calcul est conditionné par:
+        - La durée réelle de chauffe >= MIN_LEARNING_DURATION_HOURS (15 min)
+        Si le cycle a été trop court (Snooze passif ou apports extérieurs),
+        le calcul est annulé pour éviter de corrompre le modèle thermique.
 
         Utilise wind_speed_avg (moyenne 4h) pour l'interpolation RCth,
         conformément au YAML original.
         """
         if self.data.time_recovery_start is None or self.data.time_recovery_end is None:
+            return
+
+        # ADR-053: Calculer la durée réelle de chauffe
+        actual_heating_duration_hours = (
+            self.data.time_recovery_end.timestamp()
+            - self.data.time_recovery_start.timestamp()
+        ) / 3600
+
+        # ADR-053: Vérifier le seuil minimum d'apprentissage
+        if actual_heating_duration_hours < MIN_LEARNING_DURATION_HOURS:
+            _LOGGER.info(
+                "%s [ADR-053 Learning Guard] Durée réelle de chauffe %.1f min < seuil %d min "
+                "→ calcul RPth annulé pour protéger le modèle thermique",
+                self._log_prefix(),
+                actual_heating_duration_hours * 60,
+                int(MIN_LEARNING_DURATION_HOURS * 60),
+            )
             return
 
         # Utiliser wind_speed_avg (moyenne 4h) comme dans le YAML

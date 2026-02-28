@@ -84,6 +84,12 @@ FORECAST_HOURS = 3
 # Seuil de baisse de température pour confirmer l'arrêt réel du chauffage
 TEMP_DECREASE_THRESHOLD = 0.2  # °C
 
+# ADR-053: Optimisation inter-saison (Snooze) et sécurisation apprentissage
+# Seuil minimum d'activation (en heures): si durée estimée <= seuil, pas de relance
+MIN_DURATION_THRESHOLD_HOURS = 0.25  # 15 minutes
+# Seuil minimum d'apprentissage (en heures): durée réelle de chauffe requise pour calculer RPth
+MIN_LEARNING_DURATION_HOURS = 0.25  # 15 minutes
+
 # Default recoverycalc hour (23:00)
 DEFAULT_RECOVERYCALC_HOUR = "23:00:00"
 
