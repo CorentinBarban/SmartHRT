@@ -62,9 +62,11 @@ class MockUnits:
     """Mock pour hass.config.units."""
 
     def __init__(self, temperature_unit: str = "°C"):
-        from homeassistant.const import UnitOfTemperature
+        from homeassistant.const import UnitOfTemperature, UnitOfSpeed
 
         self.temperature_unit = temperature_unit
+        # ADR-055: Ajout de l'unité de vitesse du vent
+        self.wind_speed_unit = UnitOfSpeed.METERS_PER_SECOND
 
 
 class MockConfig:

@@ -56,9 +56,10 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     EVENT_HOMEASSISTANT_STARTED,
     UnitOfTemperature,
+    UnitOfSpeed,
 )
 from homeassistant.util import dt as dt_util
-from homeassistant.util.unit_conversion import TemperatureConverter
+from homeassistant.util.unit_conversion import TemperatureConverter, SpeedConverter
 from homeassistant.exceptions import ServiceNotFound
 
 from .const import (
@@ -251,6 +252,88 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
                 temp, UnitOfTemperature.FAHRENHEIT, UnitOfTemperature.CELSIUS
             )
         return temp
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # ADR-055: Conversion des unités de vitesse du vent
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _get_wind_speed_unit(self, entity_id: str) -> UnitOfSpeed:
+        """Récupère l'unité de vitesse du vent d'un capteur.
+
+        ADR-055: Détecte l'unité du capteur pour la conversion vers m/s.
+
+        Pour les weather entities: utilise l'unité système de HA.
+        Le système métrique utilise m/s, le système US utilise mph.
+
+        Args:
+            entity_id: ID de l'entité capteur
+
+        Returns:
+            L'unité de vitesse (m/s, km/h, mph, etc.), défaut m/s.
+        """
+        state = self.hass.states.get(entity_id)
+        if state:
+            # Weather entities: attributs exposés dans l'unité système HA
+            if entity_id.startswith("weather."):
+                return self.hass.config.units.wind_speed_unit
+            # Sensor entities: unit_of_measurement reflète l'unité exposée
+            if state.attributes:
+                unit = state.attributes.get("unit_of_measurement")
+                if unit in (
+                    UnitOfSpeed.MILES_PER_HOUR,
+                    UnitOfSpeed.KILOMETERS_PER_HOUR,
+                    UnitOfSpeed.KNOTS,
+                    UnitOfSpeed.FEET_PER_SECOND,
+                    UnitOfSpeed.METERS_PER_SECOND,
+                ):
+                    return UnitOfSpeed(unit)
+        return UnitOfSpeed.METERS_PER_SECOND
+
+    def _normalize_to_ms(
+        self,
+        speed: float | None,
+        source_unit: UnitOfSpeed = UnitOfSpeed.METERS_PER_SECOND,
+    ) -> float | None:
+        """Convertit une vitesse de vent vers m/s si nécessaire.
+
+        ADR-055: Normalisation pour le ThermalSolver qui travaille en m/s.
+
+        Args:
+            speed: Vitesse à convertir (ou None)
+            source_unit: Unité source (m/s, km/h, mph, etc.)
+
+        Returns:
+            Vitesse en m/s (ou None si speed est None)
+        """
+        if speed is None:
+            return None
+        if source_unit == UnitOfSpeed.METERS_PER_SECOND:
+            return speed
+        return SpeedConverter.convert(speed, source_unit, UnitOfSpeed.METERS_PER_SECOND)
+
+    def _normalize_to_kmh(
+        self,
+        speed: float | None,
+        source_unit: UnitOfSpeed = UnitOfSpeed.KILOMETERS_PER_HOUR,
+    ) -> float | None:
+        """Convertit une vitesse de vent vers km/h si nécessaire.
+
+        ADR-055: Normalisation pour wind_speed_forecast_avg qui est stocké en km/h.
+
+        Args:
+            speed: Vitesse à convertir (ou None)
+            source_unit: Unité source (m/s, km/h, mph, etc.)
+
+        Returns:
+            Vitesse en km/h (ou None si speed est None)
+        """
+        if speed is None:
+            return None
+        if source_unit == UnitOfSpeed.KILOMETERS_PER_HOUR:
+            return speed
+        return SpeedConverter.convert(
+            speed, source_unit, UnitOfSpeed.KILOMETERS_PER_HOUR
+        )
 
     def _on_state_entered(
         self, _old_state: SmartHRTState, new_state: SmartHRTState
@@ -1107,7 +1190,10 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             self.data.exterior_temp = self._normalize_to_celsius(raw_temp, source_unit)
 
         if (wind := weather.attributes.get("wind_speed")) is not None:
-            self.data.wind_speed = float(wind) / 3.6  # km/h -> m/s
+            # ADR-055: Convertir vers m/s
+            raw_wind = float(wind)
+            wind_unit = self._get_wind_speed_unit(self._weather_entity_id)
+            self.data.wind_speed = self._normalize_to_ms(raw_wind, wind_unit) or 0.0
             # Ajouter à l'historique pour la moyenne
             self.data.wind_speed_history.append(self.data.wind_speed)
 
@@ -1134,8 +1220,10 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             return
 
         entity_id = self._weather_entity_id
-        # ADR-054: Détecter l'unité du capteur météo pour conversion
+        # ADR-054: Détecter l'unité du capteur météo pour conversion température
         source_unit = self._get_sensor_unit(entity_id)
+        # ADR-055: Détecter l'unité du capteur météo pour conversion vitesse du vent
+        wind_source_unit = self._get_wind_speed_unit(entity_id)
 
         try:
             # Vérifier que le service existe avant de l'appeler
@@ -1181,7 +1269,12 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
                                     wind_val = f.get("wind_speed")
                                     if isinstance(wind_val, (int, float)):
-                                        winds.append(float(wind_val))
+                                        # ADR-055: Convertir vers km/h
+                                        wind_kmh = self._normalize_to_kmh(
+                                            float(wind_val), wind_source_unit
+                                        )
+                                        if wind_kmh is not None:
+                                            winds.append(wind_kmh)
 
                             if temps:
                                 self.data.temperature_forecast_avg = sum(temps) / len(
