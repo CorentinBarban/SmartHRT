@@ -204,7 +204,13 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
     def _get_sensor_unit(self, entity_id: str) -> str:
         """Récupère l'unité de température d'un capteur.
 
-        ADR-054: Détecte l'unité native du capteur pour la conversion.
+        ADR-054: Détecte l'unité du capteur pour la conversion.
+
+        Pour les sensor entities: utilise l'attribut unit_of_measurement
+        (HA le convertit vers l'unité système si device_class=TEMPERATURE).
+
+        Pour les weather entities: utilise l'unité système de HA car les
+        attributs weather sont TOUJOURS exposés dans l'unité système.
 
         Args:
             entity_id: ID de l'entité capteur
@@ -213,10 +219,15 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             L'unité de température (CELSIUS ou FAHRENHEIT), défaut CELSIUS.
         """
         state = self.hass.states.get(entity_id)
-        if state and state.attributes:
-            unit = state.attributes.get("unit_of_measurement")
-            if unit == UnitOfTemperature.FAHRENHEIT:
-                return UnitOfTemperature.FAHRENHEIT
+        if state:
+            # Weather entities: attributs exposés dans l'unité système HA
+            if entity_id.startswith("weather."):
+                return self.hass.config.units.temperature_unit
+            # Sensor entities: unit_of_measurement reflète l'unité exposée
+            if state.attributes:
+                unit = state.attributes.get("unit_of_measurement")
+                if unit == UnitOfTemperature.FAHRENHEIT:
+                    return UnitOfTemperature.FAHRENHEIT
         return UnitOfTemperature.CELSIUS
 
     def _normalize_to_celsius(

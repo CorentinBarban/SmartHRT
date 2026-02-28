@@ -30,29 +30,24 @@ decision: |
   - La standardisation interne en Celsius pour les calculs physiques
   - La conversion automatique au runtime
 
-  **1. Neutralité des Sensors :**
+  **1. Déclaration Explicite de l'Unité Native :**
 
-  Supprimer la mention explicite `native_unit_of_measurement=UnitOfTemperature.CELSIUS`
-  dans les descriptions de capteurs (`sensor.py`). Laisser Home Assistant attribuer
-  l'unité selon la configuration globale du système.
+  Les sensors de température DOIVENT déclarer `native_unit_of_measurement=UnitOfTemperature.CELSIUS`
+  pour indiquer à Home Assistant que la valeur native est en Celsius. HA convertit
+  automatiquement vers l'unité préférée de l'utilisateur (Fahrenheit si configuré).
 
   ```python
-  # sensor.py - AVANT
+  # sensor.py - Correct
   SmartHRTSensorDescription(
       key="interior_temperature",
-      native_unit_of_measurement=UnitOfTemperature.CELSIUS,  # ❌ Forçage
-      device_class=SensorDeviceClass.TEMPERATURE,
-      ...
-  )
-
-  # sensor.py - APRÈS
-  SmartHRTSensorDescription(
-      key="interior_temperature",
-      # native_unit_of_measurement omis - HA utilise l'unité système
-      device_class=SensorDeviceClass.TEMPERATURE,
+      native_unit_of_measurement=UnitOfTemperature.CELSIUS,  # ✅ Requis pour conversion
+      device_class=SensorDeviceClass.TEMPERATURE,           # ✅ Active la conversion auto
       ...
   )
   ```
+
+  **Note importante:** Sans `native_unit_of_measurement`, HA ne connaît pas l'unité
+  source et ne peut pas effectuer de conversion. Le `device_class` seul ne suffit pas.
 
   **2. Standardisation Interne en Celsius :**
 
@@ -180,9 +175,17 @@ implementation:
 
     - component: "sensor.py"
       task: |
-        Supprimer le forçage `UnitOfTemperature.CELSIUS` explicite pour les
-        capteurs de température (interior_temp, exterior_temp, windchill, temp_forecast).
-        Laisser `device_class=SensorDeviceClass.TEMPERATURE` gérer l'unité.
+        Déclarer `native_unit_of_measurement=UnitOfTemperature.CELSIUS` sur tous
+        les capteurs de température (interior_temp, exterior_temp, windchill, temp_forecast).
+        Avec `device_class=SensorDeviceClass.TEMPERATURE`, HA convertit automatiquement.
+      status: "Implémenté"
+
+    - component: "number.py"
+      task: |
+        Pour TSP (température de consigne) et RPth (coefficients thermiques):
+        utiliser `device_class=NumberDeviceClass.TEMPERATURE` avec
+        `native_unit_of_measurement=UnitOfTemperature.CELSIUS` pour conversion
+        automatique selon la configuration utilisateur (°C ou °F).
       status: "Implémenté"
 
     - component: "thermal.py"

@@ -200,24 +200,71 @@ class TestSensorStateConversion:
 
 
 class TestWeatherConversion:
-    """Tests de conversion pour les données météo."""
+    """Tests de conversion pour les données météo.
 
-    def test_weather_temp_fahrenheit(self, mock_coordinator, mock_hass):
-        """La température météo en Fahrenheit est convertie."""
+    ADR-054: Les weather entities n'ont pas d'attribut unit_of_measurement.
+    Les attributs temperature sont exposés dans l'unité système de HA.
+    """
+
+    def test_weather_uses_system_unit_fahrenheit(self, mock_coordinator, mock_hass):
+        """Weather entity utilise l'unité système (Fahrenheit)."""
+        # Configurer HA en Fahrenheit
+        mock_hass.config.units.temperature_unit = UnitOfTemperature.FAHRENHEIT
+
+        # Weather entity SANS unit_of_measurement (comme en réalité)
         mock_hass.states.set(
             "weather.home",
             "sunny",
-            {
-                "temperature": 41.0,  # 41°F = 5°C
-                "unit_of_measurement": UnitOfTemperature.FAHRENHEIT,
-            },
+            {"temperature": 41.0},  # 41°F (exposé dans l'unité système)
         )
 
+        # Doit détecter Fahrenheit via l'unité système
         unit = mock_coordinator._get_sensor_unit("weather.home")
         assert unit == UnitOfTemperature.FAHRENHEIT
 
+        # Conversion vers Celsius
         converted = mock_coordinator._normalize_to_celsius(41.0, unit)
         assert converted == pytest.approx(5.0, abs=0.01)
+
+    def test_weather_uses_system_unit_celsius(self, mock_coordinator, mock_hass):
+        """Weather entity utilise l'unité système (Celsius)."""
+        # Configurer HA en Celsius (défaut)
+        mock_hass.config.units.temperature_unit = UnitOfTemperature.CELSIUS
+
+        mock_hass.states.set(
+            "weather.home",
+            "sunny",
+            {"temperature": 5.0},  # 5°C
+        )
+
+        unit = mock_coordinator._get_sensor_unit("weather.home")
+        assert unit == UnitOfTemperature.CELSIUS
+
+        # Pas de conversion nécessaire
+        converted = mock_coordinator._normalize_to_celsius(5.0, unit)
+        assert converted == 5.0
+
+    def test_weather_no_double_conversion(self, mock_coordinator, mock_hass):
+        """Vérifie qu'il n'y a pas de double conversion pour weather.
+
+        Scénario:
+        - Utilisateur en Fahrenheit
+        - Weather expose 68°F (≈20°C)
+        - Le coordinator doit stocker 20°C (pas 20°F converti à nouveau)
+        """
+        mock_hass.config.units.temperature_unit = UnitOfTemperature.FAHRENHEIT
+
+        mock_hass.states.set(
+            "weather.home",
+            "sunny",
+            {"temperature": 68.0},  # 68°F = 20°C
+        )
+
+        unit = mock_coordinator._get_sensor_unit("weather.home")
+        converted = mock_coordinator._normalize_to_celsius(68.0, unit)
+
+        # Doit être 20°C, pas une double conversion
+        assert converted == pytest.approx(20.0, abs=0.01)
 
 
 class TestEdgeCases:
