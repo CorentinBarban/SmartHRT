@@ -126,7 +126,7 @@ SENSOR_DESCRIPTIONS: tuple[SmartHRTSensorDescription, ...] = (
         icon="mdi:weather-windy",
         device_class=SensorDeviceClass.WIND_SPEED,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="km/h",
+        native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
         value_fn=lambda data: data.wind_speed_forecast_avg,
         round_digits=1,
     ),
