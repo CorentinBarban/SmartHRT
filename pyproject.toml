@@ -4,7 +4,7 @@ version = "0.0.0"
 description = ""
 readme = "README.md"
 requires-python = ">=3.13.2"
-dependencies = ["colorlog>=6.9.0", "homeassistant>=2026.2.0"]
+dependencies = ["colorlog>=6.9.0", "homeassistant>=2026.2.0", "pydantic>=2.0.0"]
 
 [project.optional-dependencies]
 dev = [
