@@ -207,11 +207,8 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
         ADR-054: Détecte l'unité du capteur pour la conversion.
 
-        Pour les sensor entities: utilise l'attribut unit_of_measurement
-        (HA le convertit vers l'unité système si device_class=TEMPERATURE).
-
-        Pour les weather entities: utilise l'unité système de HA car les
-        attributs weather sont TOUJOURS exposés dans l'unité système.
+        Pour les weather entities: lit l'attribut temperature_unit de l'entité.
+        Pour les sensor entities: utilise l'attribut unit_of_measurement.
 
         Args:
             entity_id: ID de l'entité capteur
@@ -220,15 +217,18 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             L'unité de température (CELSIUS ou FAHRENHEIT), défaut CELSIUS.
         """
         state = self.hass.states.get(entity_id)
-        if state:
-            # Weather entities: attributs exposés dans l'unité système HA
+        if state and state.attributes:
+            # Weather entities: lire l'attribut temperature_unit
             if entity_id.startswith("weather."):
-                return self.hass.config.units.temperature_unit
-            # Sensor entities: unit_of_measurement reflète l'unité exposée
-            if state.attributes:
-                unit = state.attributes.get("unit_of_measurement")
+                unit = state.attributes.get("temperature_unit")
                 if unit == UnitOfTemperature.FAHRENHEIT:
                     return UnitOfTemperature.FAHRENHEIT
+                # Défaut pour weather: Celsius (Météo France, etc.)
+                return UnitOfTemperature.CELSIUS
+            # Sensor entities: unit_of_measurement reflète l'unité exposée
+            unit = state.attributes.get("unit_of_measurement")
+            if unit == UnitOfTemperature.FAHRENHEIT:
+                return UnitOfTemperature.FAHRENHEIT
         return UnitOfTemperature.CELSIUS
 
     def _normalize_to_celsius(
@@ -262,23 +262,20 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
         ADR-055: Détecte l'unité du capteur pour la conversion vers m/s.
 
-        Pour les weather entities: utilise l'unité système de HA.
-        Le système métrique utilise m/s, le système US utilise mph.
+        Pour les weather entities: lit l'attribut wind_speed_unit de l'entité.
+        Pour les sensor entities: lit l'attribut unit_of_measurement.
 
         Args:
             entity_id: ID de l'entité capteur
 
         Returns:
-            L'unité de vitesse (m/s, km/h, mph, etc.), défaut m/s.
+            L'unité de vitesse (m/s, km/h, mph, etc.), défaut km/h.
         """
         state = self.hass.states.get(entity_id)
-        if state:
-            # Weather entities: attributs exposés dans l'unité système HA
+        if state and state.attributes:
+            # Weather entities: lire l'attribut wind_speed_unit
             if entity_id.startswith("weather."):
-                return self.hass.config.units.wind_speed_unit
-            # Sensor entities: unit_of_measurement reflète l'unité exposée
-            if state.attributes:
-                unit = state.attributes.get("unit_of_measurement")
+                unit = state.attributes.get("wind_speed_unit")
                 if unit in (
                     UnitOfSpeed.MILES_PER_HOUR,
                     UnitOfSpeed.KILOMETERS_PER_HOUR,
@@ -287,7 +284,20 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
                     UnitOfSpeed.METERS_PER_SECOND,
                 ):
                     return UnitOfSpeed(unit)
-        return UnitOfSpeed.METERS_PER_SECOND
+                # Fallback: la plupart des weather integrations utilisent km/h
+                return UnitOfSpeed.KILOMETERS_PER_HOUR
+            # Sensor entities: unit_of_measurement reflète l'unité exposée
+            unit = state.attributes.get("unit_of_measurement")
+            if unit in (
+                UnitOfSpeed.MILES_PER_HOUR,
+                UnitOfSpeed.KILOMETERS_PER_HOUR,
+                UnitOfSpeed.KNOTS,
+                UnitOfSpeed.FEET_PER_SECOND,
+                UnitOfSpeed.METERS_PER_SECOND,
+            ):
+                return UnitOfSpeed(unit)
+        # Fallback: km/h (unité la plus courante pour le vent)
+        return UnitOfSpeed.KILOMETERS_PER_HOUR
 
     def _normalize_to_ms(
         self,

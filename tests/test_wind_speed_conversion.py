@@ -118,10 +118,10 @@ class TestNormalizeToKmh:
 class TestGetWindSpeedUnit:
     """Tests pour _get_wind_speed_unit (ADR-055)."""
 
-    def test_ms_by_default(self, mock_coordinator):
-        """Retourne m/s si pas d'unité spécifiée."""
+    def test_kmh_by_default(self, mock_coordinator):
+        """Retourne km/h si pas d'unité spécifiée (fallback par défaut)."""
         result = mock_coordinator._get_wind_speed_unit("sensor.wind_nonexistent")
-        assert result == UnitOfSpeed.METERS_PER_SECOND
+        assert result == UnitOfSpeed.KILOMETERS_PER_HOUR
 
     def test_sensor_with_ms_unit(self, mock_coordinator, mock_hass):
         """Détecte m/s quand l'entité l'utilise."""
@@ -163,31 +163,48 @@ class TestGetWindSpeedUnit:
         result = mock_coordinator._get_wind_speed_unit("sensor.wind_knots")
         assert result == UnitOfSpeed.KNOTS
 
-    def test_weather_entity_uses_system_unit(self, mock_coordinator, mock_hass):
-        """Weather entity utilise l'unité système de HA."""
-        # Simuler une weather entity
+    def test_weather_entity_uses_wind_speed_unit_attribute(
+        self, mock_coordinator, mock_hass
+    ):
+        """Weather entity lit l'attribut wind_speed_unit."""
+        # Simuler une weather entity avec wind_speed_unit (Météo France = km/h)
         mock_hass.states.set(
             "weather.home",
             "sunny",
-            {"temperature": 20.0, "wind_speed": 10.0},
+            {
+                "temperature": 20.0,
+                "wind_speed": 7.0,
+                "wind_speed_unit": UnitOfSpeed.KILOMETERS_PER_HOUR,
+            },
         )
-        # Le mock_hass utilise m/s par défaut (système métrique)
         result = mock_coordinator._get_wind_speed_unit("weather.home")
-        assert result == UnitOfSpeed.METERS_PER_SECOND
+        assert result == UnitOfSpeed.KILOMETERS_PER_HOUR
 
-    def test_weather_entity_us_system(self, mock_coordinator, mock_hass):
-        """Weather entity avec système US retourne mph."""
-        # Configurer le système US
-        mock_hass.config.units.wind_speed_unit = UnitOfSpeed.MILES_PER_HOUR
-
+    def test_weather_entity_with_mph_attribute(self, mock_coordinator, mock_hass):
+        """Weather entity avec wind_speed_unit=mph retourne mph."""
         mock_hass.states.set(
             "weather.home",
             "sunny",
-            {"temperature": 68.0, "wind_speed": 10.0},
+            {
+                "temperature": 68.0,
+                "wind_speed": 10.0,
+                "wind_speed_unit": UnitOfSpeed.MILES_PER_HOUR,
+            },
         )
 
         result = mock_coordinator._get_wind_speed_unit("weather.home")
         assert result == UnitOfSpeed.MILES_PER_HOUR
+
+    def test_weather_entity_fallback_to_kmh(self, mock_coordinator, mock_hass):
+        """Weather entity sans wind_speed_unit fallback sur km/h."""
+        mock_hass.states.set(
+            "weather.home",
+            "sunny",
+            {"temperature": 20.0, "wind_speed": 10.0},  # Pas de wind_speed_unit
+        )
+
+        result = mock_coordinator._get_wind_speed_unit("weather.home")
+        assert result == UnitOfSpeed.KILOMETERS_PER_HOUR
 
 
 class TestConversionPrecision:
@@ -332,6 +349,46 @@ class TestWeatherDataConversion:
             raw_forecast_wind, source_unit, UnitOfSpeed.KILOMETERS_PER_HOUR
         )
         assert result == pytest.approx(24.14, abs=0.01)
+
+    def test_meteo_france_forecast_no_double_conversion(
+        self, mock_coordinator, mock_hass
+    ):
+        """Scénario Météo France: wind_speed_forecast_avg sans double conversion.
+
+        Météo France expose wind_speed en km/h (via wind_speed_unit attribute).
+        Le forecast doit rester en km/h sans reconversion.
+
+        Bug fix: Avant, le code utilisait hass.config.units.wind_speed_unit (m/s)
+        au lieu de lire l'attribut wind_speed_unit de l'entité weather.
+        Résultat: 7 km/h × 3.6 = 25.2 km/h (FAUX)
+        Après fix: 7 km/h reste 7 km/h (CORRECT)
+        """
+        # Simuler une weather entity Météo France avec wind_speed_unit en km/h
+        mock_hass.states.set(
+            "weather.meteo_france",
+            "sunny",
+            {
+                "temperature": 15.0,
+                "wind_speed": 7.0,
+                "wind_speed_unit": UnitOfSpeed.KILOMETERS_PER_HOUR,
+            },
+        )
+
+        # 1. Détecter l'unité (doit lire l'attribut wind_speed_unit)
+        detected_unit = mock_coordinator._get_wind_speed_unit("weather.meteo_france")
+        assert (
+            detected_unit == UnitOfSpeed.KILOMETERS_PER_HOUR
+        ), f"Expected km/h but got {detected_unit}"
+
+        # 2. Convertir vers km/h (doit être no-op car déjà en km/h)
+        raw_wind = 7.0
+        converted = mock_coordinator._normalize_to_kmh(raw_wind, detected_unit)
+        assert converted == 7.0, f"Expected 7.0 but got {converted}"
+
+        # 3. Vérifier que le résultat final est correct (pas de × 3.6)
+        assert converted != pytest.approx(
+            25.2, abs=1.0
+        ), "Double conversion detected! 7 × 3.6 = 25.2"
 
 
 # =============================================================================
