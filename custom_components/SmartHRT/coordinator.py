@@ -1090,7 +1090,12 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         self.async_set_updated_data(self.data)
 
     def _reschedule_recoverycalc_hour(self) -> None:
-        """Reprogramme le déclencheur recoverycalc_hour pour le lendemain (ADR-051)."""
+        """Reprogramme le déclencheur recoverycalc_hour pour la prochaine occurrence (ADR-051).
+
+        Calcule la prochaine occurrence : aujourd'hui si l'heure n'est pas
+        encore passée, demain sinon. Ceci évite de sauter un jour quand
+        un cycle est forcé manuellement avant l'heure de coupure.
+        """
         if not self.data.recoverycalc_hour:
             return
         now = dt_util.now()
@@ -1099,16 +1104,28 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             minute=self.data.recoverycalc_hour.minute,
             second=0,
             microsecond=0,
-        ) + timedelta(days=1)
+        )
+        # Ajouter 1 jour seulement si l'heure est déjà passée aujourd'hui
+        if next_trigger <= now:
+            next_trigger += timedelta(days=1)
 
         self._timer_manager.schedule(
             TimerKey.RECOVERYCALC_HOUR,
             self._on_recoverycalc_hour,
             next_trigger,
         )
+        _LOGGER.debug(
+            "%s Timer RECOVERYCALC_HOUR reprogrammé pour %s",
+            self._log_prefix(),
+            next_trigger,
+        )
 
     def _reschedule_target_hour(self) -> None:
-        """Reprogramme le déclencheur target_hour pour le lendemain (ADR-051)."""
+        """Reprogramme le déclencheur target_hour pour la prochaine occurrence (ADR-051).
+
+        Calcule la prochaine occurrence : aujourd'hui si l'heure n'est pas
+        encore passée, demain sinon.
+        """
         if not self.data.target_hour:
             return
         now = dt_util.now()
@@ -1117,11 +1134,19 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             minute=self.data.target_hour.minute,
             second=0,
             microsecond=0,
-        ) + timedelta(days=1)
+        )
+        # Ajouter 1 jour seulement si l'heure est déjà passée aujourd'hui
+        if next_trigger <= now:
+            next_trigger += timedelta(days=1)
 
         self._timer_manager.schedule(
             TimerKey.TARGET_HOUR,
             self._on_target_hour,
+            next_trigger,
+        )
+        _LOGGER.debug(
+            "%s Timer TARGET_HOUR reprogrammé pour %s",
+            self._log_prefix(),
             next_trigger,
         )
 
@@ -1919,6 +1944,11 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             self.data.rpth_calculated,
         )
 
+        # Garantir que les timers sont reprogrammés pour le prochain cycle
+        # Ceci évite de perdre le timer si le cycle a été forcé manuellement
+        self._reschedule_recoverycalc_hour()
+        self._reschedule_target_hour()
+
         self.async_set_updated_data(self.data)
 
     def _on_recovery_end(self) -> None:
@@ -1936,6 +1966,7 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         - Transition vers HEATING_ON
         - Réinitialisation des flags via la machine à états
         - Annulation des timers en cours
+        - Reprogrammation des timers quotidiens
         - Sauvegarde des données
         """
         # ADR-051: Annuler les timers via TimerManager
@@ -1945,6 +1976,10 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         # Transition vers HEATING_ON
         if not self.transition_to(SmartHRTState.HEATING_ON):
             self.force_state(SmartHRTState.HEATING_ON)
+
+        # Garantir que les timers quotidiens sont actifs
+        self._reschedule_recoverycalc_hour()
+        self._reschedule_target_hour()
 
         await self._save_learned_data()
         self.async_set_updated_data(self.data)
