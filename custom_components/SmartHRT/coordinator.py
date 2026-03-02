@@ -648,29 +648,15 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
                 self._log_prefix(),
             )
 
-        # ADR-049: Transition depuis INITIALIZING vers l'état cible
-        # Utilise transition_to pour déclencher les callbacks on_enter
-        target_state = self.data.current_state
-        if self._state_machine.state == SmartHRTState.INITIALIZING:
-            result = self._state_machine.transition_with_actions(target_state)
-            if result.success:
-                _LOGGER.info(
-                    "%s État restauré: INITIALIZING → %s",
-                    self._log_prefix(),
-                    target_state.value,
-                )
-                # Exécuter les actions de transition (ex: SCHEDULE_RECOVERY_UPDATE)
-                self._execute_actions(result.actions)
-            else:
-                _LOGGER.error(
-                    "%s Échec de transition vers %s, forçage",
-                    self._log_prefix(),
-                    target_state.value,
-                )
-                self._state_machine._force_state_unsafe(target_state)
-        else:
-            # Déjà dans un état valide (cas de migration)
-            self._state_machine._force_state_unsafe(self.data.current_state)
+        # ADR-049: NE PAS faire la transition ici !
+        # La transition sera gérée par _restore_state_after_restart() APRÈS
+        # vérification de cohérence de l'état persisté.
+        # On reste en INITIALIZING jusqu'à ce que la cohérence soit vérifiée.
+        _LOGGER.debug(
+            "%s État persisté: %s (transition différée)",
+            self._log_prefix(),
+            self.data.current_state.value,
+        )
 
     def _is_legacy_format(self, data: dict) -> bool:
         """Détecte si les données sont au format legacy (PERSISTED_FIELDS).
@@ -1837,6 +1823,7 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         - L'état persisté est la source de vérité
         - Vérification de cohérence minimaliste
         - En cas d'incohérence, déduit le bon état (MONITORING ou HEATING_ON)
+        - Fait la transition depuis INITIALIZING vers l'état cible
         """
         persisted_state = self.data.current_state
         now = dt_util.now()
@@ -1847,30 +1834,54 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             persisted_state.value,
         )
 
-        # Vérification de cohérence minimale
-        if not self._is_state_coherent(persisted_state, now):
+        # Déterminer l'état cible (cohérent ou déduit)
+        if self._is_state_coherent(persisted_state, now):
+            target_state = persisted_state
+            _LOGGER.info(
+                "%s État %s cohérent, transition INITIALIZING → %s",
+                self._log_prefix(),
+                persisted_state.value,
+                target_state.value,
+            )
+        else:
             # Déduire le bon état plutôt que reset brutal vers HEATING_ON
-            correct_state = self._deduce_correct_state(now)
+            target_state = self._deduce_correct_state(now)
             _LOGGER.warning(
                 "%s État incohérent %s pour l'heure actuelle, correction vers %s",
                 self._log_prefix(),
                 persisted_state.value,
-                correct_state.value,
+                target_state.value,
             )
-            self.force_state(correct_state)
-            await self._save_learned_data()
-            # Reprogrammer les triggers pour le nouvel état
-            self._restore_triggers_for_state(correct_state, now)
-            self.async_set_updated_data(self.data)
-            return
+            # Mettre à jour l'état dans data pour cohérence
+            self.data.current_state = target_state
 
-        # État cohérent : reprogrammer les triggers nécessaires
-        _LOGGER.debug(
-            "%s État %s cohérent, restauration des triggers",
-            self._log_prefix(),
-            persisted_state.value,
-        )
-        self._restore_triggers_for_state(persisted_state, now)
+        # Faire la transition depuis INITIALIZING vers l'état cible
+        if self._state_machine.state == SmartHRTState.INITIALIZING:
+            result = self._state_machine.transition_with_actions(target_state)
+            if result.success:
+                _LOGGER.info(
+                    "%s Transition INITIALIZING → %s réussie",
+                    self._log_prefix(),
+                    target_state.value,
+                )
+                self._execute_actions(result.actions)
+            else:
+                _LOGGER.warning(
+                    "%s Échec transition vers %s, forçage",
+                    self._log_prefix(),
+                    target_state.value,
+                )
+                self._state_machine._force_state_unsafe(target_state)
+        else:
+            # Déjà dans un état (cas rare), forcer l'état cible
+            self.force_state(target_state)
+
+        # Sauvegarder si l'état a été corrigé
+        if target_state != persisted_state:
+            await self._save_learned_data()
+
+        # Reprogrammer les triggers pour l'état cible
+        self._restore_triggers_for_state(target_state, now)
         self.async_set_updated_data(self.data)
 
     def _deduce_correct_state(self, now: datetime) -> SmartHRTState:
