@@ -590,10 +590,22 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         await self._update_weather_forecasts()
 
         # ADR-048: Calcul synchrone (< 10ms, pas d'I/O bloquante)
-        self.calculate_recovery_time()
+        # Ne pas écraser recovery_start_hour si déjà valide pour aujourd'hui
+        now = dt_util.now()
+        should_recalculate = True
+        if self.data.recovery_start_hour:
+            if self.data.recovery_start_hour.date() == now.date():
+                _LOGGER.debug(
+                    "%s recovery_start_hour déjà défini pour aujourd'hui (%s), pas de recalcul",
+                    self._log_prefix(),
+                    self.data.recovery_start_hour.strftime("%H:%M"),
+                )
+                should_recalculate = False
+
+        if should_recalculate:
+            self.calculate_recovery_time()
 
         # Programmer le trigger de relance si nécessaire
-        now = dt_util.now()
         if self.data.recovery_start_hour and self.data.recovery_start_hour > now:
             self._schedule_recovery_start(self.data.recovery_start_hour)
 
