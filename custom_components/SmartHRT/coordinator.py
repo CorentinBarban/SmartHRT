@@ -1763,15 +1763,30 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             self._reschedule_target_hour()
             # Et RECOVERY_START si pas encore passé
             if self.data.recovery_start_hour:
-                if self.data.recovery_start_hour > now:
-                    self._schedule_recovery_start(self.data.recovery_start_hour)
+                # Vérifier que recovery_start_hour est bien aujourd'hui
+                if self.data.recovery_start_hour.date() == now.date():
+                    if self.data.recovery_start_hour > now:
+                        self._schedule_recovery_start(self.data.recovery_start_hour)
+                    else:
+                        # L'heure est passée AUJOURD'HUI = on démarre
+                        _LOGGER.info(
+                            "%s Heure de relance dépassée, démarrage immédiat",
+                            self._log_prefix(),
+                        )
+                        self.on_recovery_start()
                 else:
-                    # L'heure est passée mais on était en MONITORING = on démarre
+                    # Date périmée → recalculer recovery_start_hour
                     _LOGGER.info(
-                        "%s Heure de relance dépassée, démarrage immédiat",
+                        "%s recovery_start_hour périmé (%s), recalcul",
                         self._log_prefix(),
+                        self.data.recovery_start_hour,
                     )
-                    self.on_recovery_start()
+                    self.calculate_recovery_time()
+                    if (
+                        self.data.recovery_start_hour
+                        and self.data.recovery_start_hour > now
+                    ):
+                        self._schedule_recovery_start(self.data.recovery_start_hour)
 
         elif state == SmartHRTState.DETECTING_LAG:
             # La surveillance de température reprendra automatiquement
