@@ -297,7 +297,12 @@ class ThermalSolver:
 
         # ADR-050: Validation physique explicite
         # Note: On utilise la température prévue (text) pour la validation
-        tint = state.interior_temp if state.interior_temp is not None else 17.0
+        # Si interior_temp n'est pas disponible, utiliser temp_recovery_calc (dernière température connue)
+        tint = (
+            state.interior_temp
+            if state.interior_temp is not None
+            else state.temp_recovery_calc
+        )
         validation = validate_recovery_physics(
             interior_temp=state.interior_temp,
             exterior_temp=text if text else None,
