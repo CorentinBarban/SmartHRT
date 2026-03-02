@@ -1836,7 +1836,7 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         Principe "Trust the Persistence, Verify Minimally" :
         - L'état persisté est la source de vérité
         - Vérification de cohérence minimaliste
-        - En cas d'incohérence, reset à HEATING_ON (auto-correction)
+        - En cas d'incohérence, déduit le bon état (MONITORING ou HEATING_ON)
         """
         persisted_state = self.data.current_state
         now = dt_util.now()
@@ -1849,13 +1849,18 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
         # Vérification de cohérence minimale
         if not self._is_state_coherent(persisted_state, now):
+            # Déduire le bon état plutôt que reset brutal vers HEATING_ON
+            correct_state = self._deduce_correct_state(now)
             _LOGGER.warning(
-                "%s État incohérent %s pour l'heure actuelle, reset à HEATING_ON",
+                "%s État incohérent %s pour l'heure actuelle, correction vers %s",
                 self._log_prefix(),
                 persisted_state.value,
+                correct_state.value,
             )
-            self.force_state(SmartHRTState.HEATING_ON)
+            self.force_state(correct_state)
             await self._save_learned_data()
+            # Reprogrammer les triggers pour le nouvel état
+            self._restore_triggers_for_state(correct_state, now)
             self.async_set_updated_data(self.data)
             return
 
@@ -1867,6 +1872,49 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         )
         self._restore_triggers_for_state(persisted_state, now)
         self.async_set_updated_data(self.data)
+
+    def _deduce_correct_state(self, now: datetime) -> SmartHRTState:
+        """Déduit l'état correct basé sur l'heure actuelle.
+
+        Utilisé quand l'état persisté est incohérent.
+
+        Args:
+            now: Heure actuelle
+
+        Returns:
+            L'état qui devrait être actif selon l'heure
+        """
+        current_time = now.time()
+        target = self.data.target_hour
+        recoverycalc = self.data.recoverycalc_hour
+
+        # Si recovery_start_hour est dans le futur proche → MONITORING
+        if self.data.recovery_start_hour and self.data.recovery_start_hour > now:
+            hours_until = (self.data.recovery_start_hour - now).total_seconds() / 3600
+            if hours_until < 6:
+                _LOGGER.info(
+                    "%s État déduit: MONITORING (recovery_start_hour dans %.1fh)",
+                    self._log_prefix(),
+                    hours_until,
+                )
+                return SmartHRTState.MONITORING
+
+        # Si on est en période nocturne → MONITORING
+        if target and recoverycalc:
+            is_night = self._is_night_period(current_time, target, recoverycalc)
+            if is_night:
+                _LOGGER.info(
+                    "%s État déduit: MONITORING (période nocturne)",
+                    self._log_prefix(),
+                )
+                return SmartHRTState.MONITORING
+
+        # Par défaut → HEATING_ON (état sûr)
+        _LOGGER.info(
+            "%s État déduit: HEATING_ON (défaut)",
+            self._log_prefix(),
+        )
+        return SmartHRTState.HEATING_ON
 
     def on_heating_stop(self) -> None:
         """Appelé quand le chauffage s'arrête (service manuel)"""
