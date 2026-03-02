@@ -1737,9 +1737,18 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
         is_night = self._is_night_period(current_time, target, recoverycalc)
 
-        # MONITORING/DETECTING_LAG valides la nuit uniquement
+        # MONITORING/DETECTING_LAG valides la nuit OU si recovery_start_hour est proche
         if persisted_state in (SmartHRTState.MONITORING, SmartHRTState.DETECTING_LAG):
-            return is_night
+            if is_night:
+                return True
+            # Aussi valide si recovery_start_hour est dans le futur proche (< 6h)
+            if self.data.recovery_start_hour and self.data.recovery_start_hour > now:
+                hours_until_recovery = (
+                    self.data.recovery_start_hour - now
+                ).total_seconds() / 3600
+                if hours_until_recovery < 6:
+                    return True
+            return False
 
         # RECOVERY/HEATING_PROCESS valides pendant la période de relance
         if persisted_state in (SmartHRTState.RECOVERY, SmartHRTState.HEATING_PROCESS):
