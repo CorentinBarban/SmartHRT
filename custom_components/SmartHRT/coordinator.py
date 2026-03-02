@@ -1745,6 +1745,12 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         if persisted_state in (SmartHRTState.RECOVERY, SmartHRTState.HEATING_PROCESS):
             if not self.data.recovery_start_hour:
                 return False  # Pas de recovery_start_hour = incohérent
+            # recovery_start_hour doit être récent (< 24h) pour être valide
+            hours_since_recovery = (
+                now - self.data.recovery_start_hour
+            ).total_seconds() / 3600
+            if hours_since_recovery > 24:
+                return False  # État périmé
             # Valide si : recovery_start_hour <= now ET current_time < target
             return now >= self.data.recovery_start_hour and current_time < target
 
