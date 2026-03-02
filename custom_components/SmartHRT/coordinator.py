@@ -1759,6 +1759,9 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             now: Heure actuelle
         """
         if state == SmartHRTState.MONITORING:
+            # Reprogrammer TARGET_HOUR pour le matin
+            self._reschedule_target_hour()
+            # Et RECOVERY_START si pas encore passé
             if self.data.recovery_start_hour:
                 if self.data.recovery_start_hour > now:
                     self._schedule_recovery_start(self.data.recovery_start_hour)
@@ -1772,7 +1775,8 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
         elif state == SmartHRTState.DETECTING_LAG:
             # La surveillance de température reprendra automatiquement
-            pass
+            # Mais il faut reprogrammer TARGET_HOUR pour le matin
+            self._reschedule_target_hour()
 
         elif state in (SmartHRTState.RECOVERY, SmartHRTState.HEATING_PROCESS):
             # Vérifier si target_hour est dépassée
@@ -1787,8 +1791,14 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             if now >= target_dt:
                 # Target dépassée, terminer le cycle
                 self.on_recovery_end()
+            else:
+                # Reprogrammer le timer TARGET_HOUR
+                self._reschedule_target_hour()
 
-        # HEATING_ON: rien à faire (attend le prochain recoverycalc_hour)
+        elif state == SmartHRTState.HEATING_ON:
+            # Reprogrammer les timers perdus au redémarrage
+            self._reschedule_recoverycalc_hour()
+            self._reschedule_target_hour()
 
     async def _restore_state_after_restart(self) -> None:
         """Restaure l'état après redémarrage avec vérification minimale (ADR-039).
