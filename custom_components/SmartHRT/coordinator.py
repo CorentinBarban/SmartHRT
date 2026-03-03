@@ -2241,17 +2241,33 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             attr_name: Nom de l'attribut dans self.data (ex: "rcth", "tsp")
             value: Nouvelle valeur à assigner
             recalculate: Si True, recalcule recovery_time après modification
+                         (uniquement si en MONITORING, pas en HEATING_ON/HEATING_PROCESS)
             reschedule: Si True, reprogramme le trigger si en MONITORING
             persist: Si True, sauvegarde les données après modification
 
         ADR-023: Protection try/except centralisée pour la reprogrammation.
+        Note: Le recalcul est ignoré pendant HEATING_ON/HEATING_PROCESS pour
+              éviter de perturber un cycle de chauffage en cours.
         """
         # 1. Mise à jour atomique de la valeur
         setattr(self.data, attr_name, value)
 
         # 2. Recalcul optionnel de l'heure de relance
-        if recalculate:
+        # Ne pas recalculer pendant HEATING_ON ou HEATING_PROCESS pour éviter
+        # de perturber un cycle de chauffage actif
+        # Autorisé dans: INITIALIZING, DETECTING_LAG, MONITORING
+        if recalculate and self.data.current_state not in (
+            SmartHRTState.HEATING_ON,
+            SmartHRTState.HEATING_PROCESS,
+        ):
             self.calculate_recovery_time()
+        elif recalculate:
+            _LOGGER.debug(
+                "%s Coefficient %s mis à jour mais recalcul ignoré (état: %s)",
+                self._log_prefix(),
+                attr_name,
+                self.data.current_state.value,
+            )
 
         # 3. Reprogrammation du trigger si nécessaire (ADR-023)
         if (
