@@ -2,6 +2,11 @@ automation: !include automations.yaml
 # Loads default set of integrations. Do not remove.
 default_config:
 
+# ADR-054: Test en Fahrenheit pour valider la conversion automatique
+# Décommentez pour tester le système en Fahrenheit
+# homeassistant:
+#   unit_system: imperial
+
 logger:
   default: info
   logs:

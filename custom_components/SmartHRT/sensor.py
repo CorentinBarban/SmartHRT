@@ -6,6 +6,7 @@ ADR implémentées dans ce module:
 - ADR-027: Utilisation de CoordinatorEntity pour synchronisation automatique
 - ADR-030: Simplification avec SensorEntityDescription
 - ADR-052: Internationalisation native (translation_key au lieu de name)
+- ADR-054: Abstraction unités (native_unit=CELSIUS + device_class pour conversion auto)
 """
 
 from __future__ import annotations
@@ -66,6 +67,8 @@ class SmartHRTSensorDescription(SensorEntityDescription):
 
 SENSOR_DESCRIPTIONS: tuple[SmartHRTSensorDescription, ...] = (
     # Températures
+    # ADR-054: Les données internes sont en Celsius. native_unit_of_measurement=CELSIUS
+    # permet à HA de convertir automatiquement vers Fahrenheit si nécessaire.
     SmartHRTSensorDescription(
         key="interior_temp",
         translation_key="interior_temp",
@@ -123,7 +126,7 @@ SENSOR_DESCRIPTIONS: tuple[SmartHRTSensorDescription, ...] = (
         icon="mdi:weather-windy",
         device_class=SensorDeviceClass.WIND_SPEED,
         state_class=SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement="km/h",
+        native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
         value_fn=lambda data: data.wind_speed_forecast_avg,
         round_digits=1,
     ),
@@ -156,6 +159,7 @@ SENSOR_DESCRIPTIONS: tuple[SmartHRTSensorDescription, ...] = (
         key="rpth_sensor",
         translation_key="rpth_sensor",
         icon="mdi:home-lightning-bolt-outline",
+        device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         value_fn=lambda data: data.rpth,

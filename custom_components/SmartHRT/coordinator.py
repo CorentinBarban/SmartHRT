@@ -32,6 +32,8 @@ ADR implémentées dans ce module:
 - ADR-040: Délégation flags à la machine à états (propriétés calculées)
 - ADR-041: Sérialisation globale via as_dict/from_dict (remplace PERSISTED_FIELDS)
 - ADR-047: Unification du modèle de données (Single Source of Truth)
+- ADR-053: Optimisation inter-saison (Snooze) et sécurisation apprentissage
+- ADR-054: Abstraction unités (_normalize_to_celsius, conversion Fahrenheit→Celsius)
 """
 
 import asyncio
@@ -53,8 +55,11 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     EVENT_HOMEASSISTANT_STARTED,
+    UnitOfTemperature,
+    UnitOfSpeed,
 )
 from homeassistant.util import dt as dt_util
+from homeassistant.util.unit_conversion import TemperatureConverter, SpeedConverter
 from homeassistant.exceptions import ServiceNotFound
 
 from .const import (
@@ -75,6 +80,9 @@ from .const import (
     TEMP_DECREASE_THRESHOLD,
     DEFAULT_RECOVERYCALC_HOUR,
     TimerKey,
+    # ADR-053: Seuils pour Snooze et sécurisation apprentissage
+    MIN_DURATION_THRESHOLD_HOURS,
+    MIN_LEARNING_DURATION_HOURS,
 )
 
 # ADR-051: Import du gestionnaire centralisé de timers
@@ -180,7 +188,9 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             default_rpth=DEFAULT_RPTH,
             default_relaxation_factor=DEFAULT_RELAXATION_FACTOR,
         )
-        self._thermal_solver = ThermalSolver(thermal_config, logger=_LOGGER)
+        self._thermal_solver = ThermalSolver(
+            thermal_config, logger=_LOGGER, log_prefix=log_prefix
+        )
 
     def _log_prefix(self) -> str:
         """Retourne un préfixe pour les logs incluant le nom et entry_id de l'instance.
@@ -189,6 +199,153 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         sont configurées, en incluant le nom et l'identifiant unique.
         """
         return f"[{self.data.name}#{self._entry.entry_id[:8]}]"
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # ADR-054: Conversion des unités de température
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _get_sensor_unit(self, entity_id: str) -> str:
+        """Récupère l'unité de température d'un capteur.
+
+        ADR-054: Détecte l'unité du capteur pour la conversion.
+
+        Pour les weather entities: lit l'attribut temperature_unit de l'entité.
+        Pour les sensor entities: utilise l'attribut unit_of_measurement.
+
+        Args:
+            entity_id: ID de l'entité capteur
+
+        Returns:
+            L'unité de température (CELSIUS ou FAHRENHEIT), défaut CELSIUS.
+        """
+        state = self.hass.states.get(entity_id)
+        if state and state.attributes:
+            # Weather entities: lire l'attribut temperature_unit
+            if entity_id.startswith("weather."):
+                unit = state.attributes.get("temperature_unit")
+                if unit == UnitOfTemperature.FAHRENHEIT:
+                    return UnitOfTemperature.FAHRENHEIT
+                # Défaut pour weather: Celsius (Météo France, etc.)
+                return UnitOfTemperature.CELSIUS
+            # Sensor entities: unit_of_measurement reflète l'unité exposée
+            unit = state.attributes.get("unit_of_measurement")
+            if unit == UnitOfTemperature.FAHRENHEIT:
+                return UnitOfTemperature.FAHRENHEIT
+        return UnitOfTemperature.CELSIUS
+
+    def _normalize_to_celsius(
+        self, temp: float | None, source_unit: str = UnitOfTemperature.CELSIUS
+    ) -> float | None:
+        """Convertit une température vers Celsius si nécessaire.
+
+        ADR-054: Normalisation pour le ThermalSolver qui travaille en °C.
+
+        Args:
+            temp: Température à convertir (ou None)
+            source_unit: Unité source (CELSIUS ou FAHRENHEIT)
+
+        Returns:
+            Température en Celsius (ou None si temp est None)
+        """
+        if temp is None:
+            return None
+        if source_unit == UnitOfTemperature.FAHRENHEIT:
+            return TemperatureConverter.convert(
+                temp, UnitOfTemperature.FAHRENHEIT, UnitOfTemperature.CELSIUS
+            )
+        return temp
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # ADR-055: Conversion des unités de vitesse du vent
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _get_wind_speed_unit(self, entity_id: str) -> UnitOfSpeed:
+        """Récupère l'unité de vitesse du vent d'un capteur.
+
+        ADR-055: Détecte l'unité du capteur pour la conversion vers m/s.
+
+        Pour les weather entities: lit l'attribut wind_speed_unit de l'entité.
+        Pour les sensor entities: lit l'attribut unit_of_measurement.
+
+        Args:
+            entity_id: ID de l'entité capteur
+
+        Returns:
+            L'unité de vitesse (m/s, km/h, mph, etc.), défaut km/h.
+        """
+        state = self.hass.states.get(entity_id)
+        if state and state.attributes:
+            # Weather entities: lire l'attribut wind_speed_unit
+            if entity_id.startswith("weather."):
+                unit = state.attributes.get("wind_speed_unit")
+                if unit in (
+                    UnitOfSpeed.MILES_PER_HOUR,
+                    UnitOfSpeed.KILOMETERS_PER_HOUR,
+                    UnitOfSpeed.KNOTS,
+                    UnitOfSpeed.FEET_PER_SECOND,
+                    UnitOfSpeed.METERS_PER_SECOND,
+                ):
+                    return UnitOfSpeed(unit)
+                # Fallback: la plupart des weather integrations utilisent km/h
+                return UnitOfSpeed.KILOMETERS_PER_HOUR
+            # Sensor entities: unit_of_measurement reflète l'unité exposée
+            unit = state.attributes.get("unit_of_measurement")
+            if unit in (
+                UnitOfSpeed.MILES_PER_HOUR,
+                UnitOfSpeed.KILOMETERS_PER_HOUR,
+                UnitOfSpeed.KNOTS,
+                UnitOfSpeed.FEET_PER_SECOND,
+                UnitOfSpeed.METERS_PER_SECOND,
+            ):
+                return UnitOfSpeed(unit)
+        # Fallback: km/h (unité la plus courante pour le vent)
+        return UnitOfSpeed.KILOMETERS_PER_HOUR
+
+    def _normalize_to_ms(
+        self,
+        speed: float | None,
+        source_unit: UnitOfSpeed = UnitOfSpeed.METERS_PER_SECOND,
+    ) -> float | None:
+        """Convertit une vitesse de vent vers m/s si nécessaire.
+
+        ADR-055: Normalisation pour le ThermalSolver qui travaille en m/s.
+
+        Args:
+            speed: Vitesse à convertir (ou None)
+            source_unit: Unité source (m/s, km/h, mph, etc.)
+
+        Returns:
+            Vitesse en m/s (ou None si speed est None)
+        """
+        if speed is None:
+            return None
+        if source_unit == UnitOfSpeed.METERS_PER_SECOND:
+            return speed
+        return SpeedConverter.convert(speed, source_unit, UnitOfSpeed.METERS_PER_SECOND)
+
+    def _normalize_to_kmh(
+        self,
+        speed: float | None,
+        source_unit: UnitOfSpeed = UnitOfSpeed.KILOMETERS_PER_HOUR,
+    ) -> float | None:
+        """Convertit une vitesse de vent vers km/h si nécessaire.
+
+        ADR-055: Normalisation pour wind_speed_forecast_avg qui est stocké en km/h.
+
+        Args:
+            speed: Vitesse à convertir (ou None)
+            source_unit: Unité source (m/s, km/h, mph, etc.)
+
+        Returns:
+            Vitesse en km/h (ou None si speed est None)
+        """
+        if speed is None:
+            return None
+        if source_unit == UnitOfSpeed.KILOMETERS_PER_HOUR:
+            return speed
+        return SpeedConverter.convert(
+            speed, source_unit, UnitOfSpeed.KILOMETERS_PER_HOUR
+        )
 
     def _on_state_entered(
         self, _old_state: SmartHRTState, new_state: SmartHRTState
@@ -433,10 +590,22 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         await self._update_weather_forecasts()
 
         # ADR-048: Calcul synchrone (< 10ms, pas d'I/O bloquante)
-        self.calculate_recovery_time()
+        # Ne pas écraser recovery_start_hour si déjà valide pour aujourd'hui
+        now = dt_util.now()
+        should_recalculate = True
+        if self.data.recovery_start_hour:
+            if self.data.recovery_start_hour.date() == now.date():
+                _LOGGER.debug(
+                    "%s recovery_start_hour déjà défini pour aujourd'hui (%s), pas de recalcul",
+                    self._log_prefix(),
+                    self.data.recovery_start_hour.strftime("%H:%M"),
+                )
+                should_recalculate = False
+
+        if should_recalculate:
+            self.calculate_recovery_time()
 
         # Programmer le trigger de relance si nécessaire
-        now = dt_util.now()
         if self.data.recovery_start_hour and self.data.recovery_start_hour > now:
             self._schedule_recovery_start(self.data.recovery_start_hour)
 
@@ -491,29 +660,15 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
                 self._log_prefix(),
             )
 
-        # ADR-049: Transition depuis INITIALIZING vers l'état cible
-        # Utilise transition_to pour déclencher les callbacks on_enter
-        target_state = self.data.current_state
-        if self._state_machine.state == SmartHRTState.INITIALIZING:
-            result = self._state_machine.transition_with_actions(target_state)
-            if result.success:
-                _LOGGER.info(
-                    "%s État restauré: INITIALIZING → %s",
-                    self._log_prefix(),
-                    target_state.value,
-                )
-                # Exécuter les actions de transition (ex: SCHEDULE_RECOVERY_UPDATE)
-                self._execute_actions(result.actions)
-            else:
-                _LOGGER.error(
-                    "%s Échec de transition vers %s, forçage",
-                    self._log_prefix(),
-                    target_state.value,
-                )
-                self._state_machine._force_state_unsafe(target_state)
-        else:
-            # Déjà dans un état valide (cas de migration)
-            self._state_machine._force_state_unsafe(self.data.current_state)
+        # ADR-049: NE PAS faire la transition ici !
+        # La transition sera gérée par _restore_state_after_restart() APRÈS
+        # vérification de cohérence de l'état persisté.
+        # On reste en INITIALIZING jusqu'à ce que la cohérence soit vérifiée.
+        _LOGGER.debug(
+            "%s État persisté: %s (transition différée)",
+            self._log_prefix(),
+            self.data.current_state.value,
+        )
 
     def _is_legacy_format(self, data: dict) -> bool:
         """Détecte si les données sont au format legacy (PERSISTED_FIELDS).
@@ -680,12 +835,17 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
     # ─────────────────────────────────────────────────────────────────────────
 
     async def _update_initial_states(self) -> None:
-        """Récupération des états initiaux"""
+        """Récupération des états initiaux (ADR-054: conversion vers Celsius)"""
         if self._interior_temp_sensor_id:
             state = self.hass.states.get(self._interior_temp_sensor_id)
             if state and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
                 try:
-                    self.data.interior_temp = float(state.state)
+                    # ADR-054: Convertir vers Celsius pour le ThermalSolver
+                    raw_temp = float(state.state)
+                    source_unit = self._get_sensor_unit(self._interior_temp_sensor_id)
+                    self.data.interior_temp = self._normalize_to_celsius(
+                        raw_temp, source_unit
+                    )
                 except ValueError:
                     pass
 
@@ -693,7 +853,10 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
     @callback
     def _on_sensor_state_change(self, event) -> None:
-        """Callback lors d'un changement d'état du capteur de température."""
+        """Callback lors d'un changement d'état du capteur de température.
+
+        ADR-054: Convertit les températures vers Celsius pour le ThermalSolver.
+        """
         new_state = event.data.get("new_state")
         if not new_state or new_state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return
@@ -702,7 +865,12 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
         if entity_id == self._interior_temp_sensor_id:
             try:
-                self.data.interior_temp = float(new_state.state)
+                # ADR-054: Convertir vers Celsius
+                raw_temp = float(new_state.state)
+                source_unit = self._get_sensor_unit(entity_id)
+                self.data.interior_temp = self._normalize_to_celsius(
+                    raw_temp, source_unit
+                )
                 self._check_temperature_thresholds()
             except ValueError:
                 pass
@@ -858,7 +1026,12 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         self.hass.async_create_task(self._async_on_recovery_update_hour())
 
     async def _async_on_recovery_update_hour(self) -> None:
-        """Exécute les calculs de mise à jour (ADR-048: synchrones car < 10ms)."""
+        """Exécute les calculs de mise à jour (ADR-048: synchrones car < 10ms).
+
+        ADR-053: Implémente le Snooze intelligent - si la durée estimée de relance
+        est inférieure au seuil MIN_DURATION_THRESHOLD_HOURS (15 min), aucune
+        relance n'est programmée et le système reste silencieusement en MONITORING.
+        """
         # Sauvegarder l'heure de relance avant calcul
         prev_recovery_start = self.data.recovery_start_hour
 
@@ -870,7 +1043,28 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
             # Programmer le trigger de relance si nécessaire (depuis le thread principal)
             now = dt_util.now()
-            if (
+
+            # ADR-053: Snooze intelligent - vérifier le seuil minimum d'activation
+            if self.data.recovery_duration_hours < MIN_DURATION_THRESHOLD_HOURS:
+                # Durée insuffisante → Snooze: annuler tout trigger existant
+                if self._timer_manager.is_active(TimerKey.RECOVERY_START):
+                    self._timer_manager.cancel(TimerKey.RECOVERY_START)
+                    _LOGGER.info(
+                        "%s [ADR-053 Snooze] Durée estimée %.1f min < seuil %d min "
+                        "→ relance annulée, reste en MONITORING",
+                        self._log_prefix(),
+                        self.data.recovery_duration_hours * 60,
+                        int(MIN_DURATION_THRESHOLD_HOURS * 60),
+                    )
+                else:
+                    _LOGGER.debug(
+                        "%s [ADR-053 Snooze] Durée estimée %.1f min < seuil %d min "
+                        "→ pas de relance programmée",
+                        self._log_prefix(),
+                        self.data.recovery_duration_hours * 60,
+                        int(MIN_DURATION_THRESHOLD_HOURS * 60),
+                    )
+            elif (
                 self.data.recovery_start_hour
                 and prev_recovery_start != self.data.recovery_start_hour
                 and self.data.recovery_start_hour > now
@@ -894,7 +1088,12 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         self.async_set_updated_data(self.data)
 
     def _reschedule_recoverycalc_hour(self) -> None:
-        """Reprogramme le déclencheur recoverycalc_hour pour le lendemain (ADR-051)."""
+        """Reprogramme le déclencheur recoverycalc_hour pour la prochaine occurrence (ADR-051).
+
+        Calcule la prochaine occurrence : aujourd'hui si l'heure n'est pas
+        encore passée, demain sinon. Ceci évite de sauter un jour quand
+        un cycle est forcé manuellement avant l'heure de coupure.
+        """
         if not self.data.recoverycalc_hour:
             return
         now = dt_util.now()
@@ -903,16 +1102,28 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             minute=self.data.recoverycalc_hour.minute,
             second=0,
             microsecond=0,
-        ) + timedelta(days=1)
+        )
+        # Ajouter 1 jour seulement si l'heure est déjà passée aujourd'hui
+        if next_trigger <= now:
+            next_trigger += timedelta(days=1)
 
         self._timer_manager.schedule(
             TimerKey.RECOVERYCALC_HOUR,
             self._on_recoverycalc_hour,
             next_trigger,
         )
+        _LOGGER.debug(
+            "%s Timer RECOVERYCALC_HOUR reprogrammé pour %s",
+            self._log_prefix(),
+            next_trigger,
+        )
 
     def _reschedule_target_hour(self) -> None:
-        """Reprogramme le déclencheur target_hour pour le lendemain (ADR-051)."""
+        """Reprogramme le déclencheur target_hour pour la prochaine occurrence (ADR-051).
+
+        Calcule la prochaine occurrence : aujourd'hui si l'heure n'est pas
+        encore passée, demain sinon.
+        """
         if not self.data.target_hour:
             return
         now = dt_util.now()
@@ -921,11 +1132,19 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             minute=self.data.target_hour.minute,
             second=0,
             microsecond=0,
-        ) + timedelta(days=1)
+        )
+        # Ajouter 1 jour seulement si l'heure est déjà passée aujourd'hui
+        if next_trigger <= now:
+            next_trigger += timedelta(days=1)
 
         self._timer_manager.schedule(
             TimerKey.TARGET_HOUR,
             self._on_target_hour,
+            next_trigger,
+        )
+        _LOGGER.debug(
+            "%s Timer TARGET_HOUR reprogrammé pour %s",
+            self._log_prefix(),
             next_trigger,
         )
 
@@ -981,6 +1200,7 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
         ADR-002: Utilise l'entité météo configurée explicitement par l'utilisateur
         au lieu de scanner automatiquement toutes les entités weather.
+        ADR-054: Convertit les températures vers Celsius pour le ThermalSolver.
         """
         if not self._weather_entity_id:
             _LOGGER.debug(
@@ -999,10 +1219,16 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             return
 
         if (temp := weather.attributes.get("temperature")) is not None:
-            self.data.exterior_temp = float(temp)
+            # ADR-054: Convertir vers Celsius
+            raw_temp = float(temp)
+            source_unit = self._get_sensor_unit(self._weather_entity_id)
+            self.data.exterior_temp = self._normalize_to_celsius(raw_temp, source_unit)
 
         if (wind := weather.attributes.get("wind_speed")) is not None:
-            self.data.wind_speed = float(wind) / 3.6  # km/h -> m/s
+            # ADR-055: Convertir vers m/s
+            raw_wind = float(wind)
+            wind_unit = self._get_wind_speed_unit(self._weather_entity_id)
+            self.data.wind_speed = self._normalize_to_ms(raw_wind, wind_unit) or 0.0
             # Ajouter à l'historique pour la moyenne
             self.data.wind_speed_history.append(self.data.wind_speed)
 
@@ -1019,6 +1245,7 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         """Mise à jour des prévisions météo (température et vent).
 
         ADR-002: Utilise l'entité météo configurée explicitement par l'utilisateur.
+        ADR-054: Convertit les températures vers Celsius pour le ThermalSolver.
         """
         if not self._weather_entity_id:
             _LOGGER.debug(
@@ -1028,6 +1255,10 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             return
 
         entity_id = self._weather_entity_id
+        # ADR-054: Détecter l'unité du capteur météo pour conversion température
+        source_unit = self._get_sensor_unit(entity_id)
+        # ADR-055: Détecter l'unité du capteur météo pour conversion vitesse du vent
+        wind_source_unit = self._get_wind_speed_unit(entity_id)
 
         try:
             # Vérifier que le service existe avant de l'appeler
@@ -1064,11 +1295,21 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
                                 if isinstance(f, dict):
                                     temp_val = f.get("temperature")
                                     if isinstance(temp_val, (int, float)):
-                                        temps.append(float(temp_val))
+                                        # ADR-054: Convertir vers Celsius
+                                        temp_c = self._normalize_to_celsius(
+                                            float(temp_val), source_unit
+                                        )
+                                        if temp_c is not None:
+                                            temps.append(temp_c)
 
                                     wind_val = f.get("wind_speed")
                                     if isinstance(wind_val, (int, float)):
-                                        winds.append(float(wind_val))
+                                        # ADR-055: Convertir vers km/h
+                                        wind_kmh = self._normalize_to_kmh(
+                                            float(wind_val), wind_source_unit
+                                        )
+                                        if wind_kmh is not None:
+                                            winds.append(wind_kmh)
 
                             if temps:
                                 self.data.temperature_forecast_avg = sum(temps) / len(
@@ -1177,9 +1418,10 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
     # ─────────────────────────────────────────────────────────────────────────
 
     def calculate_recovery_time(self) -> None:
-        """Calcule l'heure de démarrage de la relance (ADR-005, ADR-026).
+        """Calcule l'heure de démarrage de la relance (ADR-005, ADR-026, ADR-053).
 
         ADR-026: Délègue au ThermalSolver pour le calcul Pure Python.
+        ADR-053: Stocke aussi la durée estimée pour le Snooze intelligent.
         Utilise les prévisions météo et 20 itérations pour affiner la prédiction.
         """
         now = dt_util.now()
@@ -1189,6 +1431,8 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         result = self._thermal_solver.calculate_recovery_duration(state, coeffs, now)
 
         self.data.recovery_start_hour = result.recovery_start_hour
+        # ADR-053: Stocker la durée estimée pour le Snooze
+        self.data.recovery_duration_hours = result.duration_hours
 
         # Note: Le scheduling du trigger est fait dans le contexte async appelant
         # car async_track_point_in_time doit être appelé depuis le thread principal
@@ -1273,12 +1517,34 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             self._update_coefficients("rcth")
 
     def calculate_rpth_at_recovery_end(self) -> None:
-        """Calcule RPth à la fin de la relance (ADR-026: via ThermalSolver).
+        """Calcule RPth à la fin de la relance (ADR-026, ADR-053: via ThermalSolver).
+
+        ADR-053: Sécurisation de l'apprentissage - Le calcul est conditionné par:
+        - La durée réelle de chauffe >= MIN_LEARNING_DURATION_HOURS (15 min)
+        Si le cycle a été trop court (Snooze passif ou apports extérieurs),
+        le calcul est annulé pour éviter de corrompre le modèle thermique.
 
         Utilise wind_speed_avg (moyenne 4h) pour l'interpolation RCth,
         conformément au YAML original.
         """
         if self.data.time_recovery_start is None or self.data.time_recovery_end is None:
+            return
+
+        # ADR-053: Calculer la durée réelle de chauffe
+        actual_heating_duration_hours = (
+            self.data.time_recovery_end.timestamp()
+            - self.data.time_recovery_start.timestamp()
+        ) / 3600
+
+        # ADR-053: Vérifier le seuil minimum d'apprentissage
+        if actual_heating_duration_hours < MIN_LEARNING_DURATION_HOURS:
+            _LOGGER.info(
+                "%s [ADR-053 Learning Guard] Durée réelle de chauffe %.1f min < seuil %d min "
+                "→ calcul RPth annulé pour protéger le modèle thermique",
+                self._log_prefix(),
+                actual_heating_duration_hours * 60,
+                int(MIN_LEARNING_DURATION_HOURS * 60),
+            )
             return
 
         # Utiliser wind_speed_avg (moyenne 4h) comme dans le YAML
@@ -1469,14 +1735,29 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
         is_night = self._is_night_period(current_time, target, recoverycalc)
 
-        # MONITORING/DETECTING_LAG valides la nuit uniquement
+        # MONITORING/DETECTING_LAG valides la nuit OU si recovery_start_hour est proche
         if persisted_state in (SmartHRTState.MONITORING, SmartHRTState.DETECTING_LAG):
-            return is_night
+            if is_night:
+                return True
+            # Aussi valide si recovery_start_hour est dans le futur proche (< 6h)
+            if self.data.recovery_start_hour and self.data.recovery_start_hour > now:
+                hours_until_recovery = (
+                    self.data.recovery_start_hour - now
+                ).total_seconds() / 3600
+                if hours_until_recovery < 6:
+                    return True
+            return False
 
         # RECOVERY/HEATING_PROCESS valides pendant la période de relance
         if persisted_state in (SmartHRTState.RECOVERY, SmartHRTState.HEATING_PROCESS):
             if not self.data.recovery_start_hour:
                 return False  # Pas de recovery_start_hour = incohérent
+            # recovery_start_hour doit être récent (< 24h) pour être valide
+            hours_since_recovery = (
+                now - self.data.recovery_start_hour
+            ).total_seconds() / 3600
+            if hours_since_recovery > 24:
+                return False  # État périmé
             # Valide si : recovery_start_hour <= now ET current_time < target
             return now >= self.data.recovery_start_hour and current_time < target
 
@@ -1491,20 +1772,39 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             now: Heure actuelle
         """
         if state == SmartHRTState.MONITORING:
+            # Reprogrammer TARGET_HOUR pour le matin
+            self._reschedule_target_hour()
+            # Et RECOVERY_START si pas encore passé
             if self.data.recovery_start_hour:
-                if self.data.recovery_start_hour > now:
-                    self._schedule_recovery_start(self.data.recovery_start_hour)
+                # Vérifier que recovery_start_hour est bien aujourd'hui
+                if self.data.recovery_start_hour.date() == now.date():
+                    if self.data.recovery_start_hour > now:
+                        self._schedule_recovery_start(self.data.recovery_start_hour)
+                    else:
+                        # L'heure est passée AUJOURD'HUI = on démarre
+                        _LOGGER.info(
+                            "%s Heure de relance dépassée, démarrage immédiat",
+                            self._log_prefix(),
+                        )
+                        self.on_recovery_start()
                 else:
-                    # L'heure est passée mais on était en MONITORING = on démarre
+                    # Date périmée → recalculer recovery_start_hour
                     _LOGGER.info(
-                        "%s Heure de relance dépassée, démarrage immédiat",
+                        "%s recovery_start_hour périmé (%s), recalcul",
                         self._log_prefix(),
+                        self.data.recovery_start_hour,
                     )
-                    self.on_recovery_start()
+                    self.calculate_recovery_time()
+                    if (
+                        self.data.recovery_start_hour
+                        and self.data.recovery_start_hour > now
+                    ):
+                        self._schedule_recovery_start(self.data.recovery_start_hour)
 
         elif state == SmartHRTState.DETECTING_LAG:
             # La surveillance de température reprendra automatiquement
-            pass
+            # Mais il faut reprogrammer TARGET_HOUR pour le matin
+            self._reschedule_target_hour()
 
         elif state in (SmartHRTState.RECOVERY, SmartHRTState.HEATING_PROCESS):
             # Vérifier si target_hour est dépassée
@@ -1519,8 +1819,14 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             if now >= target_dt:
                 # Target dépassée, terminer le cycle
                 self.on_recovery_end()
+            else:
+                # Reprogrammer le timer TARGET_HOUR
+                self._reschedule_target_hour()
 
-        # HEATING_ON: rien à faire (attend le prochain recoverycalc_hour)
+        elif state == SmartHRTState.HEATING_ON:
+            # Reprogrammer les timers perdus au redémarrage
+            self._reschedule_recoverycalc_hour()
+            self._reschedule_target_hour()
 
     async def _restore_state_after_restart(self) -> None:
         """Restaure l'état après redémarrage avec vérification minimale (ADR-039).
@@ -1528,7 +1834,8 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         Principe "Trust the Persistence, Verify Minimally" :
         - L'état persisté est la source de vérité
         - Vérification de cohérence minimaliste
-        - En cas d'incohérence, reset à HEATING_ON (auto-correction)
+        - En cas d'incohérence, déduit le bon état (MONITORING ou HEATING_ON)
+        - Fait la transition depuis INITIALIZING vers l'état cible
         """
         persisted_state = self.data.current_state
         now = dt_util.now()
@@ -1539,26 +1846,98 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             persisted_state.value,
         )
 
-        # Vérification de cohérence minimale
-        if not self._is_state_coherent(persisted_state, now):
-            _LOGGER.warning(
-                "%s État incohérent %s pour l'heure actuelle, reset à HEATING_ON",
+        # Déterminer l'état cible (cohérent ou déduit)
+        if self._is_state_coherent(persisted_state, now):
+            target_state = persisted_state
+            _LOGGER.info(
+                "%s État %s cohérent, transition INITIALIZING → %s",
                 self._log_prefix(),
                 persisted_state.value,
+                target_state.value,
             )
-            self.force_state(SmartHRTState.HEATING_ON)
-            await self._save_learned_data()
-            self.async_set_updated_data(self.data)
-            return
+        else:
+            # Déduire le bon état plutôt que reset brutal vers HEATING_ON
+            target_state = self._deduce_correct_state(now)
+            _LOGGER.warning(
+                "%s État incohérent %s pour l'heure actuelle, correction vers %s",
+                self._log_prefix(),
+                persisted_state.value,
+                target_state.value,
+            )
+            # Mettre à jour l'état dans data pour cohérence
+            self.data.current_state = target_state
 
-        # État cohérent : reprogrammer les triggers nécessaires
-        _LOGGER.debug(
-            "%s État %s cohérent, restauration des triggers",
-            self._log_prefix(),
-            persisted_state.value,
-        )
-        self._restore_triggers_for_state(persisted_state, now)
+        # Faire la transition depuis INITIALIZING vers l'état cible
+        if self._state_machine.state == SmartHRTState.INITIALIZING:
+            result = self._state_machine.transition_with_actions(target_state)
+            if result.success:
+                _LOGGER.info(
+                    "%s Transition INITIALIZING → %s réussie",
+                    self._log_prefix(),
+                    target_state.value,
+                )
+                self._execute_actions(result.actions)
+            else:
+                _LOGGER.warning(
+                    "%s Échec transition vers %s, forçage",
+                    self._log_prefix(),
+                    target_state.value,
+                )
+                self._state_machine._force_state_unsafe(target_state)
+        else:
+            # Déjà dans un état (cas rare), forcer l'état cible
+            self.force_state(target_state)
+
+        # Sauvegarder si l'état a été corrigé
+        if target_state != persisted_state:
+            await self._save_learned_data()
+
+        # Reprogrammer les triggers pour l'état cible
+        self._restore_triggers_for_state(target_state, now)
         self.async_set_updated_data(self.data)
+
+    def _deduce_correct_state(self, now: datetime) -> SmartHRTState:
+        """Déduit l'état correct basé sur l'heure actuelle.
+
+        Utilisé quand l'état persisté est incohérent.
+
+        Args:
+            now: Heure actuelle
+
+        Returns:
+            L'état qui devrait être actif selon l'heure
+        """
+        current_time = now.time()
+        target = self.data.target_hour
+        recoverycalc = self.data.recoverycalc_hour
+
+        # Si recovery_start_hour est dans le futur proche → MONITORING
+        if self.data.recovery_start_hour and self.data.recovery_start_hour > now:
+            hours_until = (self.data.recovery_start_hour - now).total_seconds() / 3600
+            if hours_until < 6:
+                _LOGGER.info(
+                    "%s État déduit: MONITORING (recovery_start_hour dans %.1fh)",
+                    self._log_prefix(),
+                    hours_until,
+                )
+                return SmartHRTState.MONITORING
+
+        # Si on est en période nocturne → MONITORING
+        if target and recoverycalc:
+            is_night = self._is_night_period(current_time, target, recoverycalc)
+            if is_night:
+                _LOGGER.info(
+                    "%s État déduit: MONITORING (période nocturne)",
+                    self._log_prefix(),
+                )
+                return SmartHRTState.MONITORING
+
+        # Par défaut → HEATING_ON (état sûr)
+        _LOGGER.info(
+            "%s État déduit: HEATING_ON (défaut)",
+            self._log_prefix(),
+        )
+        return SmartHRTState.HEATING_ON
 
     def on_heating_stop(self) -> None:
         """Appelé quand le chauffage s'arrête (service manuel)"""
@@ -1676,6 +2055,11 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             self.data.rpth_calculated,
         )
 
+        # Garantir que les timers sont reprogrammés pour le prochain cycle
+        # Ceci évite de perdre le timer si le cycle a été forcé manuellement
+        self._reschedule_recoverycalc_hour()
+        self._reschedule_target_hour()
+
         self.async_set_updated_data(self.data)
 
     def _on_recovery_end(self) -> None:
@@ -1693,6 +2077,7 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         - Transition vers HEATING_ON
         - Réinitialisation des flags via la machine à états
         - Annulation des timers en cours
+        - Reprogrammation des timers quotidiens
         - Sauvegarde des données
         """
         # ADR-051: Annuler les timers via TimerManager
@@ -1702,6 +2087,10 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         # Transition vers HEATING_ON
         if not self.transition_to(SmartHRTState.HEATING_ON):
             self.force_state(SmartHRTState.HEATING_ON)
+
+        # Garantir que les timers quotidiens sont actifs
+        self._reschedule_recoverycalc_hour()
+        self._reschedule_target_hour()
 
         await self._save_learned_data()
         self.async_set_updated_data(self.data)
@@ -1852,17 +2241,33 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             attr_name: Nom de l'attribut dans self.data (ex: "rcth", "tsp")
             value: Nouvelle valeur à assigner
             recalculate: Si True, recalcule recovery_time après modification
+                         (uniquement si en MONITORING, pas en HEATING_ON/HEATING_PROCESS)
             reschedule: Si True, reprogramme le trigger si en MONITORING
             persist: Si True, sauvegarde les données après modification
 
         ADR-023: Protection try/except centralisée pour la reprogrammation.
+        Note: Le recalcul est ignoré pendant HEATING_ON/HEATING_PROCESS pour
+              éviter de perturber un cycle de chauffage en cours.
         """
         # 1. Mise à jour atomique de la valeur
         setattr(self.data, attr_name, value)
 
         # 2. Recalcul optionnel de l'heure de relance
-        if recalculate:
+        # Ne pas recalculer pendant HEATING_ON ou HEATING_PROCESS pour éviter
+        # de perturber un cycle de chauffage actif
+        # Autorisé dans: INITIALIZING, DETECTING_LAG, MONITORING
+        if recalculate and self.data.current_state not in (
+            SmartHRTState.HEATING_ON,
+            SmartHRTState.HEATING_PROCESS,
+        ):
             self.calculate_recovery_time()
+        elif recalculate:
+            _LOGGER.debug(
+                "%s Coefficient %s mis à jour mais recalcul ignoré (état: %s)",
+                self._log_prefix(),
+                attr_name,
+                self.data.current_state.value,
+            )
 
         # 3. Reprogrammation du trigger si nécessaire (ADR-023)
         if (

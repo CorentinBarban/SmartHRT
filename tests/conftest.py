@@ -58,12 +58,33 @@ class MockStore:
         self._data = data
 
 
+class MockUnits:
+    """Mock pour hass.config.units."""
+
+    def __init__(self, temperature_unit: str = "°C"):
+        from homeassistant.const import UnitOfTemperature, UnitOfSpeed
+
+        self.temperature_unit = temperature_unit
+        # ADR-055: Ajout de l'unité de vitesse du vent
+        self.wind_speed_unit = UnitOfSpeed.METERS_PER_SECOND
+
+
+class MockConfig:
+    """Mock pour hass.config."""
+
+    def __init__(self):
+        from homeassistant.const import UnitOfTemperature
+
+        self.units = MockUnits(UnitOfTemperature.CELSIUS)
+
+
 class MockHass:
     """Mock simplifié de Home Assistant."""
 
     def __init__(self):
         self.states = MockStates()
         self.services = MockServices()
+        self.config = MockConfig()  # ADR-054: Ajout pour détecter l'unité système
         self._listeners = []
         self._scheduled_callbacks = []
         self._time_trackers = []
@@ -251,7 +272,7 @@ def create_coordinator(mock_hass, mock_entry, mock_store):
             if "data_overrides" in data_overrides:
                 nested_overrides = data_overrides.pop("data_overrides")
                 data_overrides.update(nested_overrides)
-                
+
             for key, value in data_overrides.items():
                 if key not in computed_flags:
                     setattr(coordinator.data, key, value)

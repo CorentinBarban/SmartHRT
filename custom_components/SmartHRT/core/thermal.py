@@ -2,6 +2,7 @@
 
 ADR-026: Extraction du modèle thermique en Pure Python.
 ADR-031: Optimisation algorithmique avec convergence adaptative.
+ADR-054: TOUTES LES TEMPÉRATURES DOIVENT ÊTRE EN CELSIUS.
 
 Ce module contient la classe ThermalSolver qui implémente tous les calculs
 de physique thermique sans aucune dépendance à Home Assistant:
@@ -9,6 +10,10 @@ de physique thermique sans aucune dépendance à Home Assistant:
 - Interpolation selon le vent (ADR-007)
 - Apprentissage des coefficients (ADR-006)
 - Calcul du windchill
+
+IMPORTANT (ADR-054): Ce module utilise exclusivement le système métrique (Celsius).
+La conversion depuis/vers Fahrenheit est de la responsabilité de l'appelant
+(voir coordinator.py: _normalize_to_celsius).
 """
 
 from __future__ import annotations
@@ -39,12 +44,13 @@ def validate_recovery_physics(
     """Valide les contraintes physiques pour le calcul de recovery.
 
     ADR-050: Gardes physiques explicites avant les calculs.
+    ADR-054: TOUTES LES TEMPÉRATURES DOIVENT ÊTRE EN CELSIUS.
 
     Args:
-        interior_temp: Température intérieure actuelle (°C) ou None
-        exterior_temp: Température extérieure (°C) ou None
-        target_temp: Température cible (°C)
-        rcth: Constante de temps thermique
+        interior_temp: Température intérieure actuelle en °C (ou None)
+        exterior_temp: Température extérieure en °C (ou None)
+        target_temp: Température cible en °C
+        rcth: Constante de temps thermique (heures)
 
     Returns:
         PhysicsValidation avec le résultat et un message explicatif.
@@ -98,7 +104,7 @@ def validate_recovery_physics(
 
 
 class ThermalSolver:
-    """Solveur thermique Pure Python (ADR-026, ADR-031).
+    """Solveur thermique Pure Python (ADR-026, ADR-031, ADR-054).
 
     Implémente tous les calculs de physique thermique:
     - calculate_recovery_duration: temps nécessaire pour atteindre la consigne
@@ -114,12 +120,19 @@ class ThermalSolver:
     testée unitairement avec des données synthétiques.
 
     ADR-031: Optimisation algorithmique avec critère de convergence adaptatif.
+
+    IMPORTANT (ADR-054): TOUTES les méthodes de ce solveur attendent des
+    températures en CELSIUS. La conversion depuis Fahrenheit doit être
+    effectuée par l'appelant (SmartHRTCoordinator._normalize_to_celsius).
+    Les formules physiques (windchill, coefficients thermiques) sont calibrées
+    pour le système métrique et ne doivent pas être modifiées.
     """
 
     def __init__(
         self,
         config: ThermalConfig | None = None,
         logger: logging.Logger | None = None,
+        log_prefix: str = "",
     ) -> None:
         """Initialise le solveur avec une configuration optionnelle.
 
@@ -128,9 +141,12 @@ class ThermalSolver:
                     Si None, utilise les valeurs par défaut.
             logger: Logger à utiliser pour les messages de debug/warning.
                     Si None, utilise un NullHandler (pas de logs).
+            log_prefix: Préfixe pour les logs (ex: "[SmartHRT Chambre#xxx]").
+                        Permet d'identifier l'instance émettrice.
         """
         self.config = config or ThermalConfig()
         self._logger = logger or logging.getLogger(__name__)
+        self._log_prefix = log_prefix
 
     # ─────────────────────────────────────────────────────────────────────────
     # Calcul du windchill (température ressentie)
@@ -219,7 +235,7 @@ class ThermalSolver:
         )
 
     # ─────────────────────────────────────────────────────────────────────────
-    # ADR-005, ADR-022, ADR-031, ADR-050: Calcul du temps de relance
+    # ADR-005, ADR-022, ADR-031, ADR-050, ADR-054: Calcul du temps de relance
     # ─────────────────────────────────────────────────────────────────────────
 
     def calculate_recovery_duration(
@@ -232,6 +248,8 @@ class ThermalSolver:
 
         ADR-050: Utilise des gardes physiques explicites pour valider les
         contraintes avant le calcul au lieu de try/except génériques.
+        ADR-054: TOUTES les températures dans ThermalState DOIVENT être en °C.
+        La conversion depuis Fahrenheit est de la responsabilité de l'appelant.
 
         Utilise les prévisions météo et un algorithme itératif avec convergence
         adaptative pour affiner la prédiction. Le calcul prend en compte:
@@ -279,7 +297,12 @@ class ThermalSolver:
 
         # ADR-050: Validation physique explicite
         # Note: On utilise la température prévue (text) pour la validation
-        tint = state.interior_temp if state.interior_temp is not None else 17.0
+        # Si interior_temp n'est pas disponible, utiliser temp_recovery_calc (dernière température connue)
+        tint = (
+            state.interior_temp
+            if state.interior_temp is not None
+            else state.temp_recovery_calc
+        )
         validation = validate_recovery_physics(
             interior_temp=state.interior_temp,
             exterior_temp=text if text else None,
@@ -287,14 +310,18 @@ class ThermalSolver:
             rcth=rcth,
         )
 
-        # Log de diagnostic
+        # Log de diagnostic détaillé pour non-régression (TC-PRED)
         self._logger.info(
-            "Recovery calc: tint=%.1f°C, text=%.1f°C, tsp=%.1f°C, target=%s, rcth=%.1f, validation=%s",
+            "%s [TC-PRED] Recovery prediction: "
+            "tint=%.2f°C, text=%.2f°C, tsp=%.2f°C, "
+            "rcth=%.2f, rpth=%.2f, target_time=%s, validation_status=%s",
+            self._log_prefix,
             tint,
             text,
             tsp,
-            state.target_hour,
             rcth,
+            rpth,
+            state.target_hour.strftime("%H:%M:%S"),
             validation.result.name,
         )
 
@@ -311,7 +338,8 @@ class ThermalSolver:
             if text < tint:
                 # Il y aura des pertes thermiques → continuer le calcul avec prédiction
                 self._logger.info(
-                    "ADR-050: %s mais text=%.1f°C < tint → prédiction de refroidissement",
+                    "%s ADR-050: %s mais text=%.1f°C < tint → prédiction de refroidissement",
+                    self._log_prefix,
                     validation.message,
                     text,
                 )
@@ -319,7 +347,8 @@ class ThermalSolver:
             else:
                 # Extérieur plus chaud que TSP → pas besoin de relance
                 self._logger.info(
-                    "ADR-050: %s et text >= tint → démarrage immédiat (now=%s)",
+                    "%s ADR-050: %s et text >= tint → démarrage immédiat (now=%s)",
+                    self._log_prefix,
                     validation.message,
                     now.strftime("%H:%M:%S"),
                 )
@@ -331,7 +360,8 @@ class ThermalSolver:
         if validation.result == PhysicsGuardResult.NO_HEAT_LOSS:
             # Extérieur plus chaud → chauffage passif
             self._logger.info(
-                "ADR-050: %s - pas de relance nécessaire (target_dt=%s)",
+                "%s ADR-050: %s - pas de relance nécessaire (target_dt=%s)",
+                self._log_prefix,
                 validation.message,
                 target_dt.strftime("%H:%M"),
             )
@@ -343,7 +373,8 @@ class ThermalSolver:
         if validation.result == PhysicsGuardResult.MISSING_DATA:
             # Données manquantes → utiliser valeur par défaut sécuritaire
             self._logger.warning(
-                "ADR-050: %s - utilisation de tint=17°C par défaut",
+                "%s ADR-050: %s - utilisation de tint=17°C par défaut",
+                self._log_prefix,
                 validation.message,
             )
             tint = 17.0  # Fallback déjà appliqué, mais on log
@@ -354,7 +385,8 @@ class ThermalSolver:
         ):
             # Cas d'erreur → retourner un résultat safe (démarrage à target)
             self._logger.warning(
-                "ADR-050: Calcul impossible - %s",
+                "%s ADR-050: Calcul impossible - %s",
+                self._log_prefix,
                 validation.message,
             )
             return RecoveryResult(
@@ -401,14 +433,19 @@ class ThermalSolver:
 
         recovery_start_hour = target_dt - timedelta(seconds=int(duree_relance * 3600))
 
+        # Log final détaillé pour non-régression (TC-PRED)
         self._logger.info(
-            "Calcul relance: durée=%.2fh, start=%s, iterations=%d (tint=%.1f, text=%.1f, tsp=%.1f)",
+            "%s [TC-PRED] Recovery result: "
+            "duration_hours=%.2f, start_time=%s, iterations=%d, "
+            "tint=%.2f°C, text=%.2f°C, tsp=%.2f°C, rcth=%.2f",
+            self._log_prefix,
             duree_relance,
             recovery_start_hour.strftime("%H:%M"),
             iterations,
             tint,
             text,
             tsp,
+            rcth,
         )
 
         return RecoveryResult(
@@ -467,7 +504,8 @@ class ThermalSolver:
             denominator = rpth + text - tsp
             if abs(denominator) < 0.001:
                 self._logger.debug(
-                    "ADR-050: Dénominateur proche de zéro (%f), arrêt itération %d",
+                    "%s ADR-050: Dénominateur proche de zéro (%f), arrêt itération %d",
+                    self._log_prefix,
                     denominator,
                     iteration + 1,
                 )
@@ -478,7 +516,8 @@ class ThermalSolver:
             # ADR-050: Garde contre log de valeur non positive
             if ratio <= 0.001:
                 self._logger.debug(
-                    "ADR-050: Ratio non valide (%.4f), arrêt itération %d",
+                    "%s ADR-050: Ratio non valide (%.4f), arrêt itération %d",
+                    self._log_prefix,
                     ratio,
                     iteration + 1,
                 )
@@ -493,7 +532,8 @@ class ThermalSolver:
             # ADR-031: Vérifier la convergence
             if abs(new_estimate - prev_estimate) < self.config.convergence_threshold:
                 self._logger.debug(
-                    "Convergence atteinte en %d itérations (delta=%.4f h)",
+                    "%s Convergence atteinte en %d itérations (delta=%.4f h)",
+                    self._log_prefix,
                     iteration + 1,
                     abs(new_estimate - prev_estimate),
                 )
@@ -506,7 +546,8 @@ class ThermalSolver:
 
         if not converged:
             self._logger.warning(
-                "Max itérations (%d) atteint sans convergence (threshold=%.3f h)",
+                "%s Max itérations (%d) atteint sans convergence (threshold=%.3f h)",
+                self._log_prefix,
                 self.config.max_iterations,
                 self.config.convergence_threshold,
             )
@@ -574,7 +615,8 @@ class ThermalSolver:
             tint_at_start = text + (tint - text) * math.exp(exponent)
 
             self._logger.debug(
-                "Cooling prediction iter %d: cooling_time=%.2fh, tint_at_start=%.1f°C",
+                "%s Cooling prediction iter %d: cooling_time=%.2fh, tint_at_start=%.1f°C",
+                self._log_prefix,
                 iterations,
                 cooling_time,
                 tint_at_start,
@@ -603,7 +645,8 @@ class ThermalSolver:
             # Vérifier la convergence
             if abs(new_estimate - prev_estimate) < self.config.convergence_threshold:
                 self._logger.debug(
-                    "Cooling prediction convergence en %d itérations",
+                    "%s Cooling prediction convergence en %d itérations",
+                    self._log_prefix,
                     iterations,
                 )
                 duree_relance = new_estimate
@@ -613,7 +656,8 @@ class ThermalSolver:
             duree_relance = new_estimate
 
         self._logger.info(
-            "Cooling prediction: durée=%.2fh après %d itérations (tint=%.1f → %.1f°C)",
+            "%s Cooling prediction: durée=%.2fh après %d itérations (tint=%.1f → %.1f°C)",
+            self._log_prefix,
             duree_relance,
             iterations,
             tint,
@@ -749,8 +793,27 @@ class ThermalSolver:
                     (avg_text - temp_recovery_calc) / (avg_text - temp_recovery_start)
                 ),
             )
+            # Log détaillé pour non-régression (TC-CALIB-RCth)
+            self._logger.info(
+                "%s [TC-CALIB-RCTH] RCth calibration: "
+                "tint_start=%.2f°C, tint_end=%.2f°C, "
+                "text_start=%.2f°C, text_end=%.2f°C, "
+                "duration_minutes=%.1f, rcth_calculated=%.2f",
+                self._log_prefix,
+                temp_recovery_calc,
+                temp_recovery_start,
+                text_recovery_calc,
+                text_recovery_start,
+                dt_hours * 60,
+                rcth,
+            )
             return rcth
-        except (ValueError, ZeroDivisionError):
+        except (ValueError, ZeroDivisionError) as e:
+            self._logger.warning(
+                "%s [TC-CALIB-RCTH] RCth calculation failed: %s",
+                self._log_prefix,
+                str(e),
+            )
             return None
 
     def calculate_rpth_at_recovery(
@@ -795,8 +858,28 @@ class ThermalSolver:
                 self.config.coef_max,
                 max(self.config.coef_min, numerator / (1 - exp_term)),
             )
+            # Log détaillé pour non-régression (TC-CALIB-RPth)
+            self._logger.info(
+                "%s [TC-CALIB-RPTH] RPth calibration: "
+                "tint_start=%.2f°C, tint_end=%.2f°C, "
+                "text_start=%.2f°C, text_end=%.2f°C, "
+                "duration_minutes=%.1f, rcth_interpolated=%.2f, rpth_calculated=%.2f",
+                self._log_prefix,
+                temp_recovery_start,
+                temp_recovery_end,
+                text_recovery_start,
+                text_recovery_end,
+                dt_hours * 60,
+                rcth_interpolated,
+                rpth,
+            )
             return rpth
-        except (ValueError, ZeroDivisionError):
+        except (ValueError, ZeroDivisionError) as e:
+            self._logger.warning(
+                "%s [TC-CALIB-RPTH] RPth calculation failed: %s",
+                self._log_prefix,
+                str(e),
+            )
             return None
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -851,18 +934,25 @@ class ThermalSolver:
 
             if deviation_percent > self.config.outlier_threshold_percent:
                 outlier_detected = True
+                # Log détaillé pour non-régression (TC-SAFE)
                 self._logger.warning(
-                    "Outlier détecté pour %s: calculé=%.2f, actuel=%.2f (écart=%.1f%%)",
+                    "%s [TC-SAFE] Outlier détecté pour %s: "
+                    "calculated_raw=%.2f, current_memory=%.2f, "
+                    "outlier_threshold_percent=%.1f, deviation_percent=%.1f%%",
+                    self._log_prefix,
                     coef_type,
                     calculated_value,
                     current_main,
+                    self.config.outlier_threshold_percent,
                     deviation_percent,
                 )
 
                 if self.config.outlier_mode == "reject":
                     # Mode reject: ignorer complètement la mise à jour
                     self._logger.info(
-                        "Mise à jour rejetée pour %s (mode reject)", coef_type
+                        "%s Mise à jour rejetée pour %s (mode reject)",
+                        self._log_prefix,
+                        coef_type,
                     )
                     return CoefficientUpdateResult(
                         coef_lw=current_lw,
@@ -878,17 +968,19 @@ class ThermalSolver:
                     threshold = self.config.outlier_threshold_percent / 100
                     max_allowed = current_main * (1 + threshold)
                     min_allowed = current_main * (1 - threshold)
-                    calculated_value = max(
-                        min_allowed, min(max_allowed, calculated_value)
-                    )
+                    clamped_value = max(min_allowed, min(max_allowed, calculated_value))
                     outlier_clamped = True
+                    # Log détaillé pour non-régression (TC-SAFE)
                     self._logger.info(
-                        "Valeur plafonnée à %.2f pour %s (min=%.2f, max=%.2f)",
-                        calculated_value,
+                        "%s [TC-SAFE] Valeur plafonnée pour %s: "
+                        "action=CLAMP_VALUE, clamped_to=%.2f (min=%.2f, max=%.2f)",
+                        self._log_prefix,
                         coef_type,
+                        clamped_value,
                         min_allowed,
                         max_allowed,
                     )
+                    calculated_value = clamped_value
 
         # Position relative du vent entre les bornes (centré sur 0)
         x = (wind_kmh - wind_low) / (wind_high - wind_low) - 0.5
@@ -924,10 +1016,24 @@ class ThermalSolver:
         if coef_type == "rpth":
             new_main = min(coef_max, max(coef_min, new_main))
 
+        final_main = max(coef_min, new_main)
+
+        # Log final pour non-régression (TC-SAFE si outlier)
+        if outlier_detected:
+            self._logger.info(
+                "%s [TC-SAFE] Coefficient final pour %s: "
+                "final_%s=%.2f (après relaxation factor=%.1f)",
+                self._log_prefix,
+                coef_type,
+                coef_type,
+                final_main,
+                relaxation_factor,
+            )
+
         return CoefficientUpdateResult(
             coef_lw=new_lw,
             coef_hw=new_hw,
-            coef_main=max(coef_min, new_main),
+            coef_main=final_main,
             error=round(err, 3),
             outlier_detected=outlier_detected,
             outlier_clamped=outlier_clamped,

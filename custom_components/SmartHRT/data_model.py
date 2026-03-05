@@ -11,6 +11,11 @@ Avantages:
 
 Le module serialization.py est supprimé, remplacé par les sérialiseurs
 Pydantic intégrés.
+
+ADR-054: TOUTES LES TEMPÉRATURES SONT STOCKÉES EN CELSIUS.
+Les données persistées sont toujours en Celsius (unité interne du ThermalSolver).
+La conversion depuis/vers Fahrenheit est gérée par le Coordinator à la lecture
+des capteurs, pas lors de la persistance/restauration.
 """
 
 from __future__ import annotations
@@ -187,28 +192,34 @@ class SmartHRTData(BaseModel):
     current_state: SmartHRTStateField = Field(default=SmartHRTState.HEATING_ON)
     stop_lag_duration: float = Field(default=0.0, ge=0)
 
-    # Snapshots de référence
+    # Snapshots de référence (ADR-054: toutes les températures en °C)
     time_recovery_calc: DateTimeField = Field(default=None)
     time_recovery_start: DateTimeField = Field(default=None)
     time_recovery_end: DateTimeField = Field(default=None)
-    temp_recovery_calc: float = Field(default=17.0)
-    temp_recovery_start: float = Field(default=17.0)
-    temp_recovery_end: float = Field(default=17.0)
-    text_recovery_calc: float = Field(default=0.0)
-    text_recovery_start: float = Field(default=0.0)
-    text_recovery_end: float = Field(default=0.0)
+    temp_recovery_calc: float = Field(default=17.0)  # °C
+    temp_recovery_start: float = Field(default=17.0)  # °C
+    temp_recovery_end: float = Field(default=17.0)  # °C
+    text_recovery_calc: float = Field(default=0.0)  # °C (extérieur)
+    text_recovery_start: float = Field(default=0.0)  # °C (extérieur)
+    text_recovery_end: float = Field(default=0.0)  # °C (extérieur)
 
     # Triggers programmés
     recovery_start_hour: DateTimeField = Field(default=None)
     recovery_update_hour: DateTimeField = Field(default=None)
+    # ADR-053: Durée estimée de la relance (pour diagnostic et Snooze)
+    recovery_duration_hours: float = Field(default=0.0, ge=0.0)
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Données météorologiques (ADR-038)
-    # ─────────────────────────────────────────────────────────────────────────
-    interior_temp: float | None = Field(default=None)
-    exterior_temp: float | None = Field(default=None)
+    # Données météorologiques (ADR-038, ADR-054: températures en °C)
+    # ─────────────────────────────────────────────────────────────────────────────
+    interior_temp: float | None = Field(
+        default=None
+    )  # °C (converti depuis Fahrenheit si nécessaire)
+    exterior_temp: float | None = Field(
+        default=None
+    )  # °C (converti depuis Fahrenheit si nécessaire)
     wind_speed: float = Field(default=0.0, ge=0)  # m/s
-    windchill: float | None = Field(default=None)
+    windchill: float | None = Field(default=None)  # °C
     wind_speed_avg: float = Field(default=0.0, ge=0)  # m/s
     wind_speed_forecast_avg: float = Field(default=0.0, ge=0)  # km/h
     temperature_forecast_avg: float = Field(default=0.0)  # °C

@@ -220,6 +220,51 @@
       "recoverycalc_hour_timestamp": {
         "name": "Heating Stop Hour"
       }
+    },
+    "number": {
+      "setpoint": {
+        "name": "Set Point"
+      },
+      "rcth": {
+        "name": "RCth"
+      },
+      "rpth": {
+        "name": "RPth"
+      },
+      "rcth_lw": {
+        "name": "RCth (Low Wind)"
+      },
+      "rcth_hw": {
+        "name": "RCth (High Wind)"
+      },
+      "rpth_lw": {
+        "name": "RPth (Low Wind)"
+      },
+      "rpth_hw": {
+        "name": "RPth (High Wind)"
+      },
+      "relaxation": {
+        "name": "Relaxation Factor"
+      }
+    },
+    "time": {
+      "target_hour": {
+        "name": "Target Hour"
+      },
+      "recoverycalc_hour": {
+        "name": "Heating Stop Hour"
+      },
+      "recovery_start_time": {
+        "name": "Recovery Start Time"
+      }
+    },
+    "switch": {
+      "smartheating_mode": {
+        "name": "Smart Heating Mode"
+      },
+      "adaptive_mode": {
+        "name": "Adaptive Mode"
+      }
     }
   }
 }

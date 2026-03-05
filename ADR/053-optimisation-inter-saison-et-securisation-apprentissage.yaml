@@ -1,0 +1,34 @@
+title: Optimisation inter-saison (Snooze) et sécurisation de l'apprentissage par durée réelle
+status: Accepted
+date: "2026-02-28"
+context: |
+  En mi-saison ("beaux jours"), la température intérieure permet souvent de se passer du chauffage.
+  L'architecture actuelle présente deux limites dans ce contexte :
+  1. Démarrage (Bruit) : Programmation de relances très courtes (ex: 2 min) juste avant l'heure cible pour satisfaire mathématiquement la consigne, réveillant inutilement le système.
+  2. Apprentissage (Corruption) : Le modèle de performance (RPth) risque d'être faussé si le système calcule le coefficient sur un cycle passif (pas de chauffe) ou sur un cycle avorté très rapidement (ex: 5 minutes de chauffe coupées par des apports solaires). Apprendre sur une durée non représentative génère des valeurs aberrantes.
+
+decision: |
+  Nous implémentons une stratégie d'optimisation du calendrier (Snooze) et un filtrage strict de l'apprentissage basé sur la réalité physique :
+
+  1. Snooze Intelligent (Filtrage de la prédiction au démarrage) :
+     La planification de la relance est soumise à un seuil minimal d'activation (`MIN_DURATION_THRESHOLD` = 15 minutes).
+     - Règle : Si `Heure cible - Heure de relance calculée <= 15 minutes` (soit une durée estimée <= 0.25h), aucune relance n'est programmée.
+     - L'état reste silencieusement en `MONITORING`.
+     - Cette logique ne s'applique que *jusqu'à l'heure cible*. Si le besoin reste inférieur à 15 minutes tout au long de la période de veille, le chauffage ne s'allume jamais (Cycle Passif).
+   Fin de Cycle Standard (Heure Cible) :
+     À l'heure cible, la planification SmartHRT prend fin inconditionnellement. Le système bascule l'état vers `HEATING_ON` et rend la main à la régulation classique du thermostat / de la domotique.
+
+  2. Sécurisation de l'Apprentissage (Filtrage de la réalité à la fin) :
+     Le calcul de performance de chauffe (`Action.CALCULATE_RPTH`) est strictement conditionné pour garantir la représentativité des données. À la fin du cycle, deux conditions cumulatives sont requises :
+     - Le système doit avoir transité par une phase de chauffe active (état précédent == `HEATING_PROCESS`).
+     - La **durée réelle de cette chauffe** (`heure de fin - heure de début`) doit être supérieure ou égale à un seuil minimum d'apprentissage (`MIN_LEARNING_DURATION`, ex: 15 minutes).
+     Si le cycle a été passif (Snooze) ou trop court (apports extérieurs), le calcul est intercepté et annulé.
+
+consequences: |
+  Positives :
+  - Disparition totale des micro-cycles de chauffe inutiles (économie d'énergie et réduction de l'usure matérielle).
+  - Double protection du modèle thermique (RPth) : on ne lance pas la chauffe pour rien, et on n'apprend pas si la chauffe réelle a été parasitée ou trop courte.
+  - Respect strict du périmètre de l'intégration : SmartHRT planifie l'heure de confort, le thermostat gère le matériel.
+
+  Négatives :
+  - La précision de l'apprentissage du RPth repose sur des cycles longs (typiquement ceux de l'hiver). En mi-saison, le modèle se fige sur ses acquis, ce qui est le comportement souhaité mais implique une inertie dans l'apprentissage.

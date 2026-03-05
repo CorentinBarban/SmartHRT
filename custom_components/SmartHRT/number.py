@@ -5,6 +5,7 @@ ADR implémentées dans ce module:
 - ADR-007: Compensation météo (RCth/RPth LW/HW pour interpolation vent)
 - ADR-012: Exposition entités pour Lovelace (numbers comme entités HA)
 - ADR-027: Utilisation de CoordinatorEntity pour synchronisation automatique
+- ADR-054: Abstraction unités (device_class TEMPERATURE pour TSP)
 """
 
 import logging
@@ -13,7 +14,7 @@ from homeassistant.const import UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.components.number import NumberEntity, NumberMode
+from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
 from homeassistant.helpers.device_registry import DeviceInfo, DeviceEntryType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -85,17 +86,23 @@ class SmartHRTBaseNumber(CoordinatorEntity[SmartHRTCoordinator], NumberEntity):
 
 
 class SmartHRTSetPointNumber(SmartHRTBaseNumber):
-    """Entité number pour la consigne de température (Set Point)"""
+    """Entité number pour la consigne de température (Set Point).
+
+    ADR-054: Utilise device_class=TEMPERATURE pour conversion automatique
+    Celsius/Fahrenheit selon la configuration utilisateur.
+    """
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Consigne"
+        self._attr_translation_key = "setpoint"
         self._attr_unique_id = f"{self._device_id}_setpoint"
         self._attr_native_min_value = DEFAULT_TSP_MIN
         self._attr_native_max_value = DEFAULT_TSP_MAX
         self._attr_native_step = DEFAULT_TSP_STEP
+        # ADR-054: device_class permet la conversion auto Celsius↔Fahrenheit
+        self._attr_device_class = NumberDeviceClass.TEMPERATURE
         self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
         self._attr_mode = NumberMode.BOX
 
@@ -120,7 +127,7 @@ class SmartHRTRCthNumber(SmartHRTBaseNumber):
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "RCth"
+        self._attr_translation_key = "rcth"
         self._attr_unique_id = f"{self._device_id}_rcth"
         self._attr_native_min_value = DEFAULT_RCTH_MIN
         self._attr_native_max_value = DEFAULT_RCTH_MAX
@@ -142,17 +149,23 @@ class SmartHRTRCthNumber(SmartHRTBaseNumber):
 
 
 class SmartHRTRPthNumber(SmartHRTBaseNumber):
-    """Entité number pour RPth"""
+    """Entité number pour RPth (coefficient de puissance thermique).
+
+    ADR-054: Utilise device_class=TEMPERATURE pour conversion automatique
+    Celsius/Fahrenheit selon la configuration utilisateur.
+    """
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "RPth"
+        self._attr_translation_key = "rpth"
         self._attr_unique_id = f"{self._device_id}_rpth"
         self._attr_native_min_value = DEFAULT_RPTH_MIN
         self._attr_native_max_value = DEFAULT_RPTH_MAX
         self._attr_native_step = 0.5
+        # ADR-054: device_class permet la conversion auto Celsius↔Fahrenheit
+        self._attr_device_class = NumberDeviceClass.TEMPERATURE
         self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
         self._attr_mode = NumberMode.BOX
 
@@ -180,7 +193,7 @@ class SmartHRTRCthLWNumber(SmartHRTBaseNumber):
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "RCth (vent faible)"
+        self._attr_translation_key = "rcth_lw"
         self._attr_unique_id = f"{self._device_id}_rcth_lw"
         self._attr_native_min_value = DEFAULT_RCTH_MIN
         self._attr_native_max_value = DEFAULT_RCTH_MAX
@@ -208,7 +221,7 @@ class SmartHRTRCthHWNumber(SmartHRTBaseNumber):
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "RCth (vent fort)"
+        self._attr_translation_key = "rcth_hw"
         self._attr_unique_id = f"{self._device_id}_rcth_hw"
         self._attr_native_min_value = DEFAULT_RCTH_MIN
         self._attr_native_max_value = DEFAULT_RCTH_MAX
@@ -230,17 +243,23 @@ class SmartHRTRCthHWNumber(SmartHRTBaseNumber):
 
 
 class SmartHRTRPthLWNumber(SmartHRTBaseNumber):
-    """Entité number pour RPth low wind"""
+    """Entité number pour RPth low wind.
+
+    ADR-007: Compensation météo - coefficient de puissance par vent faible.
+    ADR-054: Conversion auto Celsius/Fahrenheit.
+    """
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "RPth (vent faible)"
+        self._attr_translation_key = "rpth_lw"
         self._attr_unique_id = f"{self._device_id}_rpth_lw"
         self._attr_native_min_value = DEFAULT_RPTH_MIN
         self._attr_native_max_value = DEFAULT_RPTH_MAX
         self._attr_native_step = 0.5
+        # ADR-054: device_class permet la conversion auto Celsius↔Fahrenheit
+        self._attr_device_class = NumberDeviceClass.TEMPERATURE
         self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
         self._attr_mode = NumberMode.BOX
 
@@ -258,17 +277,23 @@ class SmartHRTRPthLWNumber(SmartHRTBaseNumber):
 
 
 class SmartHRTRPthHWNumber(SmartHRTBaseNumber):
-    """Entité number pour RPth high wind"""
+    """Entité number pour RPth high wind.
+
+    ADR-007: Compensation météo - coefficient de puissance par vent fort.
+    ADR-054: Conversion auto Celsius/Fahrenheit.
+    """
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "RPth (vent fort)"
+        self._attr_translation_key = "rpth_hw"
         self._attr_unique_id = f"{self._device_id}_rpth_hw"
         self._attr_native_min_value = DEFAULT_RPTH_MIN
         self._attr_native_max_value = DEFAULT_RPTH_MAX
         self._attr_native_step = 0.5
+        # ADR-054: device_class permet la conversion auto Celsius↔Fahrenheit
+        self._attr_device_class = NumberDeviceClass.TEMPERATURE
         self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
         self._attr_mode = NumberMode.BOX
 
@@ -296,7 +321,7 @@ class SmartHRTRelaxationNumber(SmartHRTBaseNumber):
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
     ) -> None:
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Facteur de relaxation"
+        self._attr_translation_key = "relaxation"
         self._attr_unique_id = f"{self._device_id}_relaxation"
         self._attr_native_min_value = 0.0
         self._attr_native_max_value = 15.0
