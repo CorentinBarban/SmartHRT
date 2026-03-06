@@ -1032,8 +1032,9 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         est inférieure au seuil MIN_DURATION_THRESHOLD_HOURS (15 min), aucune
         relance n'est programmée et le système reste silencieusement en MONITORING.
         """
-        # Sauvegarder l'heure de relance avant calcul
+        # Sauvegarder l'heure de relance et l'état du trigger avant calcul
         prev_recovery_start = self.data.recovery_start_hour
+        was_trigger_active = self._timer_manager.is_active(TimerKey.RECOVERY_START)
 
         # N'exécuter les calculs que si recovery_calc_mode est actif
         # ADR-048: Calculs synchrones (pas d'I/O, < 10ms chacun)
@@ -1064,12 +1065,20 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
                         self.data.recovery_duration_hours * 60,
                         int(MIN_DURATION_THRESHOLD_HOURS * 60),
                     )
-            elif (
-                self.data.recovery_start_hour
-                and prev_recovery_start != self.data.recovery_start_hour
-                and self.data.recovery_start_hour > now
-            ):
-                self._schedule_recovery_start(self.data.recovery_start_hour)
+            elif self.data.recovery_start_hour and self.data.recovery_start_hour > now:
+                # Reprogrammer si: heure changée OU trigger annulé (sortie de snooze)
+                trigger_needs_update = (
+                    prev_recovery_start != self.data.recovery_start_hour
+                    or not was_trigger_active
+                )
+                if trigger_needs_update:
+                    self._schedule_recovery_start(self.data.recovery_start_hour)
+                    if not was_trigger_active:
+                        _LOGGER.info(
+                            "%s [ADR-053] Sortie de snooze → relance reprogrammée à %s",
+                            self._log_prefix(),
+                            self.data.recovery_start_hour.strftime("%H:%M:%S"),
+                        )
 
         # Toujours reprogrammer le prochain trigger de mise à jour
         # pour maintenir la chaîne active même si recovery_calc_mode est off
