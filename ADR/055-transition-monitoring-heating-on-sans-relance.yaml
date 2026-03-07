@@ -1,0 +1,146 @@
+id: 055
+title: "Transition directe MONITORING → HEATING_ON (pas de relance nécessaire)"
+status: "Accepté"
+date: "2026-03-07"
+author: "Corentin Barban"
+context: |
+  Bug constaté : quand la température intérieure ne descend jamais sous la cible
+  durant la nuit (ex: nuit chaude, bonne isolation), l'état machine reste bloqué
+  en MONITORING après target_hour. Le radiateur se met en route (via le thermostat
+  ou un timer externe) mais SmartHRT ne détecte pas cette transition.
+
+  **Scénario problématique :**
+
+  1. 23:00 - HEATING_ON → DETECTING_LAG → MONITORING (recoverycalc_hour)
+  2. Durant la nuit, la température ne descend jamais assez pour déclencher la relance
+  3. recovery_start_hour n'est jamais atteint (ou snooze actif car durée < 15 min)
+  4. 06:00 - target_hour atteint mais l'état reste MONITORING
+  5. Le radiateur se met en route mais SmartHRT ne le détecte pas
+  6. Les données de suivi sont faussées car le système reste "bloqué"
+
+  **Cause racine :**
+
+  Dans `_on_target_hour()`, la condition `if self.data.rp_calc_mode:` empêche
+  l'appel à `on_recovery_end()` quand l'état est MONITORING car `rp_calc_mode`
+  n'est actif que pour RECOVERY et HEATING_PROCESS.
+
+  ```python
+  # Ancien code problématique
+  def _on_target_hour(self, _now) -> None:
+      if self.data.smartheating_mode and self.data.rp_calc_mode:
+          self.on_recovery_end()  # Jamais appelé si en MONITORING
+  ```
+
+  **Transitions existantes dans VALID_TRANSITIONS :**
+
+  - MONITORING → RECOVERY (relance déclenchée)
+  - MONITORING → HEATING_PROCESS (déjà prévu mais non utilisé)
+
+  La transition MONITORING → HEATING_ON n'était pas prévue pour le cas
+  "pas de relance nécessaire".
+
+decision: |
+  Ajouter une nouvelle transition MONITORING → HEATING_ON dans la machine à états
+  pour gérer le cas où aucune relance n'est nécessaire à target_hour.
+
+  **1. Nouvelle transition valide :**
+
+  ```python
+  # state_machine.py
+  VALID_TRANSITIONS = {
+      ...
+      SmartHRTState.MONITORING: {
+          SmartHRTState.RECOVERY,
+          SmartHRTState.HEATING_PROCESS,
+          SmartHRTState.HEATING_ON,  # ADR-055: Cas "pas de relance nécessaire"
+      },
+      ...
+  }
+  ```
+
+  **2. Actions associées à la transition :**
+
+  ```python
+  # state_machine.py
+  TRANSITION_ACTIONS = {
+      ...
+      # MONITORING → HEATING_ON: Cas "pas de relance nécessaire" (ADR-055)
+      # La température n'est jamais descendue sous la cible durant la nuit
+      (SmartHRTState.MONITORING, SmartHRTState.HEATING_ON): [
+          Action.CANCEL_RECOVERY_TIMER,
+          Action.SAVE_DATA,
+      ],
+      ...
+  }
+  ```
+
+  **3. Logique modifiée dans `_on_target_hour()` :**
+
+  ```python
+  # coordinator.py
+  @callback
+  def _on_target_hour(self, _now) -> None:
+      """Appelé à l'heure cible (target_hour / réveil)
+      
+      ADR-055: Gère aussi le cas où la température n'est jamais descendue
+      sous la cible (pas de relance nécessaire) → transition directe
+      MONITORING → HEATING_ON sans calcul de RPth.
+      """
+      _LOGGER.info("%s Heure cible atteinte", self._log_prefix())
+
+      if self.data.smartheating_mode:
+          if self.data.rp_calc_mode:
+              # Cas normal: en RECOVERY ou HEATING_PROCESS → fin de relance
+              self.on_recovery_end()
+          elif self.data.current_state == SmartHRTState.MONITORING:
+              # ADR-055: Cas "pas de relance nécessaire"
+              _LOGGER.info(
+                  "%s Pas de relance nécessaire (temp >= cible), "
+                  "transition directe vers HEATING_ON",
+                  self._log_prefix(),
+              )
+              result = self.transition_with_actions(SmartHRTState.HEATING_ON)
+              if result.success:
+                  self._execute_actions(result.actions)
+              else:
+                  # Fallback si transition échoue
+                  self._timer_manager.cancel(TimerKey.RECOVERY_START)
+                  self._timer_manager.cancel(TimerKey.RECOVERY_UPDATE)
+                  self.force_state(SmartHRTState.HEATING_ON)
+                  self.hass.async_create_task(self._save_learned_data())
+              self.async_set_updated_data(self.data)
+
+      self._reschedule_target_hour()
+  ```
+
+  **4. Pas de calcul RPth :**
+
+  Contrairement à `on_recovery_end()`, cette transition ne calcule pas RPth car
+  aucune relance réelle n'a eu lieu. Les valeurs de référence (temp_recovery_start,
+  time_recovery_start) ne sont pas pertinentes.
+
+consequences:
+  positive:
+    - Le système ne reste plus bloqué en MONITORING après target_hour
+    - Le cycle quotidien se termine proprement même sans relance
+    - Les données de suivi restent cohérentes
+    - Le prochain cycle (recoverycalc_hour) pourra démarrer normalement
+
+  negative:
+    - Pas d'apprentissage RPth pour ces cycles sans relance (acceptable car pas de données utiles)
+
+  neutral:
+    - La transition est logguée pour le suivi
+    - Les timers de relance non utilisés sont annulés proprement
+
+alternatives:
+  rejected:
+    - "Passer par HEATING_PROCESS": Aurait calculé RPth avec des données invalides
+    - "Forcer recovery_start même sans baisse": Aurait faussé l'apprentissage
+    - "Ignorer et attendre le prochain recoverycalc_hour": Laissait le système incohérent
+
+related:
+  - "ADR-003": Définition de la machine à états
+  - "ADR-040": Flags calculés depuis current_state
+  - "ADR-046": Pattern Command pour les actions
+  - "ADR-053": Snooze intelligent (seuil minimum de durée)

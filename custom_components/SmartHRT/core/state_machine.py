@@ -63,7 +63,11 @@ VALID_TRANSITIONS: dict[SmartHRTState, set[SmartHRTState]] = {
     },
     SmartHRTState.HEATING_ON: {SmartHRTState.DETECTING_LAG},
     SmartHRTState.DETECTING_LAG: {SmartHRTState.MONITORING},
-    SmartHRTState.MONITORING: {SmartHRTState.RECOVERY, SmartHRTState.HEATING_PROCESS},
+    SmartHRTState.MONITORING: {
+        SmartHRTState.RECOVERY,
+        SmartHRTState.HEATING_PROCESS,
+        SmartHRTState.HEATING_ON,  # ADR-055: Cas "pas de relance nécessaire"
+    },
     SmartHRTState.RECOVERY: {SmartHRTState.HEATING_PROCESS},
     SmartHRTState.HEATING_PROCESS: {SmartHRTState.HEATING_ON},
 }
@@ -99,6 +103,12 @@ TRANSITION_ACTIONS: dict[tuple[SmartHRTState, SmartHRTState], list[Action]] = {
     ],
     # MONITORING → HEATING_PROCESS: Cas où target atteinte sans recovery
     (SmartHRTState.MONITORING, SmartHRTState.HEATING_PROCESS): [],
+    # MONITORING → HEATING_ON: Cas "pas de relance nécessaire" (ADR-055)
+    # La température n'est jamais descendue sous la cible durant la nuit
+    (SmartHRTState.MONITORING, SmartHRTState.HEATING_ON): [
+        Action.CANCEL_RECOVERY_TIMER,
+        Action.SAVE_DATA,
+    ],
     # RECOVERY → HEATING_PROCESS: Transition naturelle
     (SmartHRTState.RECOVERY, SmartHRTState.HEATING_PROCESS): [],
     # HEATING_PROCESS → HEATING_ON: Fin du cycle, calcul RPth

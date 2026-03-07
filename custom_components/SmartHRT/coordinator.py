@@ -1005,11 +1005,36 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
     def _on_target_hour(self, _now) -> None:
         """Appelé à l'heure cible (target_hour / réveil)
         Équivalent de l'automation 'recoveryendTIME' du YAML
+
+        ADR-055: Gère aussi le cas où la température n'est jamais descendue
+        sous la cible (pas de relance nécessaire) → transition directe
+        MONITORING → HEATING_ON sans calcul de RPth.
         """
         _LOGGER.info("%s Heure cible atteinte", self._log_prefix())
 
-        if self.data.smartheating_mode and self.data.rp_calc_mode:
-            self.on_recovery_end()
+        if self.data.smartheating_mode:
+            if self.data.rp_calc_mode:
+                # Cas normal: en RECOVERY ou HEATING_PROCESS → fin de relance
+                self.on_recovery_end()
+            elif self.data.current_state == SmartHRTState.MONITORING:
+                # ADR-055: Cas "pas de relance nécessaire"
+                # La température n'est jamais descendue sous la cible
+                _LOGGER.info(
+                    "%s Pas de relance nécessaire (temp >= cible), "
+                    "transition directe vers HEATING_ON",
+                    self._log_prefix(),
+                )
+                # Utiliser la transition avec actions pour annuler les timers
+                result = self.transition_with_actions(SmartHRTState.HEATING_ON)
+                if result.success:
+                    self._execute_actions(result.actions)
+                else:
+                    # Fallback si transition échoue
+                    self._timer_manager.cancel(TimerKey.RECOVERY_START)
+                    self._timer_manager.cancel(TimerKey.RECOVERY_UPDATE)
+                    self.force_state(SmartHRTState.HEATING_ON)
+                    self.hass.async_create_task(self._save_learned_data())
+                self.async_set_updated_data(self.data)
 
         self._reschedule_target_hour()
 
