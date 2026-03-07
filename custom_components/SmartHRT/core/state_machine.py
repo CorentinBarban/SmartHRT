@@ -65,7 +65,6 @@ VALID_TRANSITIONS: dict[SmartHRTState, set[SmartHRTState]] = {
     SmartHRTState.DETECTING_LAG: {SmartHRTState.MONITORING},
     SmartHRTState.MONITORING: {
         SmartHRTState.RECOVERY,
-        SmartHRTState.HEATING_PROCESS,
         SmartHRTState.HEATING_ON,  # ADR-055: Cas "pas de relance nécessaire"
     },
     SmartHRTState.RECOVERY: {SmartHRTState.HEATING_PROCESS},
@@ -101,8 +100,6 @@ TRANSITION_ACTIONS: dict[tuple[SmartHRTState, SmartHRTState], list[Action]] = {
         Action.CALCULATE_RCTH,
         Action.SAVE_DATA,
     ],
-    # MONITORING → HEATING_PROCESS: Cas où target atteinte sans recovery
-    (SmartHRTState.MONITORING, SmartHRTState.HEATING_PROCESS): [],
     # MONITORING → HEATING_ON: Cas "pas de relance nécessaire" (ADR-055)
     # La température n'est jamais descendue sous la cible durant la nuit
     (SmartHRTState.MONITORING, SmartHRTState.HEATING_ON): [

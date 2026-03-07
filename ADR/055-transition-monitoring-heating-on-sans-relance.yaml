@@ -34,7 +34,6 @@ context: |
   **Transitions existantes dans VALID_TRANSITIONS :**
 
   - MONITORING → RECOVERY (relance déclenchée)
-  - MONITORING → HEATING_PROCESS (déjà prévu mais non utilisé)
 
   La transition MONITORING → HEATING_ON n'était pas prévue pour le cas
   "pas de relance nécessaire".
