@@ -4,7 +4,7 @@ date: "2026-03-18"
 author: "Corentin Barban"
 context: |
   Selon l'ADR-008, le système entre en état DETECTING_LAG après l'arrêt du chauffage et attend une baisse de 0,2°C pour valider le début du refroidissement réel et passer en état MONITORING.
-  
+
   Bug constaté : Dans des pièces très isolées ou par temps doux, cette baisse de température peut ne jamais survenir avant l'heure de relance calculée initialement (ex: à 23h pour un démarrage à 7h). Le système reste alors "bloqué" en DETECTING_LAG. Comme les calculs itératifs de mise à jour ne sont actifs qu'en MONITORING, le système ne recalcule pas sa relance avec les prévisions météo fraîches du matin, risquant de manquer l'heure cible de confort.
 
 decision: |
@@ -32,7 +32,7 @@ consequences:
   negative:
     - Aucune mise à jour des coefficients d'isolation (RCth) pour les nuits concernées pour protéger le modèle thermique.
   neutral:
-    - Respect strict de la machine à états : passage obligatoire par MONITORING avant RECOVERY.
+    - Respect strict de la machine à états: passage obligatoire par MONITORING avant RECOVERY.
 
 related:
   - "ADR-003": Machine à états (respect du cycle de vie).

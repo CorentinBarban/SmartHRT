@@ -1007,31 +1007,76 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
         # ADR-056: Sortie de secours si encore en DETECTING_LAG
         if self.data.current_state == SmartHRTState.DETECTING_LAG:
+            now = dt_util.now()
+            # Calculer la durée passée en DETECTING_LAG
+            lag_duration_hours = 0.0
+            if self.data.time_recovery_calc is not None:
+                lag_duration_hours = (
+                    now.timestamp() - self.data.time_recovery_calc.timestamp()
+                ) / 3600
+
             _LOGGER.warning(
-                "%s [ADR-056] Sortie de secours DETECTING_LAG: "
-                "baisse de température non détectée, forçage vers MONITORING",
+                "%s ══════════════════════════════════════════════════",
                 self._log_prefix(),
             )
+            _LOGGER.warning(
+                "%s SORTIE DE SECOURS DETECTING_LAG DÉCLENCHÉE",
+                self._log_prefix(),
+            )
+            _LOGGER.warning(
+                "%s Cause: Baisse de température (0.2°C) non détectée",
+                self._log_prefix(),
+            )
+            _LOGGER.warning(
+                "%s Durée en DETECTING_LAG: %.1fh (depuis %s)",
+                self._log_prefix(),
+                lag_duration_hours,
+                (
+                    self.data.time_recovery_calc.strftime("%H:%M")
+                    if self.data.time_recovery_calc
+                    else "?"
+                ),
+            )
+            _LOGGER.warning(
+                "%s Temp snapshot: %.1f°C → Temp actuelle: %.1f°C (delta: %.2f°C)",
+                self._log_prefix(),
+                self.data.temp_recovery_calc,
+                self.data.interior_temp or 0,
+                (self.data.interior_temp or 0) - self.data.temp_recovery_calc,
+            )
+            _LOGGER.warning(
+                "%s Action: Forçage DETECTING_LAG → MONITORING, apprentissage RCth désactivé",
+                self._log_prefix(),
+            )
+            _LOGGER.warning(
+                "%s ══════════════════════════════════════════════════",
+                self._log_prefix(),
+            )
+
             # Désactiver l'apprentissage RCth pour ce cycle (pente thermique non fiable)
             self.data.rcth_learning_disabled = True
             # Forcer la transition vers MONITORING
             self._on_temperature_decrease_detected()
+
             # Après le recalcul, vérifier si on doit démarrer immédiatement
-            now = dt_util.now()
             if (
                 self.data.recovery_start_hour is not None
                 and now >= self.data.recovery_start_hour
             ):
                 _LOGGER.info(
-                    "%s [ADR-056] Relance immédiate après recalcul",
+                    "%s Relance IMMÉDIATE (now >= recovery_start_hour recalculé)",
                     self._log_prefix(),
                 )
                 self.on_recovery_start()
             else:
                 _LOGGER.info(
-                    "%s [ADR-056] Relance différée au nouveau recovery_start_hour: %s",
+                    "%s Relance DIFFÉRÉE → nouveau recovery_start_hour: %s",
                     self._log_prefix(),
-                    self.data.recovery_start_hour,
+                    (
+                        self.data.recovery_start_hour.strftime("%H:%M")
+                        if self.data.recovery_start_hour
+                        else "non défini"
+                    ),
                 )
             return
 
@@ -1136,7 +1181,7 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
                     self._schedule_recovery_start(self.data.recovery_start_hour)
                     if not was_trigger_active:
                         _LOGGER.info(
-                            "%s [ADR-053] Sortie de snooze → relance reprogrammée à %s",
+                            "%s Sortie de snooze → relance reprogrammée à %s",
                             self._log_prefix(),
                             self.data.recovery_start_hour.strftime("%H:%M:%S"),
                         )
@@ -1572,7 +1617,7 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         # ADR-056: Garde pour protéger le modèle thermique
         if self.data.rcth_learning_disabled:
             _LOGGER.info(
-                "%s [ADR-056] Calcul RCth annulé: apprentissage désactivé "
+                "%s Calcul RCth annulé: apprentissage désactivé "
                 "(sortie de secours DETECTING_LAG)",
                 self._log_prefix(),
             )
