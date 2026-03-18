@@ -92,6 +92,26 @@ get_state:
       selector:
         text:
 
+force_monitoring:
+  name: Forcer Sortie DETECTING_LAG
+  description: >
+    Force la sortie de l'état DETECTING_LAG vers MONITORING.
+    Utilisez ce service quand la baisse de température (0.2°C) n'est pas détectée
+    (pièces très isolées ou temps doux). L'apprentissage du coefficient RCth 
+    est désactivé pour ce cycle afin de protéger le modèle thermique.
+    Ce service n'est disponible que lorsque l'état actuel est DETECTING_LAG.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: >
+        L'ID de l'instance SmartHRT (multi-instance). Si vous avez plusieurs instances, 
+        spécifiez l'entry_id pour cibler une instance spécifique.
+      required: false
+      advanced: true
+      example: "abc123def456"
+      selector:
+        text:
+
 # ═══════════════════════════════════════════════════════════════════════════
 # SERVICES UTILITAIRES
 # ═══════════════════════════════════════════════════════════════════════════

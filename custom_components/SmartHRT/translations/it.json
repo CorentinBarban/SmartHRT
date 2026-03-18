@@ -55,83 +55,83 @@
     }
   },
   "services": {
-    "calculate_recovery_time": {
-      "name": "Calcola ora di riavvio",
-      "description": "Calcola l'ora di avvio del riscaldamento in base ai parametri termici.",
+    "start_heating_cycle": {
+      "name": "Avvia ciclo riscaldamento",
+      "description": "Avvia un nuovo ciclo di riscaldamento giornaliero.",
       "fields": {
         "entry_id": {
-          "name": "ID configurazione",
-          "description": "L'ID della configurazione (opzionale, usa il primo disponibile se non specificato)."
+          "name": "ID voce",
+          "description": "L'ID della voce di configurazione (opzionale)."
         }
       }
     },
-    "calculate_recovery_update_time": {
-      "name": "Calcola ora aggiornamento",
-      "description": "Calcola quando deve avvenire il prossimo aggiornamento del calcolo di riavvio.",
+    "stop_heating": {
+      "name": "Ferma riscaldamento",
+      "description": "Ferma il riscaldamento e avvia la fase di monitoraggio notturno.",
       "fields": {
         "entry_id": {
-          "name": "ID configurazione",
-          "description": "L'ID della configurazione (opzionale, usa il primo disponibile se non specificato)."
+          "name": "ID voce",
+          "description": "L'ID della voce di configurazione (opzionale)."
         }
       }
     },
-    "calculate_rcth_fast": {
-      "name": "Calcola RCth dinamico",
-      "description": "Calcola l'evoluzione dinamica di RCth prima dell'avvio del riscaldamento.",
+    "start_recovery": {
+      "name": "Avvia recupero",
+      "description": "Avvia la fase di recupero del riscaldamento per raggiungere la temperatura target.",
       "fields": {
         "entry_id": {
-          "name": "ID configurazione",
-          "description": "L'ID della configurazione (opzionale, usa il primo disponibile se non specificato)."
+          "name": "ID voce",
+          "description": "L'ID della voce di configurazione (opzionale)."
         }
       }
     },
-    "on_heating_stop": {
-      "name": "Arresto riscaldamento",
-      "description": "Attiva le azioni quando il riscaldamento si spegne (registra temperature e orari per i calcoli).",
+    "end_recovery": {
+      "name": "Termina recupero",
+      "description": "Termina la fase di recupero. Calcola RPth e torna alla modalità normale.",
       "fields": {
         "entry_id": {
-          "name": "ID configurazione",
-          "description": "L'ID della configurazione (opzionale, usa il primo disponibile se non specificato)."
+          "name": "ID voce",
+          "description": "L'ID della voce di configurazione (opzionale)."
         }
       }
     },
-    "on_recovery_start": {
-      "name": "Inizio riavvio",
-      "description": "Attiva le azioni all'inizio del riavvio del riscaldamento (registra temperature e calcola RCth).",
+    "get_state": {
+      "name": "Ottieni stato",
+      "description": "Restituisce lo stato attuale con tutti i dettagli.",
       "fields": {
         "entry_id": {
-          "name": "ID configurazione",
-          "description": "L'ID della configurazione (opzionale, usa il primo disponibile se non specificato)."
+          "name": "ID voce",
+          "description": "L'ID della voce di configurazione (opzionale)."
         }
       }
     },
-    "on_recovery_end": {
-      "name": "Fine riavvio",
-      "description": "Attiva le azioni alla fine del riavvio del riscaldamento (registra temperature e calcola RPth).",
+    "force_monitoring": {
+      "name": "Forza uscita da DETECTING_LAG",
+      "description": "Forza l'uscita dallo stato DETECTING_LAG a MONITORING. L'apprendimento RCth è disabilitato per questo ciclo.",
       "fields": {
         "entry_id": {
-          "name": "ID configurazione",
-          "description": "L'ID della configurazione (opzionale, usa il primo disponibile se non specificato)."
+          "name": "ID voce",
+          "description": "L'ID della voce di configurazione (opzionale)."
         }
       }
     },
     "reset_learning": {
       "name": "Reimposta apprendimento",
-      "description": "Reimposta tutti i coefficienti termici appresi (RCth, RPth) ai loro valori predefiniti.",
+      "description": "Reimposta tutti i coefficienti termici appresi ai valori predefiniti.",
       "fields": {
         "entry_id": {
-          "name": "ID configurazione",
-          "description": "L'ID della configurazione (opzionale, usa il primo disponibile se non specificato)."
+          "name": "ID voce",
+          "description": "L'ID della voce di configurazione (opzionale)."
         }
       }
     },
     "trigger_calculation": {
       "name": "Attiva calcolo",
-      "description": "Attiva manualmente un ricalcolo immediato dell'ora di riavvio.",
+      "description": "Attiva manualmente un ricalcolo immediato del tempo di recupero.",
       "fields": {
         "entry_id": {
-          "name": "ID configurazione",
-          "description": "L'ID della configurazione (opzionale, usa il primo disponibile se non specificato)."
+          "name": "ID voce",
+          "description": "L'ID della voce di configurazione (opzionale)."
         }
       }
     }

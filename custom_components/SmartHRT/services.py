@@ -20,6 +20,7 @@ from .const import (
     SERVICE_START_RECOVERY,
     SERVICE_END_RECOVERY,
     SERVICE_GET_STATE,
+    SERVICE_FORCE_MONITORING,
     SERVICE_RESET_LEARNING,
     SERVICE_TRIGGER_CALCULATION,
 )
@@ -37,6 +38,7 @@ SERVICES = [
     SERVICE_START_RECOVERY,
     SERVICE_END_RECOVERY,
     SERVICE_GET_STATE,
+    SERVICE_FORCE_MONITORING,
     # Services utilitaires
     SERVICE_RESET_LEARNING,
     SERVICE_TRIGGER_CALCULATION,
@@ -248,7 +250,27 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
         return coord.get_state_dict()
 
-    # ADR-043: Mapping des services essentiels uniquement (7 services)
+    async def handle_force_monitoring(call: ServiceCall) -> dict[str, Any]:
+        """Force la sortie de l'état DETECTING_LAG vers MONITORING.
+
+        Utilisé quand la baisse de température (0.2°C) n'est pas détectée
+        (pièces très isolées ou temps doux). Désactive l'apprentissage RCth
+        pour ce cycle pour protéger le modèle thermique.
+        """
+        entry_id = call.data.get("entry_id")
+        coord = _get_coordinator(hass, entry_id)
+        if not coord:
+            error_msg = (
+                f"Coordinateur non trouvé pour entry_id={entry_id}"
+                if entry_id
+                else "Aucun coordinateur SmartHRT disponible"
+            )
+            _LOGGER.error(error_msg)
+            return {"success": False, "error": error_msg}
+
+        return await coord.async_force_monitoring()
+
+    # ADR-043: Mapping des services essentiels uniquement (8 services)
     handlers = {
         # Services simplifiés
         SERVICE_START_HEATING_CYCLE: handle_start_heating_cycle,
@@ -256,6 +278,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_START_RECOVERY: handle_start_recovery,
         SERVICE_END_RECOVERY: handle_end_recovery,
         SERVICE_GET_STATE: handle_get_state,
+        SERVICE_FORCE_MONITORING: handle_force_monitoring,
         # Services utilitaires
         SERVICE_RESET_LEARNING: handle_reset_learning,
         SERVICE_TRIGGER_CALCULATION: handle_trigger_calculation,

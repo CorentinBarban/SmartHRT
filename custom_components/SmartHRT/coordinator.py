@@ -2301,6 +2301,56 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             "message": "Relance terminée",
         }
 
+    async def async_force_monitoring(self) -> dict[str, Any]:
+        """Force la sortie de DETECTING_LAG vers MONITORING - méthode façade.
+
+        Utilisé quand la baisse de température (0.2°C) n'est pas détectée
+        (pièces très isolées ou temps doux). Désactive l'apprentissage RCth
+        pour ce cycle pour protéger le modèle thermique.
+        """
+        from .core import SmartHRTState
+
+        if self.data.current_state != SmartHRTState.DETECTING_LAG:
+            return {
+                "success": False,
+                "state": str(self.data.current_state),
+                "error": f"État actuel {self.data.current_state} != DETECTING_LAG",
+                "message": "Service disponible uniquement en état DETECTING_LAG",
+            }
+
+        _LOGGER.warning(
+            "%s ══════════════════════════════════════════════════",
+            self._log_prefix(),
+        )
+        _LOGGER.warning(
+            "%s SORTIE MANUELLE DE DETECTING_LAG (service force_monitoring)",
+            self._log_prefix(),
+        )
+        _LOGGER.warning(
+            "%s ══════════════════════════════════════════════════",
+            self._log_prefix(),
+        )
+
+        # Désactiver l'apprentissage RCth pour ce cycle
+        self.data.rcth_learning_disabled = True
+
+        # Forcer la transition vers MONITORING
+        self._on_temperature_decrease_detected()
+
+        await self._save_learned_data()
+
+        return {
+            "success": True,
+            "state": str(self.data.current_state),
+            "rcth_learning_disabled": self.data.rcth_learning_disabled,
+            "recovery_start_hour": (
+                self.data.recovery_start_hour.isoformat()
+                if self.data.recovery_start_hour
+                else None
+            ),
+            "message": "Transition forcée vers MONITORING, apprentissage RCth désactivé",
+        }
+
     def get_state_dict(self) -> dict[str, Any]:
         """Retourne l'état complet du coordinateur - méthode façade (ADR-042).
 
