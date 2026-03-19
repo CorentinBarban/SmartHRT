@@ -127,8 +127,6 @@ SmartHRT provides Home Assistant services to control the heating cycle manually 
 service: smarthrt.stop_heating
 ```
 
-See [Services Migration Guide](docs/SERVICES_MIGRATION.md) if upgrading from older versions.
-
 ## Requirements
 
 - For dashboard interface:

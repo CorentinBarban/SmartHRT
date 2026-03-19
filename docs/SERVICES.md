@@ -4,20 +4,23 @@ This document describes the available services to control SmartHRT and their rel
 
 ## State Machine
 
-SmartHRT uses an explicit state machine to model the daily thermal cycle:
+SmartHRT uses an explicit **6-state** finite state machine to model the daily thermal cycle:
 
 ```
+(Re)start
+    │
+    ▼
+INITIALIZING ──────────────────────────────────────────► (any state, restore)
+
 HEATING_ON → DETECTING_LAG → MONITORING → RECOVERY → HEATING_PROCESS → HEATING_ON
-    ↓            ↓              ↓            ↓             ↓
- (State 1)    (State 2)     (State 3)    (State 4)     (State 5)
+  (State 1)    (State 2)      (State 3)    (State 4)      (State 5)
 ```
 
 ### State Descriptions
 
+- **INITIALIZING**: Transient entry state after (re)start. Transitions to the persisted state from last session.
 - **HEATING_ON**: Normal daytime heating mode
-- **DETECTING_LAG**: Temperature lag detection after heating stops (-0.2°C)
-- **MONITORING**: Nighttime monitoring, recurring recovery time calculations
-- **RECOVERY**: Recovery start moment (RCth calculation)
+- **DETECTING_LAG**: Temperature lag detection after heating stops
 - **HEATING_PROCESS**: Temperature rise phase (RPth calculation)
 
 ## Simplified Services (Recommended)
@@ -193,6 +196,30 @@ response_variable: state_info
 
 ---
 
+### `force_monitoring`
+
+**Usage**: Forces immediate transition to MONITORING state
+
+**Transition**: `*` → `MONITORING`
+
+**Description**:
+
+- Skips the DETECTING_LAG phase
+- Immediately starts recovery time calculations
+- Useful when lag detection is stuck or not needed
+
+**Parameters**:
+
+- `entry_id` (optional): Instance ID for multi-instance setups
+
+**Example call**:
+
+```yaml
+service: smarthrt.force_monitoring
+```
+
+---
+
 ## Utility Services
 
 ### `reset_learning`
@@ -228,22 +255,6 @@ Immediately triggers a new recovery time calculation.
 ```yaml
 service: smarthrt.trigger_calculation
 ```
-
----
-
-## Legacy Services (Deprecated)
-
-These services are kept for compatibility but their use is **discouraged**.
-Use the simplified services instead:
-
-| Legacy service                   | Replaced by           |
-| -------------------------------- | --------------------- |
-| `calculate_recovery_time`        | `trigger_calculation` |
-| `on_heating_stop`                | `stop_heating`        |
-| `on_recovery_start`              | `start_recovery`      |
-| `on_recovery_end`                | `end_recovery`        |
-| `calculate_rcth_fast`            | Internal use only     |
-| `calculate_recovery_update_time` | Internal use only     |
 
 ---
 
