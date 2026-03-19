@@ -76,6 +76,35 @@ SmartHRT automatically creates **Sensors**, **Numbers**, **Switches** and **Time
 
 ---
 
+## 🎨 Custom Lovelace Card
+
+SmartHRT includes `smarthrt-card.js`, a custom card to visualize the heating state.
+
+### Installation
+
+1. Copy `smarthrt-card.js` to your `/config/www/` folder
+2. In Home Assistant go to **Settings** ⚙️ → **Dashboards** → **⁝** (top right) → **Resources**
+3. Click **Add Resource** and enter:
+   - **URL**: `/local/smarthrt-card.js`
+   - **Type**: JavaScript Module
+4. Click **Create**
+
+### Usage
+
+Add the card to your dashboard with:
+
+```yaml
+type: custom:smarthrt-card
+prefix: salon # required — your SmartHRT instance name
+name: Salon # optional — display name
+min_temp: 13 # optional — gauge minimum (default: 13)
+max_temp: 26 # optional — gauge maximum (default: 26)
+```
+
+The card displays current temperature, setpoint, machine state, and relay time.
+
+---
+
 ## 🔧 Services
 
 SmartHRT provides Home Assistant services to control the heating cycle manually if needed.
