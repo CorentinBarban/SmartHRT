@@ -2119,6 +2119,10 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         if pre_actions:
             self._execute_actions(pre_actions)
 
+        # Notify HA of the RECOVERY state before transitioning to HEATING_PROCESS,
+        # so the state appears in the history/activity journal.
+        self.async_set_updated_data(self.data)
+
         # Transition vers HEATING_PROCESS (État 5) - chauffage en cours
         if not self.transition_to(SmartHRTState.HEATING_PROCESS):
             self.force_state(SmartHRTState.HEATING_PROCESS)
