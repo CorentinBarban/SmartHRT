@@ -294,6 +294,9 @@ class SmartHRTData(BaseModel):
         # État machine
         "current_state",
         "stop_lag_duration",
+        # Modes utilisateur
+        "smartheating_mode",
+        "recovery_adaptive_mode",
         # Heures configurées
         "target_hour",
         "recoverycalc_hour",

@@ -84,13 +84,11 @@ class SmartHRTSmartHeatingSwitch(SmartHRTBaseSwitch):
         self._attr_translation_key = "smartheating_mode"
         self._attr_unique_id = f"{self._device_id}_smartheating_mode"
 
+    _attr_icon = "mdi:home-thermometer"
+
     @property
     def is_on(self) -> bool:
         return self.coordinator.data.smartheating_mode
-
-    @property
-    def icon(self) -> str | None:
-        return "mdi:home-thermometer" if self.is_on else "mdi:home-thermometer-outline"
 
     async def async_turn_on(self, **kwargs) -> None:
         """Activer le mode chauffage intelligent"""
@@ -117,13 +115,11 @@ class SmartHRTAdaptiveSwitch(SmartHRTBaseSwitch):
         self._attr_translation_key = "adaptive_mode"
         self._attr_unique_id = f"{self._device_id}_adaptive_mode"
 
+    _attr_icon = "mdi:brain"
+
     @property
     def is_on(self) -> bool:
         return self.coordinator.data.recovery_adaptive_mode
-
-    @property
-    def icon(self) -> str | None:
-        return "mdi:brain" if self.is_on else "mdi:brain-off-outline"
 
     async def async_turn_on(self, **kwargs) -> None:
         """Activer le mode adaptatif"""
