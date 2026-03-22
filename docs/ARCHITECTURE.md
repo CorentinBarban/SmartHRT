@@ -27,27 +27,31 @@ SmartHRT is a Home Assistant custom integration built on the **DataUpdateCoordin
 
 ## State Machine
 
-SmartHRT uses a **5-state finite state machine** for the daily heating cycle:
+SmartHRT uses a **6-state finite state machine** for the daily heating cycle:
 
 ```
+(Re)start
+    │
+    ▼
+INITIALIZING ─► (restores persisted state)
+
 Evening (23:00)          Night              Morning           Wake-up (06:00)
       │                   │                    │                    │
       ▼                   ▼                    ▼                    ▼
-   HEATING_ON ────► DETECTING_LAG ────► MONITORING ────► RECOVERY ────► RECOVERY_END
-      │                   │                    │                │
-   Stop heating      Temp drops            Calculate      Start heating    Target reached
-   Record baseline   Detect pattern        recovery time   Update learning
+   HEATING_ON ──► DETECTING_LAG ──► MONITORING ──► RECOVERY ──► HEATING_PROCESS
+      ◄────────────────────────────────────────────────────────────────┘
 ```
 
 ### State Descriptions
 
-| State             | Triggered By                         | Action                         | Transitions To |
-| ----------------- | ------------------------------------ | ------------------------------ | -------------- |
-| **HEATING_ON**    | Heating active                       | Monitor heating effect         | DETECTING_LAG  |
-| **DETECTING_LAG** | Temp drops 0.2°C+                    | Detect thermal response delay  | MONITORING     |
-| **MONITORING**    | Recovery time calculated             | Wait for calculated start time | RECOVERY       |
-| **RECOVERY**      | Heating starts at calculated time    | Measure heating rate (RPth)    | RECOVERY_END   |
-| **RECOVERY_END**  | Target hour reached or temp achieved | Finalize learning, reset       | HEATING_ON     |
+| State               | Triggered By                      | Action                         | Transitions To         |
+| ------------------- | --------------------------------- | ------------------------------ | ---------------------- |
+| **INITIALIZING**    | Integration (re)start             | Restore persisted state        | Any (restoration)      |
+| **HEATING_ON**      | Heating active                    | Monitor heating effect         | DETECTING_LAG          |
+| **DETECTING_LAG**   | Heating stops                     | Detect thermal response delay  | MONITORING             |
+| **MONITORING**      | Lag detected                      | Wait for calculated start time | RECOVERY or HEATING_ON |
+| **RECOVERY**        | Heating starts at calculated time | Measure heating rate (RPth)    | HEATING_PROCESS        |
+| **HEATING_PROCESS** | Recovery confirmed                | Finalize learning, reset       | HEATING_ON             |
 
 ## Thermal Model
 
@@ -121,31 +125,36 @@ Where $\alpha$ (learning rate) decays over time for stability.
 ### Core Configuration
 
 ```
-- zone_name: Name of the heating zone
+- name: Name of the heating zone
+- tsp: Target setpoint temperature (°C, 13–26)
 - target_hour: When to reach target temperature
-- heating_stop_hour: When to turn off heating
-- interior_temp_sensor: Room thermometer
+- recoverycalc_hour: When to turn off heating (default 23:00)
+- sensor_interior_temperature: Room thermometer entity
 - weather_entity: Weather source
-- target_temperature: Desired temperature (°C)
 ```
 
 ### Learned Coefficients (Persistent)
 
 ```
-- rc_thermal: Cooling constant (1-200 hours)
-- rc_thermal_windy: Cooling at max wind (1-200 hours)
-- rp_thermal: Heating constant (0.1-50 hours)
-- rp_thermal_windy: Heating at max wind (0.1-50 hours)
-- temperature_lag: Heating detection delay (minutes)
+- rcth: Cooling constant (1–200 hours)
+- rcth_lw: Cooling constant at low wind
+- rcth_hw: Cooling constant at high wind
+- rpth: Heating constant (1–200 hours)
+- rpth_lw: Heating constant at low wind
+- rpth_hw: Heating constant at high wind
+- relaxation_factor: Learning rate factor (0.1–10)
+- stop_lag_duration: Measured temperature lag after heating stops (hours)
 ```
 
 ### Calculated Values (Real-time)
 
 ```
-- recovery_start_time: When to start heating (HH:MM)
-- recovery_duration: How long heating will run (minutes)
-- interior_temperature: Current room temperature
-- exterior_temperature: Outside temperature
+- recovery_start_hour: When to start heating (datetime)
+- recovery_duration_hours: How long heating will run (hours)
+- interior_temp: Current room temperature (°C)
+- exterior_temp: Outside temperature (°C)
+- wind_speed: Current wind speed (m/s)
+- wind_speed_avg: 4h average wind speed (m/s)
 ```
 
 ## Entity Platform Distribution
@@ -174,17 +183,9 @@ Where $\alpha$ (learning rate) decays over time for stability.
 
 ## Services
 
-### smarthrt.on_heating_stop
+See [SERVICES.md](SERVICES.md) for the full services reference.
 
-Called when heating stops (evening). Records baseline temperature for next calculation.
-
-### smarthrt.on_recovery_start
-
-Called when heating starts (morning). Triggers RPth measurement mode.
-
-### smarthrt.on_recovery_end
-
-Called at target hour. Finalizes learning and resets for next day.
+Registered services: `start_heating_cycle`, `stop_heating`, `start_recovery`, `end_recovery`, `get_state`, `force_monitoring`, `reset_learning`, `trigger_calculation`.
 
 ## Persistence
 

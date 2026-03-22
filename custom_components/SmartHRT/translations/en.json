@@ -68,9 +68,9 @@
     }
   },
   "services": {
-    "calculate_recovery_time": {
-      "name": "Calculate Recovery Time",
-      "description": "Calculates the heating recovery start time based on thermal parameters.",
+    "start_heating_cycle": {
+      "name": "Start Heating Cycle",
+      "description": "Starts a new daily heating cycle. Sets the state machine to HEATING_ON (active heating).",
       "fields": {
         "entry_id": {
           "name": "Entry ID",
@@ -78,9 +78,9 @@
         }
       }
     },
-    "calculate_recovery_update_time": {
-      "name": "Calculate Recovery Update Time",
-      "description": "Calculates when the next recovery time update should occur.",
+    "stop_heating": {
+      "name": "Stop Heating",
+      "description": "Stops heating and starts the night monitoring phase. Activates temperature lag detection then launches recovery calculations.",
       "fields": {
         "entry_id": {
           "name": "Entry ID",
@@ -88,9 +88,9 @@
         }
       }
     },
-    "calculate_rcth_fast": {
-      "name": "Calculate RCth Fast",
-      "description": "Calculates the dynamic evolution of RCth before the recovery starts.",
+    "start_recovery": {
+      "name": "Start Recovery",
+      "description": "Starts the heating recovery phase to reach target temperature by wake-up time. Automatically calculates RCth and activates RPth calculation.",
       "fields": {
         "entry_id": {
           "name": "Entry ID",
@@ -98,9 +98,9 @@
         }
       }
     },
-    "on_heating_stop": {
-      "name": "On Heating Stop",
-      "description": "Triggers actions when heating stops (records temperatures and timestamps for calculations).",
+    "end_recovery": {
+      "name": "End Recovery",
+      "description": "Ends the recovery phase (setpoint reached or target time reached). Calculates RPth and returns to normal heating mode.",
       "fields": {
         "entry_id": {
           "name": "Entry ID",
@@ -108,9 +108,9 @@
         }
       }
     },
-    "on_recovery_start": {
-      "name": "On Recovery Start",
-      "description": "Triggers actions at the start of heating recovery (records temperatures and calculates RCth).",
+    "get_state": {
+      "name": "Get State",
+      "description": "Returns the current state machine state with all details (temperatures, times, thermal coefficients, active modes).",
       "fields": {
         "entry_id": {
           "name": "Entry ID",
@@ -118,9 +118,9 @@
         }
       }
     },
-    "on_recovery_end": {
-      "name": "On Recovery End",
-      "description": "Triggers actions at the end of heating recovery (records temperatures and calculates RPth).",
+    "force_monitoring": {
+      "name": "Force Exit DETECTING_LAG",
+      "description": "Forces exit from DETECTING_LAG state to MONITORING. Use when temperature drop (0.2°C) is not detected (well-insulated rooms or mild weather). RCth learning is disabled for this cycle to protect the thermal model.",
       "fields": {
         "entry_id": {
           "name": "Entry ID",

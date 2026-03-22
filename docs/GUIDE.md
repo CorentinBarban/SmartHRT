@@ -33,7 +33,7 @@ SmartHRT automatically calculates the optimal time to start your heating in the 
 
 ### Requirements
 
-- Home Assistant 2024.1 or newer
+- Home Assistant 2026.2.0 or newer
 - A weather entity (e.g., `weather.home`)
 - A temperature sensor for your room
 
@@ -85,136 +85,130 @@ Accuracy improves faster with:
 
 ### Sensors (Read-only)
 
-| Entity                          | Description                                      |
-| ------------------------------- | ------------------------------------------------ |
-| `sensor.*_interior_temperature` | Current room temperature                         |
-| `sensor.*_exterior_temperature` | Outside temperature (from weather)               |
-| `sensor.*_wind_speed`           | Current wind speed                               |
-| `sensor.*_windchill`            | Perceived temperature (wind chill)               |
-| `sensor.*_rcth`                 | Cooling coefficient (interpolated, with details) |
-| `sensor.*_rpth`                 | Heating coefficient (interpolated, with details) |
-| `sensor.*_time_to_recovery`     | Time remaining before heating starts (hours)     |
-| `sensor.*_state`                | Current state machine status                     |
+> Entity IDs use the pattern `{platform}.{instance}_{entity_slug}` where `*` represents your instance name. Slugs shown are for English HA — they may differ in other languages.
+
+| Entity                               | Description                                      |
+| ------------------------------------ | ------------------------------------------------ |
+| `sensor.*_interior_temperature`      | Current room temperature                         |
+| `sensor.*_exterior_temperature`      | Outside temperature (from weather)               |
+| `sensor.*_wind_speed`                | Current wind speed                               |
+| `sensor.*_wind_chill_temperature`    | Perceived temperature (wind chill)               |
+| `sensor.*_temperature_forecast`      | Outside temperature forecast                     |
+| `sensor.*_wind_forecast`             | Wind speed forecast                              |
+| `sensor.*_average_wind_4h`           | 4h average wind speed (used in calculations)     |
+| `sensor.*_rcth`                      | Cooling coefficient (interpolated, with details) |
+| `sensor.*_rpth`                      | Heating coefficient (interpolated, with details) |
+| `sensor.*_dynamic_rcth`              | Fast/dynamic RCth (short-term estimate)          |
+| `sensor.*_time_to_recovery`          | Time remaining before heating starts (hours)     |
+| `sensor.*_machine_state`             | Current state machine status                     |
+| `sensor.*_night_state`               | Night monitoring state                           |
+| `sensor.*_recovery_calculation_mode` | Whether recovery calculation is active           |
+| `sensor.*_rp_calculation_mode`       | Whether RP calculation is active                 |
+| `sensor.*_stop_lag_duration`         | Measured temperature lag after heating stops     |
 
 ### Timestamp Sensors (For Automations)
 
 These sensors have `device_class: timestamp` and can be used as automation triggers with `platform: time`:
 
-| Entity                             | Description                          |
-| ---------------------------------- | ------------------------------------ |
-| `sensor.*_heure_de_relance`        | When heating should start (datetime) |
-| `sensor.*_heure_cible_timestamp`   | Target/wake-up time as datetime      |
-| `sensor.*_heure_coupure_timestamp` | Heating stop time as datetime        |
+| Entity                         | Description                          |
+| ------------------------------ | ------------------------------------ |
+| `sensor.*_recovery_start_time` | When heating should start (datetime) |
+| `sensor.*_target_hour`         | Target/wake-up time as datetime      |
+| `sensor.*_heating_stop_hour`   | Heating stop time as datetime        |
+
+> **Note:** The automation example below uses French entity IDs (`sensor.smarthrt_heure_de_relance`, etc.) as it was written for a French-language HA installation. In English HA the entity IDs follow the slugs in the table above.
 
 **Example automation trigger:**
-
-```yaml
-alias: "Chauffage : Bascule matin <> soir (Avec Week-end)"
 description: Gère les cycles SmartHRT avec un horaire spécifique pour le week-end (10h-21h)
 triggers:
-  - at: sensor.smarthrt_heure_de_relance
-    id: start_heating
-    trigger: time
-  - at: sensor.smarthrt_heure_coupure_timestamp
-    id: fin_cycle
-    trigger: time
-actions:
-  - choose:
-      - conditions:
-          - condition: trigger
-            id: start_heating
-        sequence:
-          - action: climate.turn_on
-            target:
-              entity_id: climate.<YOUR_ENTITY>
-            data: {}
-      - conditions:
-          - condition: trigger
-            id: fin_cycle
-        sequence:
-          - delay:
-              seconds: 10
-          - if:
-              - condition: time
-                before: "12:00:00"
-            then:
-              - target:
-                  entity_id: time.smarthrt_heure_cible
-                data:
-                  time: "{{ soir_cible }}"
-                action: time.set_value
-              - target:
-                  entity_id: time.smarthrt_heure_coupure_chauffage
-                data:
-                  time: "{{ soir_fin }}"
-                action: time.set_value
-            else:
-              - if:
-                  - condition: template
-                    value_template: "{{ (now() + timedelta(days=1)).weekday() in [5, 6] }}"
-                then:
-                  - target:
-                      entity_id: time.smarthrt_heure_cible
-                    data:
-                      time: "{{ matin_cible_we }}"
-                    action: time.set_value
-                  - target:
-                      entity_id: time.smarthrt_heure_coupure_chauffage
-                    data:
-                      time: "{{ soir_fin }}"
-                    action: time.set_value
-                else:
-                  - target:
-                      entity_id: time.smarthrt_heure_cible
-                    data:
-                      time: "{{ matin_cible }}"
-                    action: time.set_value
-                  - target:
-                      entity_id: time.smarthrt_heure_coupure_chauffage
-                    data:
-                      time: "{{ matin_fin }}"
-                    action: time.set_value
-          - action: climate.turn_off
-            target:
-              entity_id: climate.climate.<YOUR_ENTITY>
-            data: {}
-variables:
+
+- at: sensor.smarthrt_heure_de_relance
+  id: start_heating
+  trigger: time
+- at: sensor.smarthrt_heure_coupure_timestamp
+  id: fin_cycle
+  trigger: time
+  actions:
+- choose: - conditions: - condition: trigger
+  id: start_heating
+  sequence: - action: climate.turn_on
+  target:
+  entity_id: climate.<YOUR_ENTITY>
+  data: {} - conditions: - condition: trigger
+  id: fin_cycle
+  sequence: - delay:
+  seconds: 10 - if: - condition: time
+  before: "12:00:00"
+  then: - target:
+  entity_id: time.smarthrt_heure_cible
+  data:
+  time: "{{ soir_cible }}"
+  action: time.set_value - target:
+  entity_id: time.smarthrt_heure_coupure_chauffage
+  data:
+  time: "{{ soir_fin }}"
+  action: time.set_value
+  else: - if: - condition: template
+  value_template: "{{ (now() + timedelta(days=1)).weekday() in [5, 6] }}"
+  then: - target:
+  entity_id: time.smarthrt_heure_cible
+  data:
+  time: "{{ matin_cible_we }}"
+  action: time.set_value - target:
+  entity_id: time.smarthrt_heure_coupure_chauffage
+  data:
+  time: "{{ soir_fin }}"
+  action: time.set_value
+  else: - target:
+  entity_id: time.smarthrt_heure_cible
+  data:
+  time: "{{ matin_cible }}"
+  action: time.set_value - target:
+  entity_id: time.smarthrt_heure_coupure_chauffage
+  data:
+  time: "{{ matin_fin }}"
+  action: time.set_value - action: climate.turn_off
+  target:
+  entity_id: climate.climate.<YOUR_ENTITY>
+  data: {}
+  variables:
   matin_cible: "07:00:00"
   matin_cible_we: "10:00:00"
   matin_fin: "08:00:00"
   soir_cible: "17:30:00"
   soir_fin: "21:00:00"
-```
+
+````
 
 ### Time Entities (User-configurable)
 
 These entities allow users to modify schedule settings via the UI:
 
-| Entity                           | Description                                   |
-| -------------------------------- | --------------------------------------------- |
-| `time.*_heure_cible`             | Set your wake-up/target time                  |
-| `time.*_heure_coupure_chauffage` | Set evening heating stop time                 |
-| `time.*_heure_de_relance`        | Calculated recovery start (read-only display) |
+| Entity                          | Description                                   |
+| ------------------------------- | --------------------------------------------- |
+| `time.*_target_hour`            | Set your wake-up/target time                  |
+| `time.*_heating_stop_hour`      | Set evening heating stop time                 |
+| `time.*_recovery_start_time`    | Calculated recovery start (read-only display) |
 
 ### Number Entities (Adjustable parameters)
 
-| Entity                           | Description                          |
-| -------------------------------- | ------------------------------------ |
-| `number.*_consigne`              | Target temperature setpoint (°C)     |
-| `number.*_rcth`                  | Cooling constant - manual adjustment |
-| `number.*_rpth`                  | Heating constant - manual adjustment |
-| `number.*_rcth_vent_faible`      | Cooling constant for low wind        |
-| `number.*_rcth_vent_fort`        | Cooling constant for high wind       |
-| `number.*_rpth_vent_faible`      | Heating constant for low wind        |
-| `number.*_rpth_vent_fort`        | Heating constant for high wind       |
-| `number.*_facteur_de_relaxation` | Learning rate factor                 |
+| Entity                      | Description                          |
+| --------------------------- | ------------------------------------ |
+| `number.*_set_point`        | Target temperature setpoint (°C)     |
+| `number.*_rcth`             | Cooling constant - manual adjustment |
+| `number.*_rpth`             | Heating constant - manual adjustment |
+| `number.*_rcth_low_wind`    | Cooling constant for low wind        |
+| `number.*_rcth_high_wind`   | Cooling constant for high wind       |
+| `number.*_rpth_low_wind`    | Heating constant for low wind        |
+| `number.*_rpth_high_wind`   | Heating constant for high wind       |
+| `number.*_relaxation_factor`| Learning rate factor                 |
 
 ### Switches (Mode controls)
 
-| Entity                    | Description                  |
-| ------------------------- | ---------------------------- |
-| `switch.*_smart_heating`  | Enable/disable smart heating |
-| `switch.*_mode_adaptatif` | Enable/disable auto-learning |
+| Entity                       | Description                  |
+| ---------------------------- | ---------------------------- |
+| `switch.*_smart_heating_mode`| Enable/disable smart heating |
+| `switch.*_adaptive_mode`     | Enable/disable auto-learning |
 
 > **Note:** The `*` represents your instance name (e.g., `chambre`, `salon`).
 
@@ -246,7 +240,7 @@ These entities allow users to modify schedule settings via the UI:
 - Weather has changed dramatically
 - Heating setup different than usual
 
-**Solution:** Manual adjustment via `number.*_rc_thermal` or `number.*_rp_thermal` sensors
+**Solution:** Manual adjustment via `number.*_rcth` or `number.*_rpth` entities
 
 ### "Getting repeated errors in logs"
 
@@ -259,23 +253,58 @@ These entities allow users to modify schedule settings via the UI:
 
 ## FAQ
 
-**Q: How long until it learns my home?**  
+**Q: How long until it learns my home?**
 A: Typically 3-7 days with consistent daily cycles. Improvement happens faster with stable routines.
 
-**Q: Can I use it with multiple rooms?**  
+**Q: Can I use it with multiple rooms?**
 A: Yes, add multiple instances (one per room) in configuration.
 
-**Q: Does it work in summer?**  
+**Q: Does it work in summer?**
 A: The integration is designed for heating. In summer, disable it or turn off learning mode.
 
-**Q: What if my wake-up time changes?**  
+**Q: What if my wake-up time changes?**
 A: Update the target hour in the `time.*_target_hour` entity. It will recalculate.
 
-**Q: Can I manually adjust the calculation?**  
-A: Yes, use `number.*_rc_thermal` and `number.*_rp_thermal` to fine-tune.
+**Q: Can I manually adjust the calculation?**
+A: Yes, use `number.*_rcth` and `number.*_rpth` to fine-tune.
 
-**Q: Does it need internet?**  
+**Q: Does it need internet?**
 A: Only for weather data (wind/temperature forecasts). Works fine with local-only weather.
+
+## 🎨 Custom Lovelace Card
+
+SmartHRT includes a ready-to-use custom card (`smarthrt-card.js`) to display the heating state on your dashboard.
+
+### Installation
+
+1. Copy `smarthrt-card.js` from the repository root to your `/config/www/` folder
+2. In Home Assistant, go to **Settings** ⚙️ → **Dashboards** → **⁝** (top right) → **Resources**
+3. Click **Add Resource** and fill in:
+   - **URL**: `/local/smarthrt-card.js`
+   - **Type**: JavaScript Module
+4. Click **Create**, then reload the page
+
+### Usage
+
+Add the card to any dashboard:
+
+```yaml
+type: custom:smarthrt-card
+prefix: salon # required — your SmartHRT instance name (e.g. chambre, salon)
+name: Salon # optional — display name
+min_temp: 13 # optional — gauge minimum (default: 13)
+max_temp: 26 # optional — gauge maximum (default: 26)
+````
+
+The card displays:
+
+- Current interior temperature with color scale
+- Target setpoint
+- Current machine state (INIT / ON / LAG / MONITORING / BOOST)
+- Time remaining before heating starts
+- Relay and target times
+
+---
 
 ## Getting Help
 
@@ -286,4 +315,4 @@ A: Only for weather data (wind/temperature forecasts). Works fine with local-onl
 ---
 
 **Version:** Latest  
-**Last Updated:** January 2026
+**Last Updated:** March 2026

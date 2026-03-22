@@ -208,6 +208,8 @@ class SmartHRTData(BaseModel):
     recovery_update_hour: DateTimeField = Field(default=None)
     # ADR-053: Durée estimée de la relance (pour diagnostic et Snooze)
     recovery_duration_hours: float = Field(default=0.0, ge=0.0)
+    # ADR-056: Flag pour désactiver l'apprentissage RCth (sortie de secours DETECTING_LAG)
+    rcth_learning_disabled: bool = Field(default=False)
 
     # ─────────────────────────────────────────────────────────────────────────
     # Données météorologiques (ADR-038, ADR-054: températures en °C)

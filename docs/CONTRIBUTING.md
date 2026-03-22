@@ -6,8 +6,8 @@
 
 ### Prerequisites
 
-- Python 3.12+
-- Home Assistant 2024.1+
+- Python 3.13+
+- Home Assistant 2026.2.0+
 - Git
 - Basic knowledge of Home Assistant
 
@@ -106,14 +106,11 @@ async def calculate_recovery_time(
 ### Formatting
 
 ```bash
-# Auto-format with Black
-black .
+# Lint and auto-fix with Ruff
+ruff check --fix custom_components tests
 
-# Sort imports
-isort .
-
-# Lint code
-pylint custom_components/SmartHRT/*.py
+# Format with Ruff
+ruff format custom_components tests
 ```
 
 ## Testing
@@ -128,7 +125,7 @@ pytest
 pytest --cov=custom_components/SmartHRT
 
 # Run specific test
-pytest tests/test_coordinator.py::test_example
+pytest tests/test_thermal_solver.py
 ```
 
 ### Writing Tests
@@ -140,20 +137,22 @@ Tests should cover:
 - Configuration validation
 - Error handling
 
+Key patterns (from `conftest.py`):
+
+- Use `make_coordinator()` factory for creating coordinator instances
+- Use `AsyncMock` / `MagicMock` for HA internals
+- `asyncio_mode = "auto"` is set globally — **do not** add `@pytest.mark.asyncio`
+
 Example test structure:
 
 ```python
-async def test_recovery_calculation():
+async def test_recovery_calculation(make_coordinator):
     """Test recovery time calculation."""
-    # Setup
-    coordinator = create_test_coordinator()
+    coordinator = await make_coordinator()
 
-    # Execute
-    recovery_time = coordinator.calculate_recovery()
+    await coordinator.async_trigger_calculation()
 
-    # Assert
-    assert recovery_time > 0
-    assert recovery_time < 720  # Max 12 hours
+    assert coordinator.data.recovery_start_hour is not None
 ```
 
 ## Making Changes
@@ -181,8 +180,8 @@ async def test_recovery_calculation():
 
    ```bash
    pytest
-   black .
-   pylint custom_components/SmartHRT/*.py
+   ruff check custom_components tests
+   ruff format custom_components tests
    ```
 
 4. **Push and create PR:**
@@ -193,13 +192,13 @@ async def test_recovery_calculation():
 
 ### PR Checklist
 
-- [ ] Code follows style guide (Black, isort, pylint)
+- [ ] Code follows style guide (`ruff check`, `ruff format`)
 - [ ] Tests added/updated for new features
 - [ ] Tests pass: `pytest --cov=custom_components/SmartHRT`
 - [ ] Docstrings added/updated
 - [ ] Commit messages are clear
 - [ ] No debug print statements left
-- [ ] Compatible with Home Assistant 2024.1+
+- [ ] Compatible with Home Assistant 2026.2.0+
 
 ## Common Tasks
 
@@ -216,7 +215,7 @@ SENSOR_INTERIOR_TEMPERATURE = "interior_temperature"
 ```python
 class SmartHRTTemperatureSensor(CoordinatorEntity):
     def native_value(self):
-        return self.coordinator.data.interior_temperature
+        return self.coordinator.data.interior_temp
 ```
 
 3. Register in entity description
@@ -269,8 +268,8 @@ uv run .devcontainer/hass_debug.sh
 
 **"Tests fail locally but work in CI"**
 
-- Check Python version matches
-- Ensure Home Assistant version 2024.1+
+- Check Python version matches (3.13+)
+- Ensure Home Assistant version 2026.2.0+
 - Clear pytest cache: `pytest --cache-clear`
 
 ## Documentation

@@ -72,6 +72,7 @@ SERVICE_STOP_HEATING = "stop_heating"
 SERVICE_START_RECOVERY = "start_recovery"
 SERVICE_END_RECOVERY = "end_recovery"
 SERVICE_GET_STATE = "get_state"
+SERVICE_FORCE_MONITORING = "force_monitoring"
 
 # Services utilitaires
 SERVICE_RESET_LEARNING = "reset_learning"

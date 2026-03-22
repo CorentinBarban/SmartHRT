@@ -291,3 +291,132 @@ class TestConstantsConsistency:
     def test_thresholds_are_equal(self):
         """Verify both thresholds are the same (as per ADR-053)."""
         assert MIN_DURATION_THRESHOLD_HOURS == MIN_LEARNING_DURATION_HOURS
+
+
+class TestSnoozeExitRescheduling:
+    """Tests for snooze exit trigger rescheduling (Bug fix: Salon 2026-03-06).
+
+    When temperature drops after a snooze (temperature was at target, then dropped),
+    the trigger must be rescheduled even if recovery_start_hour hasn't changed.
+    """
+
+    @pytest.fixture
+    def coordinator_monitoring(self, create_coordinator):
+        """Fixture for a coordinator in MONITORING state."""
+
+        async def _setup():
+            coord = await create_coordinator(
+                initial_state=SmartHRTState.MONITORING,
+                smartheating_mode=True,
+                interior_temp=18.5,
+                exterior_temp=10.0,
+            )
+            return coord
+
+        return _setup
+
+    @pytest.mark.asyncio
+    async def test_trigger_rescheduled_after_snooze_exit(
+        self, coordinator_monitoring, caplog
+    ):
+        """Test that trigger IS rescheduled when exiting snooze.
+
+        Scenario:
+        1. First call: duration < threshold → timer cancelled (snooze)
+        2. Second call: duration >= threshold → timer must be rescheduled
+              even if recovery_start_hour is the same
+        """
+        caplog.set_level(logging.INFO)
+        coord = await coordinator_monitoring()
+
+        recovery_time = _now_aware() + timedelta(hours=1)
+
+        # Setup timer manager mock
+        coord._timer_manager = MagicMock()
+
+        # STEP 1: Enter snooze (duration below threshold)
+        coord._timer_manager.is_active.return_value = True  # Timer exists
+
+        with patch.object(coord, "calculate_rcth_fast"):
+            with patch.object(coord, "calculate_recovery_time") as mock_calc:
+
+                def set_short_duration():
+                    coord.data.recovery_duration_hours = 0.1  # 6 minutes < 15 min
+                    coord.data.recovery_start_hour = recovery_time
+
+                mock_calc.side_effect = set_short_duration
+
+                with patch.object(
+                    coord, "calculate_recovery_update_time"
+                ) as mock_update:
+                    mock_update.return_value = _now_aware() + timedelta(hours=1)
+
+                    await coord._async_on_recovery_update_hour()
+
+                    # Timer was cancelled (snooze active)
+                    coord._timer_manager.cancel.assert_called_once_with(
+                        TimerKey.RECOVERY_START
+                    )
+                    assert "ADR-053 Snooze" in caplog.text
+
+        # Reset mock for step 2
+        coord._timer_manager.reset_mock()
+        caplog.clear()
+
+        # STEP 2: Exit snooze (duration above threshold)
+        coord._timer_manager.is_active.return_value = False  # Timer was cancelled
+
+        with patch.object(coord, "calculate_rcth_fast"):
+            with patch.object(coord, "calculate_recovery_time") as mock_calc:
+
+                def set_sufficient_duration():
+                    # Same recovery_start_hour but duration now sufficient
+                    coord.data.recovery_duration_hours = 0.5  # 30 min > 15 min
+                    coord.data.recovery_start_hour = recovery_time
+
+                mock_calc.side_effect = set_sufficient_duration
+
+                with patch.object(coord, "_schedule_recovery_start") as mock_schedule:
+                    with patch.object(
+                        coord, "calculate_recovery_update_time"
+                    ) as mock_update:
+                        mock_update.return_value = _now_aware() + timedelta(hours=1)
+
+                        await coord._async_on_recovery_update_hour()
+
+                        # Timer MUST be rescheduled (exit from snooze)
+                        mock_schedule.assert_called_once_with(recovery_time)
+                        assert "Sortie de snooze" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_no_rescheduling_when_already_active(self, coordinator_monitoring):
+        """Test that trigger is NOT rescheduled if already active and time unchanged."""
+        coord = await coordinator_monitoring()
+
+        recovery_time = _now_aware() + timedelta(hours=1)
+
+        # Set prev_recovery_start to same value to simulate unchanged time
+        coord.data.recovery_start_hour = recovery_time
+
+        coord._timer_manager = MagicMock()
+        coord._timer_manager.is_active.return_value = True  # Timer already exists
+
+        with patch.object(coord, "calculate_rcth_fast"):
+            with patch.object(coord, "calculate_recovery_time") as mock_calc:
+
+                def set_duration():
+                    coord.data.recovery_duration_hours = 0.5  # Above threshold
+                    # Keep same recovery_start_hour (no change)
+
+                mock_calc.side_effect = set_duration
+
+                with patch.object(coord, "_schedule_recovery_start") as mock_schedule:
+                    with patch.object(
+                        coord, "calculate_recovery_update_time"
+                    ) as mock_update:
+                        mock_update.return_value = _now_aware() + timedelta(hours=1)
+
+                        await coord._async_on_recovery_update_hour()
+
+                        # Timer should NOT be rescheduled (already active, time unchanged)
+                        mock_schedule.assert_not_called()

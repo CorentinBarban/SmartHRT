@@ -1,0 +1,40 @@
+title: "Sortie de secours de la phase DETECTING_LAG"
+status: Proposé
+date: "2026-03-18"
+author: "Corentin Barban"
+context: |
+  Selon l'ADR-008, le système entre en état DETECTING_LAG après l'arrêt du chauffage et attend une baisse de 0,2°C pour valider le début du refroidissement réel et passer en état MONITORING.
+
+  Bug constaté : Dans des pièces très isolées ou par temps doux, cette baisse de température peut ne jamais survenir avant l'heure de relance calculée initialement (ex: à 23h pour un démarrage à 7h). Le système reste alors "bloqué" en DETECTING_LAG. Comme les calculs itératifs de mise à jour ne sont actifs qu'en MONITORING, le système ne recalcule pas sa relance avec les prévisions météo fraîches du matin, risquant de manquer l'heure cible de confort.
+
+decision: |
+  Implémenter une "sortie de secours" déclenchée par le trigger de relance (RECOVERY_START) permettant de forcer la transition vers MONITORING, de recalculer la durée nécessaire, puis de décider de la relance immédiate ou différée.
+
+  **Logique de fonctionnement :**
+
+  1. **Déclenchement :** Si le timer RECOVERY_START arrive alors que l'état est DETECTING_LAG :
+     - Forcer la clôture du lag et passer en MONITORING via `_on_temperature_decrease_detected()`.
+     - Verrouiller l'apprentissage du coefficient d'isolation (RCth) pour ce cycle via un flag `rcth_learning_disabled`.
+  2. **Recalcul dynamique :** En entrant en MONITORING, le système lance un calcul immédiat de `recovery_duration` avec les prévisions météo actuelles.
+  3. **Arbitrage :**
+     - **CAS A :** Si `now >= recovery_start_time` (calculé avec les données fraîches), basculer immédiatement en RECOVERY.
+     - **CAS B :** Sinon, rester en MONITORING et attendre le nouveau trigger reprogrammé par le calcul.
+  4. **Sécurisation :** Désactiver le calcul du RCth dans `calculate_rcth_at_recovery_start` si le flag est actif pour éviter d'injecter une pente thermique nulle dans le modèle.
+
+  **Modifications techniques :**
+  - `data_model.py` : Ajouter `rcth_learning_disabled: bool = False`.
+  - `coordinator.py` : Intercepter l'état dans `_on_recovery_start_hour` et ajouter une garde dans `calculate_rcth_at_recovery_start`.
+
+consequences:
+  positive:
+    - Garantie du confort matinal même sans baisse de température détectée.
+    - Précision accrue par le recalcul avec les prévisions météo les plus récentes (ADR-022).
+  negative:
+    - Aucune mise à jour des coefficients d'isolation (RCth) pour les nuits concernées pour protéger le modèle thermique.
+  neutral:
+    - Respect strict de la machine à états: passage obligatoire par MONITORING avant RECOVERY.
+
+related:
+  - "ADR-003": Machine à états (respect du cycle de vie).
+  - "ADR-008": Validation du lag (définition de la condition nominale).
+  - "ADR-053": Sécurisation de l'apprentissage (complément de garde).

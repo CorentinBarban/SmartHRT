@@ -55,73 +55,73 @@
     }
   },
   "services": {
-    "calculate_recovery_time": {
-      "name": "Aufheizzeit berechnen",
-      "description": "Berechnet die Startzeit der Heizung basierend auf thermischen Parametern.",
+    "start_heating_cycle": {
+      "name": "Heizzyklus starten",
+      "description": "Startet einen neuen täglichen Heizzyklus. Setzt den Zustandsautomaten auf HEATING_ON (aktives Heizen).",
       "fields": {
         "entry_id": {
-          "name": "Konfigurations-ID",
-          "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
+          "name": "Eintrag-ID",
+          "description": "Die Konfigurations-Eintrag-ID (optional, verwendet den ersten verfügbaren wenn nicht angegeben)."
         }
       }
     },
-    "calculate_recovery_update_time": {
-      "name": "Aktualisierungszeit berechnen",
-      "description": "Berechnet, wann die nächste Aktualisierung der Aufheizberechnung erfolgen soll.",
+    "stop_heating": {
+      "name": "Heizung stoppen",
+      "description": "Stoppt die Heizung und startet die Nachtüberwachungsphase.",
       "fields": {
         "entry_id": {
-          "name": "Konfigurations-ID",
-          "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
+          "name": "Eintrag-ID",
+          "description": "Die Konfigurations-Eintrag-ID (optional)."
         }
       }
     },
-    "calculate_rcth_fast": {
-      "name": "Dynamisches RCth berechnen",
-      "description": "Berechnet die dynamische Entwicklung von RCth vor dem Start der Aufheizung.",
+    "start_recovery": {
+      "name": "Aufheizung starten",
+      "description": "Startet die Aufheizphase um die Zieltemperatur zur Weckzeit zu erreichen.",
       "fields": {
         "entry_id": {
-          "name": "Konfigurations-ID",
-          "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
+          "name": "Eintrag-ID",
+          "description": "Die Konfigurations-Eintrag-ID (optional)."
         }
       }
     },
-    "on_heating_stop": {
-      "name": "Heizungsstopp",
-      "description": "Löst Aktionen aus, wenn die Heizung stoppt (zeichnet Temperaturen und Zeitstempel für Berechnungen auf).",
+    "end_recovery": {
+      "name": "Aufheizung beenden",
+      "description": "Beendet die Aufheizphase. Berechnet RPth und kehrt zum normalen Heizmodus zurück.",
       "fields": {
         "entry_id": {
-          "name": "Konfigurations-ID",
-          "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
+          "name": "Eintrag-ID",
+          "description": "Die Konfigurations-Eintrag-ID (optional)."
         }
       }
     },
-    "on_recovery_start": {
-      "name": "Aufheizstart",
-      "description": "Löst Aktionen zu Beginn der Aufheizung aus (zeichnet Temperaturen auf und berechnet RCth).",
+    "get_state": {
+      "name": "Status abrufen",
+      "description": "Gibt den aktuellen Zustand des Zustandsautomaten mit allen Details zurück.",
       "fields": {
         "entry_id": {
-          "name": "Konfigurations-ID",
-          "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
+          "name": "Eintrag-ID",
+          "description": "Die Konfigurations-Eintrag-ID (optional)."
         }
       }
     },
-    "on_recovery_end": {
-      "name": "Aufheizende",
-      "description": "Löst Aktionen am Ende der Aufheizung aus (zeichnet Temperaturen auf und berechnet RPth).",
+    "force_monitoring": {
+      "name": "DETECTING_LAG verlassen erzwingen",
+      "description": "Erzwingt den Austritt aus dem DETECTING_LAG-Zustand zu MONITORING. RCth-Lernen wird für diesen Zyklus deaktiviert.",
       "fields": {
         "entry_id": {
-          "name": "Konfigurations-ID",
-          "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
+          "name": "Eintrag-ID",
+          "description": "Die Konfigurations-Eintrag-ID (optional)."
         }
       }
     },
     "reset_learning": {
-      "name": "Lernvorgang zurücksetzen",
-      "description": "Setzt alle erlernten thermischen Koeffizienten (RCth, RPth) auf ihre Standardwerte zurück.",
+      "name": "Lernen zurücksetzen",
+      "description": "Setzt alle gelernten thermischen Koeffizienten auf ihre Standardwerte zurück.",
       "fields": {
         "entry_id": {
-          "name": "Konfigurations-ID",
-          "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
+          "name": "Eintrag-ID",
+          "description": "Die Konfigurations-Eintrag-ID (optional)."
         }
       }
     },
@@ -130,8 +130,8 @@
       "description": "Löst manuell eine sofortige Neuberechnung der Aufheizzeit aus.",
       "fields": {
         "entry_id": {
-          "name": "Konfigurations-ID",
-          "description": "Die Konfigurations-ID (optional, verwendet die erste verfügbare wenn nicht angegeben)."
+          "name": "Eintrag-ID",
+          "description": "Die Konfigurations-Eintrag-ID (optional)."
         }
       }
     }

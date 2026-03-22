@@ -235,6 +235,43 @@ class TestEdgeCases:
             # Toujours en MONITORING
             assert coord.data.current_state == SmartHRTState.MONITORING
 
+    @pytest.mark.asyncio
+    async def test_target_hour_reached_while_in_monitoring_no_recovery(
+        self, create_coordinator
+    ):
+        """Test ADR-055: target_hour atteint en MONITORING sans relance déclenchée.
+
+        Scénario: La température n'est jamais descendue assez pour déclencher
+        la relance (ex: nuit chaude). À target_hour, le système doit transitionner
+        directement vers HEATING_ON sans passer par RECOVERY ni HEATING_PROCESS.
+        """
+        with patch("custom_components.SmartHRT.coordinator.dt_util") as mock_dt:
+            mock_dt.now.return_value = datetime(2026, 2, 4, 6, 0, 0)
+
+            coord = await create_coordinator(
+                initial_state=SmartHRTState.MONITORING,
+                smartheating_mode=True,
+                recovery_calc_mode=True,  # Flag MONITORING actif
+                tsp=DEFAULT_TSP,
+                interior_temp=19.0,  # Encore au-dessus de la cible
+                time_recovery_calc=datetime(2026, 2, 3, 23, 0, 0),
+            )
+            coord.data.target_hour = dt_time(6, 0, 0)
+            coord.data.recovery_start_hour = None  # Pas de relance programmée
+
+            # Vérifier qu'on est bien en MONITORING avant
+            assert coord.data.current_state == SmartHRTState.MONITORING
+            assert coord.data.rp_calc_mode is False
+
+            # Simuler l'arrivée de target_hour
+            coord._on_target_hour(None)
+
+            # Doit transitionner vers HEATING_ON directement
+            assert coord.data.current_state == SmartHRTState.HEATING_ON
+            # Les flags doivent être réinitialisés
+            assert coord.data.recovery_calc_mode is False
+            assert coord.data.rp_calc_mode is False
+
 
 class TestModeInteractions:
     """Tests pour les interactions entre modes et états."""

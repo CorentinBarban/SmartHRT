@@ -55,83 +55,83 @@
     }
   },
   "services": {
-    "calculate_recovery_time": {
-      "name": "Calcular hora de reinicio",
-      "description": "Calcula la hora de inicio de la calefacción según los parámetros térmicos.",
+    "start_heating_cycle": {
+      "name": "Iniciar ciclo de calefacción",
+      "description": "Inicia un nuevo ciclo de calefacción diario. Establece la máquina de estados en HEATING_ON.",
       "fields": {
         "entry_id": {
-          "name": "ID de configuración",
-          "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
+          "name": "ID de entrada",
+          "description": "El ID de entrada de configuración (opcional)."
         }
       }
     },
-    "calculate_recovery_update_time": {
-      "name": "Calcular hora de actualización",
-      "description": "Calcula cuándo debe ocurrir la próxima actualización del cálculo de reinicio.",
+    "stop_heating": {
+      "name": "Detener calefacción",
+      "description": "Detiene la calefacción e inicia la fase de vigilancia nocturna.",
       "fields": {
         "entry_id": {
-          "name": "ID de configuración",
-          "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
+          "name": "ID de entrada",
+          "description": "El ID de entrada de configuración (opcional)."
         }
       }
     },
-    "calculate_rcth_fast": {
-      "name": "Calcular RCth dinámico",
-      "description": "Calcula la evolución dinámica de RCth antes del inicio del reinicio.",
+    "start_recovery": {
+      "name": "Iniciar recuperación",
+      "description": "Inicia la fase de recuperación de calefacción para alcanzar la temperatura objetivo.",
       "fields": {
         "entry_id": {
-          "name": "ID de configuración",
-          "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
+          "name": "ID de entrada",
+          "description": "El ID de entrada de configuración (opcional)."
         }
       }
     },
-    "on_heating_stop": {
-      "name": "Parada de calefacción",
-      "description": "Activa las acciones cuando la calefacción se apaga (registra temperaturas y marcas de tiempo para los cálculos).",
+    "end_recovery": {
+      "name": "Finalizar recuperación",
+      "description": "Finaliza la fase de recuperación. Calcula RPth y vuelve al modo de calefacción normal.",
       "fields": {
         "entry_id": {
-          "name": "ID de configuración",
-          "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
+          "name": "ID de entrada",
+          "description": "El ID de entrada de configuración (opcional)."
         }
       }
     },
-    "on_recovery_start": {
-      "name": "Inicio de reinicio",
-      "description": "Activa las acciones al inicio del reinicio de la calefacción (registra temperaturas y calcula RCth).",
+    "get_state": {
+      "name": "Obtener estado",
+      "description": "Devuelve el estado actual con todos los detalles.",
       "fields": {
         "entry_id": {
-          "name": "ID de configuración",
-          "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
+          "name": "ID de entrada",
+          "description": "El ID de entrada de configuración (opcional)."
         }
       }
     },
-    "on_recovery_end": {
-      "name": "Fin de reinicio",
-      "description": "Activa las acciones al final del reinicio de la calefacción (registra temperaturas y calcula RPth).",
+    "force_monitoring": {
+      "name": "Forzar salida de DETECTING_LAG",
+      "description": "Fuerza la salida del estado DETECTING_LAG a MONITORING. El aprendizaje de RCth se desactiva para este ciclo.",
       "fields": {
         "entry_id": {
-          "name": "ID de configuración",
-          "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
+          "name": "ID de entrada",
+          "description": "El ID de entrada de configuración (opcional)."
         }
       }
     },
     "reset_learning": {
-      "name": "Restablecer aprendizaje",
-      "description": "Restablece todos los coeficientes térmicos aprendidos (RCth, RPth) a sus valores predeterminados.",
+      "name": "Reiniciar aprendizaje",
+      "description": "Restablece todos los coeficientes térmicos aprendidos a sus valores predeterminados.",
       "fields": {
         "entry_id": {
-          "name": "ID de configuración",
-          "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
+          "name": "ID de entrada",
+          "description": "El ID de entrada de configuración (opcional)."
         }
       }
     },
     "trigger_calculation": {
       "name": "Activar cálculo",
-      "description": "Activa manualmente un recálculo inmediato de la hora de reinicio.",
+      "description": "Activa manualmente un recálculo inmediato del tiempo de recuperación.",
       "fields": {
         "entry_id": {
-          "name": "ID de configuración",
-          "description": "El ID de la configuración (opcional, usa el primero disponible si no se especifica)."
+          "name": "ID de entrada",
+          "description": "El ID de entrada de configuración (opcional)."
         }
       }
     }
