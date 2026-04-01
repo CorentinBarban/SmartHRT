@@ -2515,11 +2515,13 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         """Active/désactive le mode chauffage intelligent."""
         self.data.smartheating_mode = value
         self.async_set_updated_data(self.data)
+        self.hass.async_create_task(self._save_learned_data())
 
     def set_recovery_adaptive_mode(self, value: bool) -> None:
         """Active/désactive le mode adaptatif."""
         self.data.recovery_adaptive_mode = value
         self.async_set_updated_data(self.data)
+        self.hass.async_create_task(self._save_learned_data())
 
     def set_adaptive_mode(self, value: bool) -> None:
         """Alias pour set_recovery_adaptive_mode."""
