@@ -346,6 +346,9 @@ class ThermalSolver:
                 # Ne pas retourner, laisser le calcul se poursuivre
             else:
                 # Extérieur plus chaud que TSP → pas besoin de relance
+                # recovery_start_hour = target_dt (et non now) pour que le sensor
+                # smarthrt_heure_de_relance reflète l'heure cible et déclenche
+                # les automatisations HA à la bonne heure.
                 self._logger.info(
                     "%s ADR-050: %s et text >= tint → démarrage immédiat (now=%s)",
                     self._log_prefix,
@@ -353,7 +356,7 @@ class ThermalSolver:
                     now.strftime("%H:%M:%S"),
                 )
                 return RecoveryResult(
-                    recovery_start_hour=now,
+                    recovery_start_hour=target_dt,
                     duration_hours=0.0,
                 )
 

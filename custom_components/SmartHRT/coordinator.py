@@ -993,6 +993,15 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         if not self.data.smartheating_mode:
             return
 
+        # ADR-050: Si duration_hours == 0, pas de relance nécessaire (temp >= cible,
+        # extérieur plus chaud). _on_target_hour gère la transition MONITORING → HEATING_ON.
+        if self.data.recovery_duration_hours == 0.0:
+            _LOGGER.debug(
+                "%s Relance ignorée, durée = 0 (pas de chauffage nécessaire)",
+                self._log_prefix(),
+            )
+            return
+
         # Éviter de déclencher si on est déjà en RECOVERY ou HEATING_PROCESS
         if self.data.current_state in (
             SmartHRTState.RECOVERY,
