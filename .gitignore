@@ -5,4 +5,4 @@ __pycache__/
 !config/configuration.yaml
 _bmad/
 _bmad-output/
-.github/agents/
+.github/agents/.venv/

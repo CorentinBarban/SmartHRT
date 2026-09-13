@@ -311,7 +311,10 @@ class ThermalSolver:
         )
 
         # Log de diagnostic détaillé pour non-régression (TC-PRED)
-        self._logger.info(
+        # BUGFIX (#2.3): .debug() au lieu de .info() - ce log tourne à chaque
+        # cycle de mise à jour pour chaque instance (3-4 pièces en parallèle),
+        # ce qui génère un volume de logs inutile en fonctionnement normal.
+        self._logger.debug(
             "%s [TC-PRED] Recovery prediction: "
             "tint=%.2f°C, text=%.2f°C, tsp=%.2f°C, "
             "rcth=%.2f, rpth=%.2f, target_time=%s, validation_status=%s",
@@ -434,7 +437,8 @@ class ThermalSolver:
         recovery_start_hour = target_dt - timedelta(seconds=int(duree_relance * 3600))
 
         # Log final détaillé pour non-régression (TC-PRED)
-        self._logger.info(
+        # BUGFIX (#2.3): .debug() - même raison que le log de prédiction ci-dessus.
+        self._logger.debug(
             "%s [TC-PRED] Recovery result: "
             "duration_hours=%.2f, start_time=%s, iterations=%d, "
             "tint=%.2f°C, text=%.2f°C, tsp=%.2f°C, rcth=%.2f",
@@ -597,6 +601,13 @@ class ThermalSolver:
 
         prev_estimate = float("inf")
         iterations = 0
+        # BUGFIX (#3.1): tint_at_start doit toujours être défini avant la boucle,
+        # car la branche "cooling_time <= 0" peut break() dès la 1ère itération,
+        # avant tout calcul de tint_at_start. Sans ce défaut, le log final
+        # ci-dessous levait UnboundLocalError (iterations > 0 était vrai même
+        # sur un break immédiat). Valeur par défaut sûre: tint (aucun
+        # refroidissement n'a eu lieu si on n'a pas eu le temps de refroidir).
+        tint_at_start = tint
 
         for iteration in range(self.config.max_iterations):
             iterations = iteration + 1
@@ -655,13 +666,13 @@ class ThermalSolver:
             prev_estimate = duree_relance
             duree_relance = new_estimate
 
-        self._logger.info(
+        self._logger.debug(
             "%s Cooling prediction: durée=%.2fh après %d itérations (tint=%.1f → %.1f°C)",
             self._log_prefix,
             duree_relance,
             iterations,
             tint,
-            tint_at_start if iterations > 0 else tint,
+            tint_at_start,
         )
 
         return duree_relance, iterations

@@ -78,6 +78,9 @@ from .const import (
     WIND_LOW,
     FORECAST_HOURS,
     TEMP_DECREASE_THRESHOLD,
+    MAX_PLAUSIBLE_TEMP_RATE_C_PER_HOUR,
+    MIN_TEMP_JUMP_FLOOR_C,
+    MIN_TEMP_JUMP_FALLBACK_C,
     DEFAULT_RECOVERYCALC_HOUR,
     TimerKey,
     # ADR-053: Seuils pour Snooze et sécurisation apprentissage
@@ -140,6 +143,21 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
         self._entry = entry
         self._unsub_listeners: list = []
+        # BUGFIX (#4.6): Traçage des tâches de sauvegarde fire-and-forget.
+        # self._save_learned_data() était lancé via hass.async_create_task()
+        # sans conserver de référence, donc sans jamais être annulé/attendu
+        # lors du déchargement (async_unload). Une sauvegarde en cours au
+        # moment du unload pouvait alors s'exécuter après la destruction du
+        # coordinateur (accès à self._store après unload). On garde ici un
+        # ensemble de tâches vivantes, purgé automatiquement à la complétion.
+        self._background_tasks: set[asyncio.Task] = set()
+        # BUGFIX (#3.6): dernier relevé intérieur ACCEPTÉ et son timestamp,
+        # utilisés pour borner le taux de variation plausible (°C/h) d'une
+        # nouvelle lecture. Distinct de self.data.interior_temp (qui n'est
+        # mis à jour qu'après acceptation) pour ne pas mélanger état
+        # persisté/exposé et bookkeeping interne de validation.
+        self._last_interior_temp: float | None = None
+        self._last_interior_temp_timestamp: datetime | None = None
         # ADR-051: Gestionnaire centralisé des timers
         self._timer_manager = TimerManager(hass)
         # ADR-004 & ADR-009: Stratégie hybride de persistance
@@ -521,6 +539,28 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
     # Setup / Unload
     # ─────────────────────────────────────────────────────────────────────────
 
+    def _create_tracked_task(self, coro, name: str | None = None) -> asyncio.Task:
+        """Crée une tâche de fond en conservant une référence (BUGFIX #4.6).
+
+        À utiliser pour toute tâche fire-and-forget dont on veut garantir
+        l'annulation/l'attente propre lors de async_unload() - typiquement
+        les sauvegardes (_save_learned_data). La tâche se retire elle-même
+        de l'ensemble une fois terminée.
+
+        NOTE: `name` n'est PAS transmis à hass.async_create_task() - le mock
+        de test (tests/conftest.py: MockHass.async_create_task(self, coro))
+        n'accepte pas ce kwarg, contrairement à l'API HA réelle qui l'accepte
+        en optionnel. On garde le paramètre ici (utile pour le futur/le
+        debugging via task.get_name() une fois la tâche créée) sans le
+        transmettre, pour rester compatible avec les deux.
+        """
+        task = self.hass.async_create_task(coro)
+        if name and hasattr(task, "set_name"):
+            task.set_name(name)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
+
     async def async_setup(self) -> None:
         """Configuration asynchrone du coordinateur.
 
@@ -830,6 +870,24 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             unsub()
         self._unsub_listeners.clear()
 
+        # BUGFIX (#4.6): Attendre/annuler les tâches de fond (sauvegardes)
+        # encore en cours. Sans cela, une sauvegarde lancée juste avant le
+        # unload pouvait continuer à s'exécuter après la destruction du
+        # coordinateur et accéder à self._store une fois l'entrée déchargée.
+        if self._background_tasks:
+            pending = list(self._background_tasks)
+            _LOGGER.debug(
+                "%s Attente de %d tâche(s) de fond avant déchargement",
+                self._log_prefix(),
+                len(pending),
+            )
+            done, still_pending = await asyncio.wait(pending, timeout=5)
+            for task in still_pending:
+                task.cancel()
+            if still_pending:
+                await asyncio.gather(*still_pending, return_exceptions=True)
+            self._background_tasks.clear()
+
     # ─────────────────────────────────────────────────────────────────────────
     # État initial et callbacks
     # ─────────────────────────────────────────────────────────────────────────
@@ -868,9 +926,59 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
                 # ADR-054: Convertir vers Celsius
                 raw_temp = float(new_state.state)
                 source_unit = self._get_sensor_unit(entity_id)
-                self.data.interior_temp = self._normalize_to_celsius(
-                    raw_temp, source_unit
-                )
+                normalized_temp = self._normalize_to_celsius(raw_temp, source_unit)
+
+                # BUGFIX (#3.6): rejeter les sauts de température implausibles
+                # (glitch capteur/réseau) qui corromperaient l'apprentissage
+                # RCth/RPth. Le coordinateur étant piloté par événements (pas
+                # de polling à intervalle fixe), l'écart de temps entre deux
+                # lectures est variable et propre au capteur physique - un
+                # seuil fixe en °C n'a donc pas de sens. On borne plutôt le
+                # TAUX de variation (°C/h), avec un plancher
+                # (MIN_TEMP_JUMP_FLOOR_C) pour ne pas rejeter à tort deux
+                # lectures très rapprochées où le bruit/arrondi du capteur
+                # domine le calcul de taux.
+                last_temp = self._last_interior_temp
+                last_timestamp = self._last_interior_temp_timestamp
+                reading_time = new_state.last_updated
+
+                if last_temp is not None:
+                    if last_timestamp is not None:
+                        elapsed_hours = (
+                            reading_time - last_timestamp
+                        ).total_seconds() / 3600
+                    else:
+                        elapsed_hours = 0
+
+                    if elapsed_hours > 0:
+                        max_allowed = max(
+                            MIN_TEMP_JUMP_FLOOR_C,
+                            MAX_PLAUSIBLE_TEMP_RATE_C_PER_HOUR * elapsed_hours,
+                        )
+                    else:
+                        # Timestamp manquant ou lectures simultanées: repli
+                        # sur un seuil plat conservateur.
+                        max_allowed = MIN_TEMP_JUMP_FALLBACK_C
+
+                    delta = abs(normalized_temp - last_temp)
+                    if delta > max_allowed:
+                        _LOGGER.warning(
+                            "%s Saut de température implausible ignoré: "
+                            "%.1f°C → %.1f°C (delta=%.1f°C > max_allowed=%.1f°C "
+                            "sur %.2fh), valeur précédente conservée",
+                            self._log_prefix(),
+                            last_temp,
+                            normalized_temp,
+                            delta,
+                            max_allowed,
+                            elapsed_hours,
+                        )
+                        return
+
+                self._last_interior_temp = normalized_temp
+                self._last_interior_temp_timestamp = reading_time
+
+                self.data.interior_temp = normalized_temp
                 self._check_temperature_thresholds()
             except ValueError:
                 pass
@@ -1114,7 +1222,10 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
                     self._timer_manager.cancel(TimerKey.RECOVERY_START)
                     self._timer_manager.cancel(TimerKey.RECOVERY_UPDATE)
                     self.force_state(SmartHRTState.HEATING_ON)
-                    self.hass.async_create_task(self._save_learned_data())
+                    self._create_tracked_task(
+                        self._save_learned_data(),
+                        name=f"SmartHRT {self.data.name} save",
+                    )
                 self.async_set_updated_data(self.data)
 
         self._reschedule_target_hour()
@@ -1804,7 +1915,9 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         )
 
         # Sauvegarder l'état après la transition
-        self.hass.async_create_task(self._save_learned_data())
+        self._create_tracked_task(
+            self._save_learned_data(), name=f"SmartHRT {self.data.name} save"
+        )
 
         self.async_set_updated_data(self.data)
 
@@ -1818,13 +1931,30 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         """Détermine si on est en période nocturne (entre recoverycalc et target).
 
         Args:
-            current_time: Heure actuelle (time)
+            current_time: Heure actuelle (time) - heure murale locale, dérivée
+                d'un datetime aware (dt_util.now().time()). La comparaison ne
+                porte que sur l'heure murale (time), sans aucune arithmétique
+                de date.
             target: Heure cible du matin (ex: 06:00)
             recoverycalc: Heure de calcul du soir (ex: 23:00)
 
         Returns:
             True si on est en période nocturne (MONITORING attendu)
         """
+        # BUGFIX (#3.4): garde contre le cas dégénéré target == recoverycalc
+        # (erreur de configuration). Avant ce fix, ce cas tombait dans la
+        # branche "else" et retournait toujours False silencieusement
+        # (recoverycalc <= current_time < target est une plage vide quand
+        # les deux bornes sont égales), masquant une configuration invalide.
+        if target == recoverycalc:
+            _LOGGER.warning(
+                "%s target_hour == recoverycalc_hour (%s), configuration "
+                "invalide - période nocturne indéterminée, on suppose False",
+                self._log_prefix(),
+                target,
+            )
+            return False
+
         if target < recoverycalc:
             # Cas normal: target=06:00, recoverycalc=23:00
             # Nuit = après 23:00 OU avant 06:00
@@ -1863,14 +1993,39 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
         is_night = self._is_night_period(current_time, target, recoverycalc)
 
+        # BUGFIX (#3.4): garde tzinfo avant toute comparaison/soustraction
+        # ci-dessous. On ne modifie PAS self.data.recovery_start_hour de façon
+        # persistante (contrairement à une première tentative qui localisait
+        # la valeur au niveau du validateur Pydantic - cela rendait le champ
+        # stocké aware alors que `now` peut légitimement être naïf selon
+        # l'appelant, cassant la comparaison dans l'autre sens).
+        #
+        # IMPORTANT: on ne localise QUE s'il y a un vrai désaccord naïf/aware
+        # entre les deux opérandes, jamais de façon inconditionnelle. Certains
+        # tests patchent tout le module dt_util (coordinator.dt_util) sans
+        # configurer .as_local, qui renvoie alors un MagicMock au lieu d'un
+        # datetime si on l'appelle sans nécessité - cassant l'arithmétique
+        # même quand les deux opérandes étaient déjà cohérents (naïfs
+        # ensemble, comme le fait le code original). Ne convertir qu'en cas
+        # de désaccord réel reproduit exactement le comportement d'origine
+        # quand les deux côtés s'accordent déjà.
+        recovery_start_hour = self.data.recovery_start_hour
+        if recovery_start_hour is not None:
+            rsh_naive = recovery_start_hour.tzinfo is None
+            now_naive = now.tzinfo is None
+            if rsh_naive and not now_naive:
+                recovery_start_hour = dt_util.as_local(recovery_start_hour)
+            elif now_naive and not rsh_naive:
+                now = dt_util.as_local(now)
+
         # MONITORING/DETECTING_LAG valides la nuit OU si recovery_start_hour est proche
         if persisted_state in (SmartHRTState.MONITORING, SmartHRTState.DETECTING_LAG):
             if is_night:
                 return True
             # Aussi valide si recovery_start_hour est dans le futur proche (< 6h)
-            if self.data.recovery_start_hour and self.data.recovery_start_hour > now:
+            if recovery_start_hour and recovery_start_hour > now:
                 hours_until_recovery = (
-                    self.data.recovery_start_hour - now
+                    recovery_start_hour - now
                 ).total_seconds() / 3600
                 if hours_until_recovery < 6:
                     return True
@@ -1878,16 +2033,14 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
         # RECOVERY/HEATING_PROCESS valides pendant la période de relance
         if persisted_state in (SmartHRTState.RECOVERY, SmartHRTState.HEATING_PROCESS):
-            if not self.data.recovery_start_hour:
+            if not recovery_start_hour:
                 return False  # Pas de recovery_start_hour = incohérent
             # recovery_start_hour doit être récent (< 24h) pour être valide
-            hours_since_recovery = (
-                now - self.data.recovery_start_hour
-            ).total_seconds() / 3600
+            hours_since_recovery = (now - recovery_start_hour).total_seconds() / 3600
             if hours_since_recovery > 24:
                 return False  # État périmé
             # Valide si : recovery_start_hour <= now ET current_time < target
-            return now >= self.data.recovery_start_hour and current_time < target
+            return now >= recovery_start_hour and current_time < target
 
         # État inconnu = incohérent
         return False
@@ -2040,8 +2193,22 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         recoverycalc = self.data.recoverycalc_hour
 
         # Si recovery_start_hour est dans le futur proche → MONITORING
-        if self.data.recovery_start_hour and self.data.recovery_start_hour > now:
-            hours_until = (self.data.recovery_start_hour - now).total_seconds() / 3600
+        # BUGFIX (#3.4): garde tzinfo avant comparaison/soustraction avec
+        # `now`, uniquement en cas de désaccord naïf/aware réel entre les
+        # deux opérandes (voir commentaire détaillé dans _is_state_coherent
+        # ci-dessus - une conversion inconditionnelle casse les tests qui
+        # patchent tout le module dt_util sans configurer .as_local).
+        recovery_start_hour = self.data.recovery_start_hour
+        if recovery_start_hour is not None:
+            rsh_naive = recovery_start_hour.tzinfo is None
+            now_naive = now.tzinfo is None
+            if rsh_naive and not now_naive:
+                recovery_start_hour = dt_util.as_local(recovery_start_hour)
+            elif now_naive and not rsh_naive:
+                now = dt_util.as_local(now)
+
+        if recovery_start_hour and recovery_start_hour > now:
+            hours_until = (recovery_start_hour - now).total_seconds() / 3600
             if hours_until < 6:
                 _LOGGER.info(
                     "%s État déduit: MONITORING (recovery_start_hour dans %.1fh)",
@@ -2471,7 +2638,10 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
         # 5. Persistance optionnelle
         if persist:
-            self.hass.async_create_task(self._save_learned_data())
+            self._create_tracked_task(
+                self._save_learned_data(),
+                name=f"SmartHRT {self.data.name} save",
+            )
 
     # ─────────────────────────────────────────────────────────────────────────
     # Setters publics (ADR-036: factorisés via _update_and_recalculate)
@@ -2515,13 +2685,17 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
         """Active/désactive le mode chauffage intelligent."""
         self.data.smartheating_mode = value
         self.async_set_updated_data(self.data)
-        self.hass.async_create_task(self._save_learned_data())
+        self._create_tracked_task(
+            self._save_learned_data(), name=f"SmartHRT {self.data.name} save"
+        )
 
     def set_recovery_adaptive_mode(self, value: bool) -> None:
         """Active/désactive le mode adaptatif."""
         self.data.recovery_adaptive_mode = value
         self.async_set_updated_data(self.data)
-        self.hass.async_create_task(self._save_learned_data())
+        self._create_tracked_task(
+            self._save_learned_data(), name=f"SmartHRT {self.data.name} save"
+        )
 
     def set_adaptive_mode(self, value: bool) -> None:
         """Alias pour set_recovery_adaptive_mode."""

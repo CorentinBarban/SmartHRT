@@ -42,6 +42,24 @@ class ThermalConfig:
     outlier_threshold_percent: float = 50.0  # Écart max autorisé en %
     outlier_mode: str = "clamp"  # "clamp" (plafonnement) ou "reject" (ignorer)
 
+    def __post_init__(self) -> None:
+        """Valide la configuration (BUGFIX #3.2).
+
+        ThermalSolver.interpolate_for_wind() et update_coefficients() divisent
+        tous les deux par (wind_high_kmh - wind_low_kmh). Si ces deux seuils
+        sont égaux (ou inversés) suite à une erreur de configuration, chaque
+        calcul de recovery pour cette instance lève ZeroDivisionError. On
+        valide donc dès la construction plutôt que de laisser planter le
+        premier calcul thermique.
+        """
+        if self.wind_high_kmh <= self.wind_low_kmh:
+            raise ValueError(
+                "ThermalConfig invalide: wind_high_kmh "
+                f"({self.wind_high_kmh}) doit être strictement supérieur à "
+                f"wind_low_kmh ({self.wind_low_kmh}) pour éviter une "
+                "division par zéro dans l'interpolation vent."
+            )
+
 
 @dataclass
 class ThermalCoefficients:
