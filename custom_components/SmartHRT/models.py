@@ -1,41 +1,30 @@
-"""Modèles Pydantic pour la validation des données SmartHRT (ADR-029).
+"""Modèles Pydantic de validation des données persistées et du config flow."""
 
-Ce module définit les schémas de validation pour :
-- Les données persistées (coefficients thermiques, état, etc.)
-- Les entrées de configuration (config_flow)
-
-Utilise Pydantic v2 pour la validation automatique des types et ranges.
-"""
-
-from datetime import datetime, time as dt_time
-from typing import Any
-from collections import deque
 import logging
+from collections import deque
+from datetime import datetime
+from datetime import time as dt_time
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .const import (
     DEFAULT_RCTH,
-    DEFAULT_RPTH,
-    DEFAULT_RCTH_MIN,
     DEFAULT_RCTH_MAX,
-    DEFAULT_RELAXATION_FACTOR,
+    DEFAULT_RCTH_MIN,
+    DEFAULT_RPTH,
     DEFAULT_TSP,
-    DEFAULT_TSP_MIN,
     DEFAULT_TSP_MAX,
+    DEFAULT_TSP_MIN,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class PersistedDataModel(BaseModel):
-    """Modèle Pydantic pour les données persistées (ADR-029).
+    """Valide les types et bornes des données chargées depuis le stockage."""
 
-    Valide automatiquement les types et ranges des données chargées
-    depuis le stockage persistant.
-    """
-
-    # Coefficients thermiques avec validation de range
+    # Coefficients thermiques
     rcth: float = Field(default=DEFAULT_RCTH, ge=DEFAULT_RCTH_MIN, le=DEFAULT_RCTH_MAX)
     rpth: float = Field(default=DEFAULT_RPTH, ge=DEFAULT_RCTH_MIN, le=DEFAULT_RCTH_MAX)
     rcth_lw: float = Field(default=DEFAULT_RCTH, ge=0)
@@ -115,10 +104,7 @@ class PersistedDataModel(BaseModel):
 
 
 class ConfigFlowDataModel(BaseModel):
-    """Modèle Pydantic pour les données du config flow (ADR-032).
-
-    Valide les entrées utilisateur lors de la configuration.
-    """
+    """Valide les entrées utilisateur du config flow."""
 
     name: str = Field(min_length=1, max_length=100)
     target_hour: str  # Format "HH:MM:SS"
@@ -156,11 +142,7 @@ class ConfigFlowDataModel(BaseModel):
 
     @model_validator(mode="after")
     def validate_time_sequence(self) -> "ConfigFlowDataModel":
-        """Valide que recoverycalc_hour précède target_hour (passage à minuit).
-
-        La logique: recoverycalc (23:00) doit être le soir, target (06:00) le matin.
-        Si recoverycalc < target (même journée), c'est une erreur.
-        """
+        """Valide que recoverycalc_hour précède target_hour (passage à minuit)."""
         try:
             rc_parts = self.recoverycalc_hour.split(":")
             tg_parts = self.target_hour.split(":")
@@ -184,7 +166,7 @@ class ConfigFlowDataModel(BaseModel):
 
     @property
     def target_hour_as_time(self) -> dt_time:
-        """Convertit target_hour en objet time (ADR-045)."""
+        """Convertit target_hour en objet time."""
         parts = self.target_hour.split(":")
         return dt_time(
             int(parts[0]),
@@ -194,7 +176,7 @@ class ConfigFlowDataModel(BaseModel):
 
     @property
     def recoverycalc_hour_as_time(self) -> dt_time:
-        """Convertit recoverycalc_hour en objet time (ADR-045)."""
+        """Convertit recoverycalc_hour en objet time."""
         parts = self.recoverycalc_hour.split(":")
         return dt_time(
             int(parts[0]),
@@ -204,23 +186,12 @@ class ConfigFlowDataModel(BaseModel):
 
 
 def validate_persisted_data(data: dict[str, Any]) -> dict[str, Any]:
-    """Valide et normalise les données persistées.
-
-    Args:
-        data: Dictionnaire de données brutes depuis le stockage
-
-    Returns:
-        Dictionnaire validé avec valeurs corrigées si nécessaire
-
-    Note:
-        Ne lève pas d'exception, utilise des valeurs par défaut en cas d'erreur.
-    """
+    """Valide et normalise les données persistées ; retourne les défauts si invalides (ne lève pas)."""
     try:
         model = PersistedDataModel.model_validate(data)
         return model.model_dump()
     except Exception as e:
         _LOGGER.warning("Erreur de validation des données persistées: %s", e)
-        # Retourne les valeurs par défaut
         return PersistedDataModel().model_dump()
 
 
@@ -229,13 +200,8 @@ def validate_config_flow_data(
 ) -> tuple[dict[str, Any] | None, dict[str, str]]:
     """Valide les données du config flow.
 
-    Args:
-        data: Données saisies par l'utilisateur
-
     Returns:
-        Tuple (données_validées, erreurs)
-        - données_validées: None si erreurs, sinon dict validé
-        - erreurs: dict {champ: code_erreur} pour affichage UI
+        Tuple (données validées ou None, erreurs {champ: code_erreur} pour l'UI).
     """
     errors: dict[str, str] = {}
 
@@ -243,7 +209,7 @@ def validate_config_flow_data(
         model = ConfigFlowDataModel.model_validate(data)
         return model.model_dump(), errors
     except Exception as e:
-        # Parser les erreurs Pydantic pour les mapper aux champs
+        # Mappe le message d'erreur Pydantic vers un code d'erreur UI
         error_str = str(e)
         if "tsp" in error_str.lower():
             errors["tsp"] = "tsp_out_of_range"

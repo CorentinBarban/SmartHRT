@@ -25,7 +25,7 @@ from custom_components.SmartHRT.coordinator import (
     SmartHRTCoordinator,
     SmartHRTState,
 )
-from custom_components.SmartHRT.data_model import SmartHRTData  # ADR-047
+from custom_components.SmartHRT.data_model import SmartHRTData
 
 
 @dataclass
@@ -43,6 +43,7 @@ class MockConfigEntry:
             "weather_entity": "weather.home",
         }
     )
+    options: dict = field(default_factory=dict)
 
 
 class MockStore:
@@ -65,7 +66,7 @@ class MockUnits:
         from homeassistant.const import UnitOfTemperature, UnitOfSpeed
 
         self.temperature_unit = temperature_unit
-        # ADR-055: Ajout de l'unité de vitesse du vent
+        # Ajout de l'unité de vitesse du vent
         self.wind_speed_unit = UnitOfSpeed.METERS_PER_SECOND
 
 
@@ -84,7 +85,7 @@ class MockHass:
     def __init__(self):
         self.states = MockStates()
         self.services = MockServices()
-        self.config = MockConfig()  # ADR-054: Ajout pour détecter l'unité système
+        self.config = MockConfig()  # Ajout pour détecter l'unité système
         self._listeners = []
         self._scheduled_callbacks = []
         self._time_trackers = []
@@ -93,7 +94,7 @@ class MockHass:
             self.loop = asyncio.get_running_loop()
         except RuntimeError:
             self.loop = asyncio.new_event_loop()
-        # ADR-027: Attribut requis par DataUpdateCoordinator pour la validation thread-safe
+        # Attribut requis par DataUpdateCoordinator pour la validation thread-safe
         import threading
 
         self.loop_thread_id = threading.get_ident()
@@ -214,7 +215,7 @@ def mock_now():
 def create_coordinator(mock_hass, mock_entry, mock_store):
     """Factory fixture pour créer un coordinator configuré."""
 
-    # ADR-040: Flags calculés depuis current_state - mapping pour tests legacy
+    # Flags calculés depuis current_state - mapping pour tests legacy
     FLAG_TO_STATE = {
         "recovery_calc_mode": SmartHRTState.MONITORING,
         "rp_calc_mode": SmartHRTState.HEATING_PROCESS,
@@ -224,7 +225,7 @@ def create_coordinator(mock_hass, mock_entry, mock_store):
     async def _create_coordinator(
         initial_state: str = SmartHRTState.HEATING_ON, **data_overrides
     ) -> SmartHRTCoordinator:
-        # Configurer le frame helper pour DataUpdateCoordinator (ADR-027)
+        # Configurer le frame helper pour DataUpdateCoordinator
         from homeassistant.helpers import frame as frame_helper
 
         frame_helper._hass.hass = mock_hass
@@ -241,15 +242,11 @@ def create_coordinator(mock_hass, mock_entry, mock_store):
                 "custom_components.SmartHRT.coordinator.async_track_state_change_event",
                 return_value=lambda: None,
             ),
-            patch(
-                "custom_components.SmartHRT.coordinator.async_track_point_in_time",
-                return_value=lambda: None,
-            ),
         ):
             coordinator = SmartHRTCoordinator(mock_hass, mock_entry)
             coordinator._store = mock_store
 
-            # ADR-040: Si un flag est dans data_overrides avec True, ajuster initial_state
+            # Si un flag est dans data_overrides avec True, ajuster initial_state
             for flag_name, target_state in FLAG_TO_STATE.items():
                 if data_overrides.get(flag_name) is True:
                     initial_state = target_state
@@ -262,7 +259,7 @@ def create_coordinator(mock_hass, mock_entry, mock_store):
             coordinator.data.exterior_temp = 5.0
             coordinator.data.wind_speed = 4.0
 
-            # Appliquer les overrides (sauf flags - ADR-040: calculés depuis state)
+            # Appliquer les overrides (sauf flags - calculés depuis state)
             computed_flags = {
                 "recovery_calc_mode",
                 "rp_calc_mode",

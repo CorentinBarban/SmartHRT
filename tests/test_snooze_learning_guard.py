@@ -1,10 +1,10 @@
-"""Tests for ADR-053: Inter-season optimization (Snooze) and learning protection.
+"""Tests de l'optimisation inter-saison (Snooze) et de la protection de l'apprentissage.
 
 This module tests:
 1. Intelligent Snooze: No recovery is scheduled when estimated duration < 15 minutes
 2. Learning Guard: RPth calculation is skipped when actual heating duration < 15 minutes
 
-ADR-053 implementation ensures:
+This feature ensures:
 - No micro-cycles during mild weather (energy savings)
 - Thermal model (RPth) is protected from corrupted data from short cycles
 """
@@ -36,7 +36,7 @@ def _now_aware() -> datetime:
 
 
 class TestSnoozeIntelligent:
-    """Tests for the intelligent Snooze feature (ADR-053).
+    """Tests for the intelligent Snooze feature.
 
     When estimated recovery duration is below MIN_DURATION_THRESHOLD_HOURS (15 min),
     no recovery should be scheduled and existing timers should be cancelled.
@@ -96,7 +96,7 @@ class TestSnoozeIntelligent:
                     )
 
                     # Verify snooze was logged
-                    assert "ADR-053 Snooze" in caplog.text
+                    assert "[Snooze]" in caplog.text
 
     @pytest.mark.asyncio
     async def test_no_snooze_when_duration_above_threshold(
@@ -164,11 +164,11 @@ class TestSnoozeIntelligent:
                     coord._timer_manager.cancel.assert_not_called()
 
                     # But snooze should be logged (at DEBUG level)
-                    assert "ADR-053 Snooze" in caplog.text
+                    assert "[Snooze]" in caplog.text
 
 
 class TestLearningGuard:
-    """Tests for the learning protection feature (ADR-053).
+    """Tests for the learning protection feature.
 
     RPth calculation should be skipped when actual heating duration
     is below MIN_LEARNING_DURATION_HOURS (15 min).
@@ -219,7 +219,7 @@ class TestLearningGuard:
         mock_solver.calculate_rpth_at_recovery.assert_not_called()
 
         # Verify guard was logged
-        assert "ADR-053 Learning Guard" in caplog.text
+        assert "[Learning Guard]" in caplog.text
         assert "calcul RPth annulé" in caplog.text
 
     @pytest.mark.asyncio
@@ -257,7 +257,7 @@ class TestLearningGuard:
 
         # Should NOT be calculated (14.9 min < 15 min threshold)
         mock_solver.calculate_rpth_at_recovery.assert_not_called()
-        assert "ADR-053 Learning Guard" in caplog.text
+        assert "[Learning Guard]" in caplog.text
 
     @pytest.mark.asyncio
     async def test_rpth_calculated_at_exact_threshold(
@@ -278,7 +278,7 @@ class TestLearningGuard:
 
 
 class TestConstantsConsistency:
-    """Tests to verify ADR-053 constants are properly defined."""
+    """Tests to verify the snooze constants are properly defined."""
 
     def test_min_duration_threshold_is_15_minutes(self):
         """Verify MIN_DURATION_THRESHOLD_HOURS represents 15 minutes."""
@@ -289,7 +289,7 @@ class TestConstantsConsistency:
         assert MIN_LEARNING_DURATION_HOURS == 0.25  # 15 min / 60 = 0.25 hours
 
     def test_thresholds_are_equal(self):
-        """Verify both thresholds are the same (as per ADR-053)."""
+        """Verify both thresholds are the same."""
         assert MIN_DURATION_THRESHOLD_HOURS == MIN_LEARNING_DURATION_HOURS
 
 
@@ -357,7 +357,7 @@ class TestSnoozeExitRescheduling:
                     coord._timer_manager.cancel.assert_called_once_with(
                         TimerKey.RECOVERY_START
                     )
-                    assert "ADR-053 Snooze" in caplog.text
+                    assert "[Snooze]" in caplog.text
 
         # Reset mock for step 2
         coord._timer_manager.reset_mock()

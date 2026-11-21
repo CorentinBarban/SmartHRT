@@ -1,17 +1,11 @@
-"""Pure Python state machine for SmartHRT.
-
-Implements:
-- ADR-033: Decoupled state transition logic
-- ADR-034: Centralized side effects via Actions
-- ADR-035: Atomic transitions with validation
-- ADR-046: Declarative transition-to-actions mapping
-"""
+"""Machine à états SmartHRT en Pure Python : transitions validées, effets de bord renvoyés sous forme d'Actions."""
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from enum import StrEnum
-from typing import Callable, Protocol
+from typing import Protocol
 
 from .types import Action, StateTransitionResult
 
@@ -25,16 +19,13 @@ class LoggerProtocol(Protocol):
 
 
 class SmartHRTState(StrEnum):
-    """SmartHRT state machine states.
+    """États de la machine SmartHRT.
 
-    ADR-049: Added INITIALIZING as entry point after (re)start.
-
-    Lifecycle:
-    INITIALIZING -> any state (restoration)
+    INITIALIZING -> n'importe quel état (restauration)
     HEATING_ON -> DETECTING_LAG -> MONITORING -> RECOVERY -> HEATING_PROCESS -> HEATING_ON
     """
 
-    INITIALIZING = "initializing"  # ADR-049: État initial après (re)démarrage
+    INITIALIZING = "initializing"  # État initial après (re)démarrage
     HEATING_ON = "heating_on"
     DETECTING_LAG = "detecting_lag"
     MONITORING = "monitoring"
@@ -44,7 +35,7 @@ class SmartHRTState(StrEnum):
 
 # State flags: maps state -> (recovery_calc_mode, rp_calc_mode, temp_lag_detection_active)
 STATE_FLAGS: dict[SmartHRTState, tuple[bool, bool, bool]] = {
-    SmartHRTState.INITIALIZING: (False, False, False),  # ADR-049
+    SmartHRTState.INITIALIZING: (False, False, False),
     SmartHRTState.HEATING_ON: (False, False, False),
     SmartHRTState.DETECTING_LAG: (False, False, True),
     SmartHRTState.MONITORING: (True, False, False),
@@ -52,7 +43,7 @@ STATE_FLAGS: dict[SmartHRTState, tuple[bool, bool, bool]] = {
     SmartHRTState.HEATING_PROCESS: (False, True, False),
 }
 
-# ADR-049: INITIALIZING peut transitionner vers n'importe quel état (restauration)
+# INITIALIZING peut transitionner vers n'importe quel état (restauration)
 VALID_TRANSITIONS: dict[SmartHRTState, set[SmartHRTState]] = {
     SmartHRTState.INITIALIZING: {
         SmartHRTState.HEATING_ON,
@@ -65,18 +56,17 @@ VALID_TRANSITIONS: dict[SmartHRTState, set[SmartHRTState]] = {
     SmartHRTState.DETECTING_LAG: {SmartHRTState.MONITORING},
     SmartHRTState.MONITORING: {
         SmartHRTState.RECOVERY,
-        SmartHRTState.HEATING_ON,  # ADR-055: Cas "pas de relance nécessaire"
+        SmartHRTState.HEATING_ON,  # Cas "pas de relance nécessaire"
     },
     SmartHRTState.RECOVERY: {SmartHRTState.HEATING_PROCESS},
     SmartHRTState.HEATING_PROCESS: {SmartHRTState.HEATING_ON},
 }
 
-# ADR-046: Mapping déclaratif transition → actions
-# ADR-049: Transitions depuis INITIALIZING pour restauration avec effets de bord
+# Mapping déclaratif transition -> actions
 # Ordre recommandé: Snapshots, Annulation timers, Calculs, Planification, Sauvegarde
 TRANSITION_ACTIONS: dict[tuple[SmartHRTState, SmartHRTState], list[Action]] = {
-    # ADR-049: Transitions depuis INITIALIZING (restauration après redémarrage)
-    # Ces transitions reprogramment les timers nécessaires
+    # Transitions depuis INITIALIZING (restauration après redémarrage) :
+    # elles reprogramment les timers nécessaires
     (SmartHRTState.INITIALIZING, SmartHRTState.HEATING_ON): [],
     (SmartHRTState.INITIALIZING, SmartHRTState.DETECTING_LAG): [],
     (SmartHRTState.INITIALIZING, SmartHRTState.MONITORING): [
@@ -86,7 +76,7 @@ TRANSITION_ACTIONS: dict[tuple[SmartHRTState, SmartHRTState], list[Action]] = {
         Action.SCHEDULE_RECOVERY_UPDATE,
     ],
     (SmartHRTState.INITIALIZING, SmartHRTState.HEATING_PROCESS): [],
-    # HEATING_ON → DETECTING_LAG: Démarrage du cycle, pas d'action spécifique
+    # HEATING_ON → DETECTING_LAG: démarrage du cycle, pas d'action
     (SmartHRTState.HEATING_ON, SmartHRTState.DETECTING_LAG): [],
     # DETECTING_LAG → MONITORING: Planifier la mise à jour recovery
     (SmartHRTState.DETECTING_LAG, SmartHRTState.MONITORING): [
@@ -100,7 +90,7 @@ TRANSITION_ACTIONS: dict[tuple[SmartHRTState, SmartHRTState], list[Action]] = {
         Action.CALCULATE_RCTH,
         Action.SAVE_DATA,
     ],
-    # MONITORING → HEATING_ON: Cas "pas de relance nécessaire" (ADR-055)
+    # MONITORING → HEATING_ON: Cas "pas de relance nécessaire"
     # La température n'est jamais descendue sous la cible durant la nuit
     (SmartHRTState.MONITORING, SmartHRTState.HEATING_ON): [
         Action.CANCEL_RECOVERY_TIMER,
@@ -122,7 +112,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def get_state_flags(state: SmartHRTState) -> dict[str, bool]:
-    """Return mode flags for a given state (ADR-035: coherent state)."""
+    """Return mode flags for a given state."""
     flags = STATE_FLAGS.get(state, (False, False, False))
     return {
         "recovery_calc_mode": flags[0],
@@ -132,12 +122,7 @@ def get_state_flags(state: SmartHRTState) -> dict[str, bool]:
 
 
 class SmartHRTStateMachine:
-    """Pure Python state machine without Home Assistant dependencies.
-
-    ADR-033: Decoupled from HA, testable in isolation.
-    ADR-034: Returns actions for side effects.
-    ADR-035: Validates transitions atomically.
-    """
+    """State machine without Home Assistant dependencies; transitions return actions."""
 
     def __init__(
         self,
@@ -152,9 +137,9 @@ class SmartHRTStateMachine:
         self._state = initial_state
         self._valid_transitions = valid_transitions or VALID_TRANSITIONS
         self._transition_actions = transition_actions or {}
-        self._on_enter_callbacks: dict[SmartHRTState, list[StateTransitionCallback]] = (
-            {}
-        )
+        self._on_enter_callbacks: dict[
+            SmartHRTState, list[StateTransitionCallback]
+        ] = {}
         self._on_exit_callbacks: dict[SmartHRTState, list[StateTransitionCallback]] = {}
         self._logger = logger or _LOGGER
         self._log_prefix = log_prefix
@@ -217,7 +202,6 @@ class SmartHRTStateMachine:
 
         old_state = self._state
 
-        # Execute exit callbacks
         for callback in self._on_exit_callbacks.get(old_state, []):
             try:
                 callback(old_state, new_state)
@@ -226,7 +210,6 @@ class SmartHRTStateMachine:
 
         self._state = new_state
 
-        # Execute enter callbacks
         for callback in self._on_enter_callbacks.get(new_state, []):
             try:
                 callback(old_state, new_state)
@@ -239,7 +222,7 @@ class SmartHRTStateMachine:
     def transition_with_actions(
         self, new_state: SmartHRTState
     ) -> StateTransitionResult:
-        """Perform a transition and return emitted actions (ADR-034)."""
+        """Perform a transition and return emitted actions."""
         old_state = self._state
         success = self.transition_to(new_state)
         actions: list[Action] = []
@@ -259,13 +242,10 @@ class SmartHRTStateMachine:
     def _force_state_unsafe(
         self, new_state: SmartHRTState, run_callbacks: bool = False
     ) -> None:
-        """Force a state change without validating transitions.
+        """Force a state change without validation (tests uniquement).
 
-        ADR-049: Renamed from force_state to discourage direct use.
-
-        ⛔ USAGE INTERDIT sauf pour les tests unitaires.
         Pour la restauration d'état, utiliser transition_to depuis
-        INITIALIZING qui garantit l'exécution des callbacks appropriés.
+        INITIALIZING, qui exécute les callbacks appropriés.
         """
         if new_state == self._state:
             return
@@ -287,5 +267,5 @@ class SmartHRTStateMachine:
 
         self._log("info", "State forced %s → %s", old_state.value, new_state.value)
 
-    # ADR-049: Alias pour compatibilité descendante (tests)
+    # Alias pour les tests
     force_state = _force_state_unsafe

@@ -380,13 +380,13 @@ class TestOutlierDetectionFromLogs:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SCENARIO 5: Prédiction de refroidissement (ADR-050)
+# SCENARIO 5: Prédiction de refroidissement
 # Source: log 2026-02-28 21:00:00 - Température au-dessus de la cible
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestCoolingPredictionFromLogs:
-    """Tests basés sur les logs ADR-050 de prédiction de refroidissement."""
+    """Tests basés sur les logs de prédiction de refroidissement."""
 
     @pytest.fixture
     def solver(self):
@@ -398,7 +398,7 @@ class TestCoolingPredictionFromLogs:
         Source log 21:00:00:
         [TC-PRED] Recovery prediction: tint=20.00°C, text=8.97°C, tsp=19.00°C,
         rcth=23.34, rpth=56.40, target_time=10:00:00, validation_status=ALREADY_AT_TARGET
-        ADR-050: Température intérieure (20.0°C) >= cible (19.0°C) mais text=9.0°C < tint
+        Température intérieure (20.0°C) >= cible (19.0°C) mais text=9.0°C < tint
         → prédiction de refroidissement
         Cooling prediction: durée=1.59h après 6 itérations (tint=20.0 → 15.7°C)
         [TC-PRED] Recovery result: duration_hours=1.59, start_time=08:24, iterations=6

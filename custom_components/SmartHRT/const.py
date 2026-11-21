@@ -1,9 +1,4 @@
-"""Les constantes pour l'intégration SmartHRT.
-
-ADR implémentées dans ce module:
-- ADR-041: PERSISTED_FIELDS supprimé, remplacé par SmartHRTData.as_dict/from_dict
-- ADR-051: TimerKey pour la gestion centralisée des timers
-"""
+"""Constantes de l'intégration SmartHRT."""
 
 from enum import StrEnum
 
@@ -11,10 +6,7 @@ from homeassistant.const import Platform
 
 
 class TimerKey(StrEnum):
-    """Clés des timers gérés par le système (ADR-051).
-
-    Utilisées avec TimerManager pour identifier les timers de manière unique.
-    """
+    """Clés d'identification des timers gérés par TimerManager."""
 
     RECOVERYCALC_HOUR = "recoverycalc_hour"
     TARGET_HOUR = "target_hour"
@@ -54,7 +46,7 @@ DEFAULT_RPTH_MIN = 0.0
 DEFAULT_RPTH_MAX = 19999.0
 DEFAULT_RELAXATION_FACTOR = 2.0
 
-# ADR-007: Compensation météo - seuils de vent pour interpolation
+# Compensation météo : seuils de vent pour l'interpolation
 # WIND_LOW: vent faible (utilise rcth_lw), WIND_HIGH: vent fort (utilise rcth_hw)
 WIND_HIGH = 60.0
 WIND_LOW = 10.0
@@ -65,8 +57,7 @@ DEVICE_MANUFACTURER = "SmartHRT"
 # Data keys for hass.data[DOMAIN][entry_id]
 DATA_COORDINATOR = "coordinator"
 
-# ADR-043: Services essentiels uniquement
-# Services simplifiés
+# Services de pilotage
 SERVICE_START_HEATING_CYCLE = "start_heating_cycle"
 SERVICE_STOP_HEATING = "stop_heating"
 SERVICE_START_RECOVERY = "start_recovery"
@@ -81,11 +72,10 @@ SERVICE_TRIGGER_CALCULATION = "trigger_calculation"
 # Weather forecast settings
 FORECAST_HOURS = 3
 
-# ADR-008: Validation arrêt par détection lag
 # Seuil de baisse de température pour confirmer l'arrêt réel du chauffage
 TEMP_DECREASE_THRESHOLD = 0.2  # °C
 
-# BUGFIX (#3.6): Garde-fou contre les sauts de température implausibles
+# Garde-fou contre les sauts de température implausibles
 # (glitch capteur/réseau) qui corrompraient l'apprentissage RCth/RPth.
 # Le coordinateur n'est PAS pollé à intervalle fixe (update_interval=None) -
 # les mises à jour arrivent en push, au rythme propre du capteur physique
@@ -99,7 +89,7 @@ MIN_TEMP_JUMP_FALLBACK_C = (
     2.0  # °C - repli si timestamp manquant ou lectures simultanées
 )
 
-# ADR-053: Optimisation inter-saison (Snooze) et sécurisation apprentissage
+# Optimisation inter-saison (Snooze) et sécurisation de l'apprentissage
 # Seuil minimum d'activation (en heures): si durée estimée <= seuil, pas de relance
 MIN_DURATION_THRESHOLD_HOURS = 0.25  # 15 minutes
 # Seuil minimum d'apprentissage (en heures): durée réelle de chauffe requise pour calculer RPth
@@ -107,7 +97,3 @@ MIN_LEARNING_DURATION_HOURS = 0.25  # 15 minutes
 
 # Default recoverycalc hour (23:00)
 DEFAULT_RECOVERYCALC_HOUR = "23:00:00"
-
-# ADR-041: PERSISTED_FIELDS supprimé
-# La sérialisation est maintenant centralisée dans SmartHRTData.as_dict/from_dict
-# Voir coordinator.py pour _PERSISTENT_FIELDS et la logique de migration

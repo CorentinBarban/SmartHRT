@@ -1,38 +1,29 @@
-"""Le Config Flow pour SmartHRT.
+"""Config flow et options flow de SmartHRT."""
 
-ADR implémentées dans ce module:
-- ADR-002: Sélection explicite de l'entité météo (weather_entity selector)
-- ADR-010: Inputs dynamiques configurables (ConfigFlow multi-step)
-- ADR-011: Robustesse des calculs (validation des entrées)
-- ADR-032: Validation renforcée (existence entités, séquence horaires)
-"""
-
-import logging
-from typing import Any
-from datetime import time as dt_time
 import copy
+import logging
 from collections.abc import Mapping
-
-from homeassistant.core import callback
-from homeassistant.config_entries import ConfigFlow, OptionsFlow, ConfigEntry
-from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import selector
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
+from typing import Any
 
 import voluptuous as vol
+from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
+from homeassistant.core import callback
+from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers import selector
 
 from .const import (
-    DOMAIN,
     CONF_NAME,
-    CONF_TARGET_HOUR,
     CONF_RECOVERYCALC_HOUR,
     CONF_SENSOR_INTERIOR_TEMP,
-    CONF_WEATHER_ENTITY,
+    CONF_TARGET_HOUR,
     CONF_TSP,
+    CONF_WEATHER_ENTITY,
     DEFAULT_TSP,
-    DEFAULT_TSP_MIN,
     DEFAULT_TSP_MAX,
+    DEFAULT_TSP_MIN,
     DEFAULT_TSP_STEP,
+    DOMAIN,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -53,37 +44,31 @@ def add_suggested_values_to_schema(
         if key in suggested_values and isinstance(key, vol.Marker):
             # Copy the marker to not modify the flow schema
             new_key = copy.copy(key)
-            new_key.description = {
-                "suggested_value": suggested_values[key]
-            }  # type: ignore
+            new_key.description = {"suggested_value": suggested_values[key]}  # type: ignore
         schema[new_key] = val
     _LOGGER.debug("add_suggested_values_to_schema: schema=%s", schema)
     return vol.Schema(schema)
 
 
 class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
-    """La classe qui implémente le config flow pour SmartHRT.
-    Elle doit dériver de ConfigFlow"""
+    """Config flow SmartHRT : nom, puis capteurs et réglages."""
 
-    # La version de notre configFlow. Va permettre de migrer les entités
-    # vers une version plus récente en cas de changement
+    # Version du schéma, utilisée pour migrer les entrées existantes
     VERSION = 1
 
     def __init__(self) -> None:
-        """Initialize the config flow."""
+        """Initialise le config flow."""
         super().__init__()
         self._user_inputs: dict[str, Any] = {}
 
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: ConfigEntry):
-        """Get options flow for this handler"""
+        """Retourne l'options flow."""
         return SmartHRTOptionsFlow(config_entry)
 
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
-        """Gestion de l'étape 'user'. Point d'entrée du configFlow.
-        Demande le nom de l'intégration.
-        """
+        """Étape user : demande le nom de l'intégration."""
         user_form = vol.Schema(
             {
                 vol.Required(CONF_NAME): str,
@@ -102,22 +87,19 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
                 ),
             )  # pyright: ignore[reportReturnType]
 
-        # 2ème appel : il y a des user_input -> on stocke le résultat
         _LOGGER.debug(
             "config_flow step user (2). On a reçu les valeurs: %s", user_input
         )
-        # On mémorise les user_input
         self._user_inputs.update(user_input)
 
         # Vérifier les entrées dupliquées basées sur le nom
         await self.async_set_unique_id(user_input[CONF_NAME])
         self._abort_if_unique_id_configured()
 
-        # On appelle le step 2 (configuration des capteurs)
         return await self.async_step_sensors()
 
     async def async_step_sensors(self, user_input: dict | None = None) -> FlowResult:
-        """Gestion de l'étape sensors. Configuration des capteurs et paramètres."""
+        """Étape sensors : capteurs, heures et consigne."""
         errors: dict[str, str] = {}
 
         sensors_form = vol.Schema(
@@ -128,12 +110,11 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(
                     CONF_RECOVERYCALC_HOUR, default="23:00:00"
                 ): selector.TimeSelector(),
-                # Capteur de température intérieure (ADR-010: inputs dynamiques)
+                # Capteur de température intérieure
                 vol.Required(CONF_SENSOR_INTERIOR_TEMP): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain=SENSOR_DOMAIN),
                 ),
-                # ADR-002: Sélection explicite de l'entité météo
-                # L'utilisateur choisit son entité weather au lieu d'une auto-détection
+                # Entité météo choisie explicitement (pas d'auto-détection)
                 vol.Required(CONF_WEATHER_ENTITY): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain="weather"),
                 ),
@@ -162,12 +143,11 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
                 ),
             )  # pyright: ignore[reportReturnType]
 
-        # 2ème appel : il y a des user_input -> validation ADR-032
         _LOGGER.debug(
             "config_flow step sensors (2). On a reçu les valeurs: %s", user_input
         )
 
-        # ADR-032: Validation de l'entité météo
+        # Validation de l'entité météo
         weather_entity_id = user_input.get(CONF_WEATHER_ENTITY)
         if weather_entity_id:
             weather_state = self.hass.states.get(weather_entity_id)
@@ -176,26 +156,25 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
             elif not self._is_valid_weather_entity(weather_state):
                 errors[CONF_WEATHER_ENTITY] = "weather_incompatible"
 
-        # ADR-032: Validation du capteur de température
+        # Validation du capteur de température
         temp_sensor_id = user_input.get(CONF_SENSOR_INTERIOR_TEMP)
         if temp_sensor_id:
             temp_state = self.hass.states.get(temp_sensor_id)
             if temp_state is None:
                 errors[CONF_SENSOR_INTERIOR_TEMP] = "sensor_not_found"
 
-        # ADR-032: Validation TSP dans les limites
+        # Validation de la consigne dans les limites
         tsp = user_input.get(CONF_TSP, DEFAULT_TSP)
         if not (DEFAULT_TSP_MIN <= tsp <= DEFAULT_TSP_MAX):
             errors[CONF_TSP] = "tsp_out_of_range"
 
-        # ADR-032: Validation séquence horaires
+        # Validation de la séquence des horaires
         target_hour = user_input.get(CONF_TARGET_HOUR)
         recoverycalc_hour = user_input.get(CONF_RECOVERYCALC_HOUR)
         if target_hour and recoverycalc_hour:
             if not self._validate_time_sequence(recoverycalc_hour, target_hour):
                 errors["base"] = "invalid_time_sequence"
 
-        # Si erreurs, réafficher le formulaire
         if errors:
             _LOGGER.debug("Erreurs de validation config_flow: %s", errors)
             return self.async_show_form(
@@ -206,7 +185,6 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors=errors,
             )  # pyright: ignore[reportReturnType]
 
-        # On mémorise les user_input
         self._user_inputs.update(user_input)
         _LOGGER.info(
             "config_flow step sensors (2). L'ensemble de la configuration est: %s",
@@ -218,29 +196,17 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
         )  # pyright: ignore[reportReturnType]
 
     def _is_valid_weather_entity(self, state) -> bool:
-        """Vérifie que l'entité météo est valide (ADR-032).
-
-        Une entité météo valide doit être du domaine 'weather' et
-        idéalement supporter les prévisions.
-        """
+        """Vérifie que l'entité est du domaine weather."""
         if state is None:
             return False
         # Le domaine est vérifié par le selector, mais on vérifie quand même
         return state.domain == "weather"
 
     def _validate_time_sequence(self, recoverycalc: str, target: str) -> bool:
-        """Vérifie que recoverycalc_hour précède target_hour (ADR-032).
+        """Vérifie que recoverycalc_hour précède target_hour (passage à minuit admis).
 
-        La logique: recoverycalc (23:00) doit être le soir, target (06:00) le matin.
-        Si recoverycalc < target sur la même journée (ex: 05:00 et 08:00),
-        c'est probablement une erreur.
-
-        Args:
-            recoverycalc: Heure de coupure chauffage (format HH:MM:SS)
-            target: Heure cible réveil (format HH:MM:SS)
-
-        Returns:
-            True si la séquence est valide, False sinon.
+        Une séquence recoverycalc < target n'est invalide que si target est
+        l'après-midi (probable erreur de saisie). Heures au format HH:MM:SS.
         """
         try:
             rc_parts = recoverycalc.split(":")
@@ -266,37 +232,31 @@ class SmartHRTConfigFlow(ConfigFlow, domain=DOMAIN):
             return True  # En cas d'erreur de parsing, on laisse passer
 
 
-# Clés stockées dans 'data' (configuration statique - ne change pas)
+# 'data' : configuration statique (un changement déclenche un rechargement)
 STATIC_KEYS = {
     CONF_NAME,
     CONF_SENSOR_INTERIOR_TEMP,
     CONF_WEATHER_ENTITY,
 }
-# Clés stockées dans 'options' (réglages dynamiques - modifiables sans rechargement)
+# 'options' : réglages dynamiques, appliqués à chaud ; prioritaires sur 'data'
 DYNAMIC_KEYS = {CONF_TARGET_HOUR, CONF_RECOVERYCALC_HOUR, CONF_TSP}
 
 
 class SmartHRTOptionsFlow(OptionsFlow):
-    """La classe qui implémente le option flow pour SmartHRT.
-    Elle doit dériver de OptionsFlow.
-
-    Les réglages dynamiques sont stockés dans 'options' pour permettre
-    leur modification sans rechargement complet de l'intégration.
-    """
+    """Options flow SmartHRT : modifie la configuration statique et les réglages dynamiques."""
 
     def __init__(self, config_entry: ConfigEntry) -> None:
-        """Initialisation de l'option flow. On a le ConfigEntry existant en entrée"""
+        """Initialise l'options flow à partir de la ConfigEntry existante."""
         super().__init__()
         self._config_entry = config_entry
-        # On initialise les user_inputs en fusionnant data et options
-        # options a priorité sur data pour les clés dynamiques
+        # Fusion data + options ; options prioritaire
         self._user_inputs: dict[str, Any] = {
             **config_entry.data,
             **config_entry.options,
         }
 
     async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
-        """Gestion de l'étape 'init'. Point d'entrée du optionsFlow."""
+        """Étape init de l'options flow."""
         option_form = vol.Schema(
             {
                 vol.Required(CONF_NAME): str,
@@ -306,11 +266,11 @@ class SmartHRTOptionsFlow(OptionsFlow):
                 vol.Required(
                     CONF_RECOVERYCALC_HOUR, default="23:00:00"
                 ): selector.TimeSelector(),
-                # Capteur de température intérieure (ADR-010: inputs dynamiques)
+                # Capteur de température intérieure
                 vol.Required(CONF_SENSOR_INTERIOR_TEMP): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain=SENSOR_DOMAIN)
                 ),
-                # ADR-002: Sélection explicite de l'entité météo
+                # Entité météo choisie explicitement
                 vol.Required(CONF_WEATHER_ENTITY): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain="weather")
                 ),
@@ -339,34 +299,21 @@ class SmartHRTOptionsFlow(OptionsFlow):
                 ),
             )  # pyright: ignore[reportReturnType]
 
-        # 2ème appel : il y a des user_input -> on stocke le résultat
         _LOGGER.debug(
             "option_flow step user (2). On a reçu les valeurs: %s", user_input
         )
-        # On mémorise les user_input
         self._user_inputs.update(user_input)
 
-        # On appelle le step de fin pour enregistrer les modifications
         return await self.async_end()  # pyright: ignore[reportReturnType]
 
     async def async_end(self) -> FlowResult:
-        """Finalization of the ConfigEntry modification.
-
-        Sépare les données en:
-        - data: configuration statique (capteurs, nom, météo)
-        - options: réglages dynamiques (heures, consigne)
-
-        Les données statiques nécessitent un rechargement de l'intégration.
-        Les options dynamiques peuvent être appliquées sans rechargement.
-        """
-        # Extraire les données statiques (nécessite rechargement)
+        """Sépare data (statique : capteurs, nom, météo) et options (dynamique : heures, consigne)."""
         new_data = {
             key: self._user_inputs[key]
             for key in STATIC_KEYS
             if key in self._user_inputs
         }
 
-        # Extraire les options dynamiques
         new_options = {
             key: self._user_inputs[key]
             for key in DYNAMIC_KEYS
@@ -380,7 +327,7 @@ class SmartHRTOptionsFlow(OptionsFlow):
             new_options,
         )
 
-        # Mettre à jour les données statiques si elles ont changé
+        # Changer data déclenche un rechargement
         if new_data != dict(self._config_entry.data):
             self.hass.config_entries.async_update_entry(
                 self._config_entry,
@@ -388,6 +335,5 @@ class SmartHRTOptionsFlow(OptionsFlow):
             )
             _LOGGER.info("Données statiques mises à jour, rechargement nécessaire")
 
-        # Retourne les nouvelles options - Home Assistant les stockera automatiquement
-        # dans config_entry.options et déclenchera update_listener
+        # HA stocke ces options dans config_entry.options et déclenche update_listener
         return self.async_create_entry(title="", data=new_options)

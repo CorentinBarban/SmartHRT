@@ -1,4 +1,4 @@
-"""Tests pour la conversion Celsius/Fahrenheit (ADR-054).
+"""Tests pour la conversion Celsius/Fahrenheit.
 
 Ce module teste l'abstraction du système d'unités implémentée
 dans le coordinator pour supporter les utilisateurs en Fahrenheit.
@@ -16,7 +16,7 @@ from custom_components.SmartHRT.data_model import SmartHRTData
 
 
 class TestNormalizeToCelsius:
-    """Tests pour _normalize_to_celsius (ADR-054)."""
+    """Tests pour _normalize_to_celsius."""
 
     def test_none_returns_none(self, mock_coordinator):
         """None en entrée retourne None."""
@@ -70,7 +70,7 @@ class TestNormalizeToCelsius:
 
 
 class TestGetSensorUnit:
-    """Tests pour _get_sensor_unit (ADR-054)."""
+    """Tests pour _get_sensor_unit."""
 
     def test_celsius_by_default(self, mock_coordinator, mock_hass):
         """Retourne Celsius si pas d'unité spécifiée."""
@@ -202,7 +202,7 @@ class TestSensorStateConversion:
 class TestWeatherConversion:
     """Tests de conversion pour les données météo.
 
-    ADR-054: Les weather entities exposent un attribut temperature_unit
+    Les weather entities exposent un attribut temperature_unit
     qui indique l'unité des températures. Le code doit lire cet attribut,
     pas l'unité système de HA.
     """
@@ -363,7 +363,7 @@ class TestThermalSolverReceivesCelsius:
 
 
 class TestPersistenceInCelsius:
-    """Tests de persistance - les données sont toujours stockées en Celsius (ADR-054)."""
+    """Tests de persistance - les données sont toujours stockées en Celsius."""
 
     def test_save_restore_preserves_celsius(self):
         """Les températures persistées sont sauvegardées et restaurées en Celsius.

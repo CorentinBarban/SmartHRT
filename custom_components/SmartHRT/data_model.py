@@ -1,52 +1,37 @@
-"""Modèle de données unifié SmartHRT (ADR-047: Single Source of Truth).
+"""Modèle de données unifié SmartHRT (Pydantic v2).
 
-Ce module fusionne l'ancien SmartHRTData (dataclass custom) et
-PersistedDataModel (Pydantic) en un seul modèle Pydantic v2.
-
-Avantages:
-- Une seule source de vérité pour types, contraintes et valeurs par défaut
-- Validation automatique à l'assignation (validate_assignment=True)
-- Sérialisation native via model_dump()/model_validate()
-- Suppression de serialization.py et des conversions manuelles
-
-Le module serialization.py est supprimé, remplacé par les sérialiseurs
-Pydantic intégrés.
-
-ADR-054: TOUTES LES TEMPÉRATURES SONT STOCKÉES EN CELSIUS.
-Les données persistées sont toujours en Celsius (unité interne du ThermalSolver).
-La conversion depuis/vers Fahrenheit est gérée par le Coordinator à la lecture
-des capteurs, pas lors de la persistance/restauration.
+Toutes les températures sont stockées en Celsius ; la conversion Fahrenheit est
+faite par le coordinator à la lecture des capteurs, pas à la persistance.
 """
 
 from __future__ import annotations
 
 from collections import deque
-from datetime import datetime, time as dt_time
+from datetime import datetime
+from datetime import time as dt_time
 from typing import Annotated, Any, ClassVar, Self
 
 from pydantic import (
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
     PlainSerializer,
-    BeforeValidator,
     field_validator,
-    model_validator,
 )
 
 from .const import (
     DEFAULT_RCTH,
-    DEFAULT_RPTH,
-    DEFAULT_RCTH_MIN,
     DEFAULT_RCTH_MAX,
+    DEFAULT_RCTH_MIN,
     DEFAULT_RELAXATION_FACTOR,
+    DEFAULT_RPTH,
     DEFAULT_TSP,
 )
 from .core import SmartHRTState
 
-
 # ─────────────────────────────────────────────────────────────────────────────
-# Types personnalisés avec sérialiseurs Pydantic (remplace JSONEncoder)
+# Types personnalisés avec sérialiseurs Pydantic
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -137,26 +122,14 @@ DateTimeField = Annotated[
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Modèle unifié SmartHRTData (ADR-047)
+# Modèle unifié SmartHRTData
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 class SmartHRTData(BaseModel):
-    """Modèle de données unifié pour SmartHRT (ADR-047: Single Source of Truth).
+    """Source unique des données SmartHRT : types, contraintes, défauts et sérialisation.
 
-    Ce modèle Pydantic remplace:
-    - L'ancienne classe SmartHRTData (custom avec sous-structures)
-    - PersistedDataModel (validation Pydantic séparée)
-    - JSONEncoder/serialization.py (sérialisation custom)
-
-    La validation est effectuée:
-    - À l'instanciation
-    - À chaque assignation (validate_assignment=True)
-    - Au chargement depuis le stockage (model_validate)
-
-    La sérialisation/désérialisation est native via:
-    - model_dump(mode="json") pour sauvegarder
-    - model_validate(data) pour restaurer
+    Validé à l'instanciation, à chaque assignation et au chargement depuis le stockage.
     """
 
     model_config = ConfigDict(
@@ -176,7 +149,7 @@ class SmartHRTData(BaseModel):
     recovery_adaptive_mode: bool = Field(default=True)
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Coefficients thermiques appris (ADR-006, ADR-007)
+    # Coefficients thermiques appris
     # ─────────────────────────────────────────────────────────────────────────
     rcth: float = Field(default=DEFAULT_RCTH, ge=DEFAULT_RCTH_MIN, le=DEFAULT_RCTH_MAX)
     rpth: float = Field(default=DEFAULT_RPTH, ge=DEFAULT_RCTH_MIN, le=DEFAULT_RCTH_MAX)
@@ -187,12 +160,12 @@ class SmartHRTData(BaseModel):
     relaxation_factor: float = Field(default=DEFAULT_RELAXATION_FACTOR, ge=0.1, le=10.0)
 
     # ─────────────────────────────────────────────────────────────────────────
-    # État de la machine à états (ADR-003, ADR-028, ADR-040)
+    # État de la machine à états
     # ─────────────────────────────────────────────────────────────────────────
     current_state: SmartHRTStateField = Field(default=SmartHRTState.HEATING_ON)
     stop_lag_duration: float = Field(default=0.0, ge=0)
 
-    # Snapshots de référence (ADR-054: toutes les températures en °C)
+    # Snapshots de référence (températures en °C)
     time_recovery_calc: DateTimeField = Field(default=None)
     time_recovery_start: DateTimeField = Field(default=None)
     time_recovery_end: DateTimeField = Field(default=None)
@@ -206,13 +179,13 @@ class SmartHRTData(BaseModel):
     # Triggers programmés
     recovery_start_hour: DateTimeField = Field(default=None)
     recovery_update_hour: DateTimeField = Field(default=None)
-    # ADR-053: Durée estimée de la relance (pour diagnostic et Snooze)
+    # Durée estimée de la relance (diagnostic et Snooze)
     recovery_duration_hours: float = Field(default=0.0, ge=0.0)
-    # ADR-056: Flag pour désactiver l'apprentissage RCth (sortie de secours DETECTING_LAG)
+    # Désactive l'apprentissage RCth (sortie de secours de DETECTING_LAG)
     rcth_learning_disabled: bool = Field(default=False)
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Données météorologiques (ADR-038, ADR-054: températures en °C)
+    # Données météorologiques (températures en °C)
     # ─────────────────────────────────────────────────────────────────────────────
     interior_temp: float | None = Field(
         default=None
@@ -237,7 +210,7 @@ class SmartHRTData(BaseModel):
     last_rpth_error: float = Field(default=0.0)
 
     # ─────────────────────────────────────────────────────────────────────────
-    # ADR-040: Flags calculés depuis current_state (propriétés en lecture seule)
+    # Flags calculés depuis current_state (lecture seule)
     # ─────────────────────────────────────────────────────────────────────────
     @property
     def recovery_calc_mode(self) -> bool:
@@ -277,7 +250,7 @@ class SmartHRTData(BaseModel):
         return v
 
     # ─────────────────────────────────────────────────────────────────────────
-    # ADR-047: Méthodes de sérialisation (remplace as_dict/from_dict custom)
+    # Méthodes de sérialisation
     # ─────────────────────────────────────────────────────────────────────────
 
     # Champs à persister (subset du modèle) - ClassVar pour éviter interférence Pydantic
@@ -297,7 +270,8 @@ class SmartHRTData(BaseModel):
         # Modes utilisateur
         "smartheating_mode",
         "recovery_adaptive_mode",
-        # Heures configurées
+        # Réglages utilisateur (consigne et heures configurées)
+        "tsp",
         "target_hour",
         "recoverycalc_hour",
         # Snapshots de session
@@ -314,13 +288,7 @@ class SmartHRTData(BaseModel):
     }
 
     def as_dict(self) -> dict[str, Any]:
-        """Sérialise les données persistantes en dictionnaire JSON-compatible.
-
-        Utilise model_dump native de Pydantic avec filtrage des champs.
-
-        Returns:
-            Dictionnaire avec toutes les données à persister.
-        """
+        """Sérialise les champs persistés en dictionnaire JSON-compatible."""
         return self.model_dump(
             mode="json",
             include=self._PERSISTENT_FIELDS,
@@ -334,37 +302,22 @@ class SmartHRTData(BaseModel):
     ) -> SmartHRTData:
         """Désérialise un dictionnaire en SmartHRTData.
 
-        Utilise model_validate native de Pydantic.
-
         Args:
             data: Dictionnaire JSON chargé depuis le stockage
-            defaults: Instance par défaut pour les champs manquants
-
-        Returns:
-            Nouvelle instance SmartHRTData avec données restaurées.
+            defaults: Instance fournissant les valeurs des champs manquants
         """
         if defaults is None:
             defaults = cls()
 
-        # Merge defaults avec les données chargées
+        # Les données chargées complètent/écrasent les valeurs par défaut
         merged = defaults.model_dump()
         merged.update(data)
 
-        # Validation et création
         return cls.model_validate(merged)
 
     @classmethod
     def migrate_legacy_format(cls, data: dict[str, Any]) -> dict[str, Any]:
-        """Migre les données de l'ancien format (JSONEncoder avec __type__).
-
-        Détecte l'ancien format et convertit au format Pydantic natif.
-
-        Args:
-            data: Données au format legacy (avec __type__)
-
-        Returns:
-            Données au nouveau format Pydantic
-        """
+        """Convertit l'ancien format de stockage (valeurs encapsulées avec __type__) en format natif."""
         migrated: dict[str, Any] = {}
 
         for key, value in data.items():
@@ -372,7 +325,7 @@ class SmartHRTData(BaseModel):
                 migrated[key] = None
                 continue
 
-            # Ancien format avec __type__
+            # Ancien format : {"__type__": ..., "value": ...}
             if isinstance(value, dict) and "__type__" in value:
                 type_name = value.get("__type__")
                 inner_value = value.get("value")
@@ -388,51 +341,43 @@ class SmartHRTData(BaseModel):
                 else:
                     migrated[key] = inner_value
             else:
-                # Valeurs primitives ou nouveau format - pas de changement
+                # Valeurs déjà au format natif
                 migrated[key] = value
 
         return migrated
 
     def update(self, **kwargs: Any) -> Self:
-        """Met à jour les attributs en place et retourne self.
-
-        Permet une syntaxe fluide: self.data.update(tsp=20, rcth=100)
-
-        Note: La validation est effectuée grâce à validate_assignment=True.
-        """
+        """Met à jour les attributs en place (validés à l'assignation) et retourne self."""
         for key, value in kwargs.items():
             if hasattr(self, key):
                 setattr(self, key, value)
         return self
 
     # ─────────────────────────────────────────────────────────────────────────
-    # Compatibilité avec l'ancienne API (accès aux sous-structures)
+    # Alias de compatibilité (accès historique par sous-structure)
     # ─────────────────────────────────────────────────────────────────────────
 
     @property
     def config(self) -> SmartHRTData:
-        """Alias pour compatibilité avec l'ancien code utilisant self.data.config.
-
-        Retourne self car le modèle est maintenant unifié.
-        """
+        """Alias de compatibilité : retourne self."""
         return self
 
     @property
     def coefficients(self) -> SmartHRTData:
-        """Alias pour compatibilité avec l'ancien code utilisant self.data.coefficients."""
+        """Alias de compatibilité : retourne self."""
         return self
 
     @property
     def state(self) -> SmartHRTData:
-        """Alias pour compatibilité avec l'ancien code utilisant self.data.state."""
+        """Alias de compatibilité : retourne self."""
         return self
 
     @property
     def weather(self) -> SmartHRTData:
-        """Alias pour compatibilité avec l'ancien code utilisant self.data.weather."""
+        """Alias de compatibilité : retourne self."""
         return self
 
     @property
     def diagnostic(self) -> SmartHRTData:
-        """Alias pour compatibilité avec l'ancien code utilisant self.data.diagnostic."""
+        """Alias de compatibilité : retourne self."""
         return self
