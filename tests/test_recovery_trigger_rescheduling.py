@@ -3,10 +3,6 @@
 Ce module teste le problème critique où l'heure de relance était recalculée
 mais le trigger n'était pas reprogrammé, causant un déclenchement à l'ancienne heure.
 
-ADR-051: Centralisation de la Gestion des Timers
-- Le TimerManager garantit que schedule() annule automatiquement l'ancien timer
-- Plus de risque de double déclenchement ou de timer orphelin
-
 Tests couverts:
 1. Reprogrammation du trigger lors de modification des coefficients thermiques
 2. Annulation automatique du trigger précédent par TimerManager
@@ -30,7 +26,7 @@ from custom_components.SmartHRT.coordinator import (
     SmartHRTCoordinator,
     SmartHRTState,
 )
-from custom_components.SmartHRT.data_model import SmartHRTData  # ADR-047
+from custom_components.SmartHRT.data_model import SmartHRTData
 
 
 class TestRecoveryTriggerRescheduling:
@@ -246,7 +242,7 @@ class TestRecoveryTriggerRescheduling:
 
 
 class TestTriggerCancellationAndLogging:
-    """Tests pour l'annulation automatique des triggers via TimerManager (ADR-051)."""
+    """Tests pour l'annulation automatique des triggers via TimerManager."""
 
     @pytest.fixture
     def coordinator_with_active_trigger(self, create_coordinator):
@@ -270,7 +266,7 @@ class TestTriggerCancellationAndLogging:
     async def test_previous_trigger_replaced_on_rescheduling(
         self, coordinator_with_active_trigger
     ):
-        """Test que le timer précédent est remplacé par TimerManager (ADR-051)."""
+        """Test que le timer précédent est remplacé par TimerManager."""
         coord = await coordinator_with_active_trigger()
 
         # Vérifier qu'un timer RECOVERY_START est actif
@@ -323,13 +319,13 @@ class TestTriggerCancellationAndLogging:
 
 
 class TestRegressionScenario:
-    """Test de régression pour le problème original identifié dans les logs (ADR-051)."""
+    """Test de régression pour le problème original identifié dans les logs."""
 
     @pytest.mark.asyncio
     async def test_coefficients_change_scenario(self, create_coordinator):
         """Test du scénario de régression exact des logs:
 
-        ADR-051: Le TimerManager garantit que le timer est toujours
+        Le TimerManager garantit que le timer est toujours
         reprogrammé à la bonne heure après chaque modification.
         """
 
@@ -349,7 +345,7 @@ class TestRegressionScenario:
             initial_recovery_time = datetime(2026, 2, 3, 19, 26, 18)
             coord.data.recovery_start_hour = initial_recovery_time
 
-            # ADR-051: Patch au niveau du timer_manager
+            # Patch au niveau du timer_manager
             with patch(
                 "custom_components.SmartHRT.timer_manager.async_track_point_in_time"
             ) as mock_track:
@@ -403,7 +399,7 @@ class TestRegressionScenario:
         initial_time = datetime(2026, 2, 3, 19, 26, 0)
         coord.data.recovery_start_hour = initial_time
 
-        # ADR-051: Patch au niveau du timer_manager
+        # Patch au niveau du timer_manager
         with patch(
             "custom_components.SmartHRT.timer_manager.async_track_point_in_time"
         ) as mock_track:

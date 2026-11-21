@@ -1,8 +1,5 @@
 """Tests pour la persistance des prévisions météo.
 
-ADR-020: Persistance des prévisions météo au redémarrage
-ADR-041: Sérialisation centralisée via as_dict/from_dict
-
 Ce module teste que les prévisions météo (température et vent)
 sont correctement sauvegardées et restaurées lors d'un redémarrage.
 """
@@ -17,7 +14,7 @@ from custom_components.SmartHRT.const import (
     DEFAULT_TSP,
 )
 from custom_components.SmartHRT.coordinator import SmartHRTCoordinator
-from custom_components.SmartHRT.data_model import SmartHRTData  # ADR-047
+from custom_components.SmartHRT.data_model import SmartHRTData
 
 
 class TestWeatherForecastPersistence:
@@ -26,7 +23,7 @@ class TestWeatherForecastPersistence:
     @pytest.mark.asyncio
     async def test_forecast_fields_in_persistent_fields(self):
         """Vérifier que les champs de prévisions sont dans _PERSISTENT_FIELDS."""
-        # ADR-041: Utilise _PERSISTENT_FIELDS de SmartHRTData
+        # Utilise _PERSISTENT_FIELDS de SmartHRTData
         persistent_fields = SmartHRTData._PERSISTENT_FIELDS
 
         assert (
@@ -39,13 +36,13 @@ class TestWeatherForecastPersistence:
     @pytest.mark.asyncio
     async def test_temperature_forecast_in_persistent_fields(self):
         """Vérifier que temperature_forecast_avg est un champ persisté."""
-        # ADR-041: Vérifie simplement la présence dans _PERSISTENT_FIELDS
+        # Vérifie simplement la présence dans _PERSISTENT_FIELDS
         assert "temperature_forecast_avg" in SmartHRTData._PERSISTENT_FIELDS
 
     @pytest.mark.asyncio
     async def test_wind_speed_forecast_in_persistent_fields(self):
         """Vérifier que wind_speed_forecast_avg est un champ persisté."""
-        # ADR-041: Vérifie simplement la présence dans _PERSISTENT_FIELDS
+        # Vérifie simplement la présence dans _PERSISTENT_FIELDS
         assert "wind_speed_forecast_avg" in SmartHRTData._PERSISTENT_FIELDS
 
     @pytest.mark.asyncio
@@ -187,7 +184,7 @@ class TestWeatherForecastPersistence:
         """Test: Si stockage ancien (sans prévisions), les défauts sont utilisés."""
         coord = await create_coordinator()
 
-        # Simuler un ancien stockage sans prévisions (avant ADR-020)
+        # Simuler un ancien stockage sans prévisions
         old_data = {
             "rcth": 52.0,
             "rpth": 48.0,

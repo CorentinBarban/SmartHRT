@@ -27,7 +27,7 @@ from custom_components.SmartHRT.const import (
 from custom_components.SmartHRT.coordinator import SmartHRTState
 
 
-# Liste de tous les services attendus (ADR-043: Services essentiels uniquement)
+# Liste de tous les services attendus (Services essentiels uniquement)
 EXPECTED_SERVICES = [
     SERVICE_START_HEATING_CYCLE,
     SERVICE_STOP_HEATING,

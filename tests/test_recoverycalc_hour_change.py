@@ -17,7 +17,7 @@ from custom_components.SmartHRT.coordinator import (
     SmartHRTCoordinator,
     SmartHRTState,
 )
-from custom_components.SmartHRT.data_model import SmartHRTData  # ADR-047
+from custom_components.SmartHRT.data_model import SmartHRTData
 
 
 def make_mock_now(year=2026, month=2, day=4, hour=8, minute=0, second=0):

@@ -1,27 +1,21 @@
-"""Implements the SmartHRT time entities.
-
-ADR implémentées dans ce module:
-- ADR-012: Exposition entités pour Lovelace (time comme entités HA)
-- ADR-014: Format des dates en fuseau local (dt_util.as_local())
-- ADR-027: Utilisation de CoordinatorEntity pour synchronisation automatique
-"""
+"""Entités time SmartHRT (heure cible, heure de coupure, heure de relance)."""
 
 import logging
 from datetime import time as dt_time
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.components.time import TimeEntity
-from homeassistant.helpers.device_registry import DeviceInfo, DeviceEntryType
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    DOMAIN,
-    DEVICE_MANUFACTURER,
     CONF_NAME,
     DATA_COORDINATOR,
+    DEVICE_MANUFACTURER,
+    DOMAIN,
 )
 from .coordinator import SmartHRTCoordinator
 
@@ -48,7 +42,7 @@ async def async_setup_entry(
 
 
 class SmartHRTBaseTime(CoordinatorEntity[SmartHRTCoordinator], TimeEntity):
-    """Classe de base pour les entités time SmartHRT (ADR-027: CoordinatorEntity)."""
+    """Classe de base des entités time SmartHRT."""
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry

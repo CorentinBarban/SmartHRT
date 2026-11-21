@@ -1,32 +1,21 @@
-"""Dataclasses partagées pour le modèle thermique SmartHRT.
-
-ADR-026: Types Pure Python sans dépendance Home Assistant.
-
-Ces dataclasses représentent:
-- ThermalState: État thermique instantané (températures, vent)
-- ThermalCoefficients: Coefficients appris (RCth, RPth avec interpolation vent)
-- ThermalConfig: Configuration statique (seuils de vent, constantes)
-"""
+"""Dataclasses partagées pour le modèle thermique SmartHRT (Pure Python, sans Home Assistant)."""
 
 from dataclasses import dataclass, field
-from datetime import datetime, time as dt_time
+from datetime import datetime
+from datetime import time as dt_time
 from enum import StrEnum
 
 
 @dataclass
 class ThermalConfig:
-    """Configuration statique pour les calculs thermiques.
+    """Configuration statique pour les calculs thermiques."""
 
-    Ces valeurs sont généralement définies une fois et ne changent pas
-    pendant l'exécution (sauf via reconfiguration).
-    """
-
-    # Seuils de vent pour interpolation (ADR-007)
+    # Seuils de vent pour l'interpolation des coefficients
     wind_low_kmh: float = 10.0  # Vent faible
     wind_high_kmh: float = 60.0  # Vent fort
 
-    # Paramètres de convergence pour le calcul de recovery time (ADR-031)
-    max_iterations: int = 50  # Maximum d'itérations (ADR-031)
+    # Paramètres de convergence pour le calcul de recovery time
+    max_iterations: int = 50  # Maximum d'itérations
     convergence_threshold: float = 0.01  # Seuil de convergence en heures (~36s)
 
     # Valeurs par défaut des coefficients
@@ -38,19 +27,16 @@ class ThermalConfig:
     coef_min: float = 0.1
     coef_max: float = 19999.0
 
-    # ADR-044: Protection contre les valeurs aberrantes (outliers)
+    # Protection contre les valeurs aberrantes (outliers)
     outlier_threshold_percent: float = 50.0  # Écart max autorisé en %
     outlier_mode: str = "clamp"  # "clamp" (plafonnement) ou "reject" (ignorer)
 
     def __post_init__(self) -> None:
-        """Valide la configuration (BUGFIX #3.2).
+        """Valide les seuils de vent.
 
-        ThermalSolver.interpolate_for_wind() et update_coefficients() divisent
-        tous les deux par (wind_high_kmh - wind_low_kmh). Si ces deux seuils
-        sont égaux (ou inversés) suite à une erreur de configuration, chaque
-        calcul de recovery pour cette instance lève ZeroDivisionError. On
-        valide donc dès la construction plutôt que de laisser planter le
-        premier calcul thermique.
+        interpolate_for_wind() et update_coefficients() divisent par
+        (wind_high_kmh - wind_low_kmh) : on rejette dès la construction des
+        seuils égaux ou inversés pour éviter une ZeroDivisionError.
         """
         if self.wind_high_kmh <= self.wind_low_kmh:
             raise ValueError(
@@ -63,17 +49,13 @@ class ThermalConfig:
 
 @dataclass
 class ThermalCoefficients:
-    """Coefficients thermiques appris (ADR-006).
-
-    Représente les coefficients RCth et RPth avec leurs variantes
-    pour différentes conditions de vent (interpolation ADR-007).
-    """
+    """Coefficients thermiques RCth/RPth appris, avec variantes vent faible/fort."""
 
     # Coefficients principaux
     rcth: float = 50.0  # Constante de temps de refroidissement
     rpth: float = 50.0  # Constante de puissance de chauffage
 
-    # Coefficients interpolés selon le vent (ADR-007)
+    # Coefficients interpolés selon le vent
     rcth_lw: float = 50.0  # RCth par vent faible (low wind)
     rcth_hw: float = 50.0  # RCth par vent fort (high wind)
     rpth_lw: float = 50.0  # RPth par vent faible
@@ -86,7 +68,7 @@ class ThermalCoefficients:
     # RCth dynamique calculé pendant le refroidissement
     rcth_fast: float = 0.0
 
-    # Facteur de relaxation pour l'apprentissage (ADR-006)
+    # Facteur de relaxation pour l'apprentissage
     relaxation_factor: float = 2.0
 
     # Erreurs du dernier cycle (pour diagnostic)
@@ -96,12 +78,7 @@ class ThermalCoefficients:
 
 @dataclass
 class ThermalState:
-    """État thermique instantané (ADR-026).
-
-    Représente l'ensemble des données nécessaires pour un calcul
-    thermique à un instant donné. Aucune référence à Home Assistant,
-    utilise datetime standard.
-    """
+    """État thermique instantané nécessaire à un calcul à un instant donné."""
 
     # Températures actuelles
     interior_temp: float | None = None  # Température intérieure (°C)
@@ -110,7 +87,7 @@ class ThermalState:
 
     # Vent actuel
     wind_speed_ms: float = 0.0  # Vitesse du vent (m/s)
-    wind_speed_avg_ms: float = 0.0  # Moyenne 4h du vent (m/s) - ADR-013
+    wind_speed_avg_ms: float = 0.0  # Moyenne 4h du vent (m/s)
 
     # Prévisions météo
     temperature_forecast_avg: float = 0.0  # Moyenne température prévue (°C)
@@ -141,18 +118,14 @@ class ThermalState:
 
 @dataclass
 class RecoveryResult:
-    """Résultat d'un calcul de temps de relance.
-
-    Retourné par ThermalSolver.calculate_recovery_duration().
-    """
+    """Résultat de ThermalSolver.calculate_recovery_duration()."""
 
     recovery_start_hour: datetime  # Heure calculée pour démarrer la relance
     duration_hours: float  # Durée estimée de la relance (heures)
 
 
-# ADR-050: Gardes physiques pour les calculs thermiques
 class PhysicsGuardResult(StrEnum):
-    """Résultat de la validation des contraintes physiques (ADR-050)."""
+    """Résultat de la validation des contraintes physiques."""
 
     VALID = "valid"  # Calcul autorisé
     ALREADY_AT_TARGET = "already_at_target"  # Déjà à température cible
@@ -165,10 +138,7 @@ class PhysicsGuardResult(StrEnum):
 
 @dataclass(frozen=True)
 class PhysicsValidation:
-    """Résultat de validation avec contexte (ADR-050).
-
-    Fournit un message explicatif et une valeur suggérée pour certains cas.
-    """
+    """Résultat de validation avec message explicatif et valeur suggérée éventuelle."""
 
     result: PhysicsGuardResult
     message: str | None = None
@@ -177,10 +147,7 @@ class PhysicsValidation:
 
 @dataclass
 class CoefficientUpdateResult:
-    """Résultat d'une mise à jour de coefficients.
-
-    Retourné par ThermalSolver.update_coefficients().
-    """
+    """Résultat de ThermalSolver.update_coefficients()."""
 
     # Nouveaux coefficients low/high wind
     coef_lw: float
@@ -189,7 +156,7 @@ class CoefficientUpdateResult:
     coef_main: float
     # Erreur observée (pour diagnostic)
     error: float
-    # ADR-044: Traçage des outliers
+    # Traçage des outliers
     outlier_detected: bool = False  # True si outlier détecté
     outlier_clamped: bool = False  # True si valeur plafonnée
     original_calculated: float | None = None  # Valeur avant plafonnement

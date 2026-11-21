@@ -1,35 +1,27 @@
-"""Implements the SmartHRT number entities.
-
-ADR implémentées dans ce module:
-- ADR-006: Apprentissage continu (SmartHRTRelaxationNumber pour le facteur)
-- ADR-007: Compensation météo (RCth/RPth LW/HW pour interpolation vent)
-- ADR-012: Exposition entités pour Lovelace (numbers comme entités HA)
-- ADR-027: Utilisation de CoordinatorEntity pour synchronisation automatique
-- ADR-054: Abstraction unités (device_class TEMPERATURE pour TSP)
-"""
+"""Entités number SmartHRT (consigne, coefficients thermiques, relaxation)."""
 
 import logging
 
-from homeassistant.const import UnitOfTemperature, UnitOfTime
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
-from homeassistant.helpers.device_registry import DeviceInfo, DeviceEntryType
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import UnitOfTemperature, UnitOfTime
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
-    DOMAIN,
-    DEVICE_MANUFACTURER,
     CONF_NAME,
     DATA_COORDINATOR,
-    DEFAULT_TSP_MIN,
-    DEFAULT_TSP_MAX,
-    DEFAULT_TSP_STEP,
-    DEFAULT_RCTH_MIN,
     DEFAULT_RCTH_MAX,
-    DEFAULT_RPTH_MIN,
+    DEFAULT_RCTH_MIN,
     DEFAULT_RPTH_MAX,
+    DEFAULT_RPTH_MIN,
+    DEFAULT_TSP_MAX,
+    DEFAULT_TSP_MIN,
+    DEFAULT_TSP_STEP,
+    DEVICE_MANUFACTURER,
+    DOMAIN,
 )
 from .coordinator import SmartHRTCoordinator
 
@@ -61,7 +53,7 @@ async def async_setup_entry(
 
 
 class SmartHRTBaseNumber(CoordinatorEntity[SmartHRTCoordinator], NumberEntity):
-    """Classe de base pour les number SmartHRT (ADR-027: CoordinatorEntity)."""
+    """Classe de base des number SmartHRT."""
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
@@ -88,8 +80,8 @@ class SmartHRTBaseNumber(CoordinatorEntity[SmartHRTCoordinator], NumberEntity):
 class SmartHRTSetPointNumber(SmartHRTBaseNumber):
     """Entité number pour la consigne de température (Set Point).
 
-    ADR-054: Utilise device_class=TEMPERATURE pour conversion automatique
-    Celsius/Fahrenheit selon la configuration utilisateur.
+    Valeur interne en °C ; device_class=TEMPERATURE laisse HA convertir
+    en Fahrenheit selon la configuration utilisateur.
     """
 
     def __init__(
@@ -101,7 +93,7 @@ class SmartHRTSetPointNumber(SmartHRTBaseNumber):
         self._attr_native_min_value = DEFAULT_TSP_MIN
         self._attr_native_max_value = DEFAULT_TSP_MAX
         self._attr_native_step = DEFAULT_TSP_STEP
-        # ADR-054: device_class permet la conversion auto Celsius↔Fahrenheit
+        # device_class TEMPERATURE : HA convertit automatiquement Celsius/Fahrenheit
         self._attr_device_class = NumberDeviceClass.TEMPERATURE
         self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
         self._attr_mode = NumberMode.BOX
@@ -151,8 +143,8 @@ class SmartHRTRCthNumber(SmartHRTBaseNumber):
 class SmartHRTRPthNumber(SmartHRTBaseNumber):
     """Entité number pour RPth (coefficient de puissance thermique).
 
-    ADR-054: Utilise device_class=TEMPERATURE pour conversion automatique
-    Celsius/Fahrenheit selon la configuration utilisateur.
+    Valeur interne en °C ; device_class=TEMPERATURE laisse HA convertir
+    en Fahrenheit selon la configuration utilisateur.
     """
 
     def __init__(
@@ -164,7 +156,7 @@ class SmartHRTRPthNumber(SmartHRTBaseNumber):
         self._attr_native_min_value = DEFAULT_RPTH_MIN
         self._attr_native_max_value = DEFAULT_RPTH_MAX
         self._attr_native_step = 0.5
-        # ADR-054: device_class permet la conversion auto Celsius↔Fahrenheit
+        # device_class TEMPERATURE : HA convertit automatiquement Celsius/Fahrenheit
         self._attr_device_class = NumberDeviceClass.TEMPERATURE
         self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
         self._attr_mode = NumberMode.BOX
@@ -185,7 +177,7 @@ class SmartHRTRPthNumber(SmartHRTBaseNumber):
 class SmartHRTRCthLWNumber(SmartHRTBaseNumber):
     """Entité number pour RCth low wind.
 
-    ADR-007: Compensation météo - coefficient de refroidissement par vent faible.
+    Coefficient de refroidissement par vent faible.
     Utilisé pour l'interpolation linéaire selon la vitesse du vent.
     """
 
@@ -245,8 +237,7 @@ class SmartHRTRCthHWNumber(SmartHRTBaseNumber):
 class SmartHRTRPthLWNumber(SmartHRTBaseNumber):
     """Entité number pour RPth low wind.
 
-    ADR-007: Compensation météo - coefficient de puissance par vent faible.
-    ADR-054: Conversion auto Celsius/Fahrenheit.
+    Coefficient de puissance par vent faible (conversion °C/°F par HA).
     """
 
     def __init__(
@@ -258,7 +249,7 @@ class SmartHRTRPthLWNumber(SmartHRTBaseNumber):
         self._attr_native_min_value = DEFAULT_RPTH_MIN
         self._attr_native_max_value = DEFAULT_RPTH_MAX
         self._attr_native_step = 0.5
-        # ADR-054: device_class permet la conversion auto Celsius↔Fahrenheit
+        # device_class TEMPERATURE : HA convertit automatiquement Celsius/Fahrenheit
         self._attr_device_class = NumberDeviceClass.TEMPERATURE
         self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
         self._attr_mode = NumberMode.BOX
@@ -279,8 +270,7 @@ class SmartHRTRPthLWNumber(SmartHRTBaseNumber):
 class SmartHRTRPthHWNumber(SmartHRTBaseNumber):
     """Entité number pour RPth high wind.
 
-    ADR-007: Compensation météo - coefficient de puissance par vent fort.
-    ADR-054: Conversion auto Celsius/Fahrenheit.
+    Coefficient de puissance par vent fort (conversion °C/°F par HA).
     """
 
     def __init__(
@@ -292,7 +282,7 @@ class SmartHRTRPthHWNumber(SmartHRTBaseNumber):
         self._attr_native_min_value = DEFAULT_RPTH_MIN
         self._attr_native_max_value = DEFAULT_RPTH_MAX
         self._attr_native_step = 0.5
-        # ADR-054: device_class permet la conversion auto Celsius↔Fahrenheit
+        # device_class TEMPERATURE : HA convertit automatiquement Celsius/Fahrenheit
         self._attr_device_class = NumberDeviceClass.TEMPERATURE
         self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
         self._attr_mode = NumberMode.BOX
@@ -313,7 +303,7 @@ class SmartHRTRPthHWNumber(SmartHRTBaseNumber):
 class SmartHRTRelaxationNumber(SmartHRTBaseNumber):
     """Entité number pour le facteur de relaxation.
 
-    ADR-006: Apprentissage continu - contrôle la vitesse de convergence.
+    Contrôle la vitesse de convergence.
     Plus la valeur est élevée, plus l'apprentissage est lent mais stable.
     """
 

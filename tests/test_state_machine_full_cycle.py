@@ -19,7 +19,7 @@ from custom_components.SmartHRT.coordinator import (
     SmartHRTCoordinator,
     SmartHRTState,
 )
-from custom_components.SmartHRT.data_model import SmartHRTData  # ADR-047
+from custom_components.SmartHRT.data_model import SmartHRTData
 
 
 class TestFullDayCycle:
@@ -239,7 +239,7 @@ class TestEdgeCases:
     async def test_target_hour_reached_while_in_monitoring_no_recovery(
         self, create_coordinator
     ):
-        """Test ADR-055: target_hour atteint en MONITORING sans relance déclenchée.
+        """Test target_hour atteint en MONITORING sans relance déclenchée.
 
         Scénario: La température n'est jamais descendue assez pour déclencher
         la relance (ex: nuit chaude). À target_hour, le système doit transitionner
@@ -307,7 +307,7 @@ class TestModeInteractions:
     async def test_rp_calc_mode_required_for_recovery_end(self, create_coordinator):
         """Test: on_recovery_end ne fait rien si pas en état HEATING_PROCESS.
 
-        ADR-040: rp_calc_mode est une propriété calculée depuis current_state.
+        rp_calc_mode est une propriété calculée depuis current_state.
         rp_calc_mode == True ssi current_state == HEATING_PROCESS.
         """
         coord = await create_coordinator(

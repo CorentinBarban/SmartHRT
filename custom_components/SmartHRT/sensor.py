@@ -1,60 +1,47 @@
-"""Implements the SmartHRT sensors component.
-
-ADR implémentées dans ce module:
-- ADR-012: Exposition entités pour Lovelace (sensors comme entités HA)
-- ADR-014: Format des dates en fuseau local (dt_util.as_local())
-- ADR-027: Utilisation de CoordinatorEntity pour synchronisation automatique
-- ADR-030: Simplification avec SensorEntityDescription
-- ADR-052: Internationalisation native (translation_key au lieu de name)
-- ADR-054: Abstraction unités (native_unit=CELSIUS + device_class pour conversion auto)
-"""
+"""Entités sensor SmartHRT (températures, vent, coefficients, états, timestamps)."""
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Callable
+from typing import Any
 
-from homeassistant.const import (
-    UnitOfTemperature,
-    UnitOfSpeed,
-    UnitOfTime,
-    EntityCategory,
-)
-from homeassistant.core import HomeAssistant
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.components.sensor import (
-    SensorEntity,
     SensorDeviceClass,
+    SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.helpers.device_registry import DeviceInfo, DeviceEntryType
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import (
+    EntityCategory,
+    UnitOfSpeed,
+    UnitOfTemperature,
+    UnitOfTime,
+)
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    DOMAIN,
-    DEVICE_MANUFACTURER,
     CONF_NAME,
     DATA_COORDINATOR,
+    DEVICE_MANUFACTURER,
+    DOMAIN,
 )
 from .coordinator import SmartHRTCoordinator
-from .data_model import SmartHRTData  # ADR-047: Import depuis data_model
+from .data_model import SmartHRTData
 
 _LOGGER = logging.getLogger(__name__)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ADR-030: SensorEntityDescription étendue
-# ─────────────────────────────────────────────────────────────────────────────
-
-
 @dataclass(frozen=True, kw_only=True)
 class SmartHRTSensorDescription(SensorEntityDescription):
-    """Description étendue pour les sensors SmartHRT (ADR-030)."""
+    """Description de sensor SmartHRT avec fonctions d'extraction de valeur et d'attributs."""
 
     value_fn: Callable[[SmartHRTData], Any]
     extra_attrs_fn: Callable[[SmartHRTData], dict[str, Any]] | None = None
@@ -66,9 +53,8 @@ class SmartHRTSensorDescription(SensorEntityDescription):
 # ─────────────────────────────────────────────────────────────────────────────
 
 SENSOR_DESCRIPTIONS: tuple[SmartHRTSensorDescription, ...] = (
-    # Températures
-    # ADR-054: Les données internes sont en Celsius. native_unit_of_measurement=CELSIUS
-    # permet à HA de convertir automatiquement vers Fahrenheit si nécessaire.
+    # Températures : valeurs internes en °C ; avec device_class TEMPERATURE,
+    # HA convertit automatiquement vers °F si nécessaire.
     SmartHRTSensorDescription(
         key="interior_temp",
         translation_key="interior_temp",
@@ -211,7 +197,7 @@ SENSOR_DESCRIPTIONS: tuple[SmartHRTSensorDescription, ...] = (
 
 
 class SmartHRTSensor(CoordinatorEntity[SmartHRTCoordinator], SensorEntity):
-    """Sensor générique SmartHRT basé sur description (ADR-030)."""
+    """Sensor générique piloté par une SmartHRTSensorDescription."""
 
     entity_description: SmartHRTSensorDescription
 
@@ -320,7 +306,7 @@ class SmartHRTStateSensor(SmartHRTBaseSensor):
     """Sensor exposant l'état courant de la machine à états SmartHRT.
 
     Ce sensor a une logique d'icône dynamique.
-    Les labels d'état sont gérés via translation_key (ADR-052 i18n).
+    Les labels d'état sont traduits via translation_key.
     """
 
     STATE_ICONS = {
@@ -522,7 +508,6 @@ async def async_setup_entry(
         DATA_COORDINATOR
     ]
 
-    # Sensors génériques via descriptions (ADR-030)
     entities: list[SensorEntity] = [
         SmartHRTSensor(coordinator, entry, description)
         for description in SENSOR_DESCRIPTIONS

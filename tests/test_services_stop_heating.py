@@ -148,9 +148,9 @@ class TestServiceIntegration:
 
     @pytest.mark.asyncio
     async def test_service_handler_pattern_is_correct(self):
-        """Vérifie que les services ADR-043 utilisent les méthodes façade.
+        """Vérifie que les services utilisent les méthodes façade.
 
-        Après ADR-043, les services essentiels appellent les méthodes façade:
+        Les services essentiels appellent les méthodes façade:
         - async_trigger_calculation
         - async_manual_stop_heating
         - async_start_heating_cycle
@@ -165,13 +165,13 @@ class TestServiceIntegration:
 
         content = services_path.read_text()
 
-        # ADR-043: Vérifier que l'ancien handler bugué n'est plus présent
+        # Vérifier que l'ancien handler bugué n'est plus présent
         assert "_on_recoverycalc_hour" not in content, (
             "L'ancien handler '_on_recoverycalc_hour' ne devrait plus exister "
-            "après ADR-043 (services simplifiés)"
+            "(services simplifiés)"
         )
 
-        # ADR-043: Vérifier que les méthodes façade sont utilisées
+        # Vérifier que les méthodes façade sont utilisées
         assert (
             "async_trigger_calculation" in content
         ), "La méthode façade 'async_trigger_calculation' devrait être utilisée"

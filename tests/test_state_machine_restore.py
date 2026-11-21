@@ -1,8 +1,5 @@
 """Tests pour la restauration de l'état après redémarrage.
 
-ADR-019: Restauration état après redémarrage
-ADR-039: Simplification logique de restauration (auto-correction)
-
 Ce module teste que la machine à états se restaure correctement
 après un redémarrage de Home Assistant, en vérifiant:
 - La cohérence entre état persisté et heure actuelle (_is_state_coherent)
@@ -21,11 +18,11 @@ from custom_components.SmartHRT.coordinator import (
     SmartHRTCoordinator,
     SmartHRTState,
 )
-from custom_components.SmartHRT.data_model import SmartHRTData  # ADR-047
+from custom_components.SmartHRT.data_model import SmartHRTData
 
 
 class TestIsNightPeriod:
-    """Tests pour _is_night_period (ADR-039).
+    """Tests pour _is_night_period.
 
     Détermine si on est en période nocturne (MONITORING attendu).
     """
@@ -92,7 +89,7 @@ class TestIsNightPeriod:
 
 
 class TestIsStateCoherent:
-    """Tests pour _is_state_coherent (ADR-039).
+    """Tests pour _is_state_coherent.
 
     Vérifie si l'état persisté est cohérent avec l'heure actuelle.
     """
@@ -199,7 +196,7 @@ class TestIsStateCoherent:
 
 
 class TestRestoreStateAfterRestart:
-    """Tests pour _restore_state_after_restart (ADR-039).
+    """Tests pour _restore_state_after_restart.
 
     Vérifie que les états sont correctement restaurés après redémarrage,
     avec auto-correction vers HEATING_ON en cas d'incohérence.
@@ -299,7 +296,7 @@ class TestRestoreStateAfterRestart:
 
             await coord._restore_state_after_restart()
 
-            # ADR-039: État incohérent → reset à HEATING_ON (auto-correction)
+            # État incohérent → reset à HEATING_ON (auto-correction)
             assert coord.data.current_state == SmartHRTState.HEATING_ON
 
     @pytest.mark.asyncio
@@ -321,7 +318,7 @@ class TestRestoreStateAfterRestart:
 
             await coord._restore_state_after_restart()
 
-            # ADR-039: Incohérent → reset à HEATING_ON
+            # Incohérent → reset à HEATING_ON
             assert coord.data.current_state == SmartHRTState.HEATING_ON
 
 
@@ -428,7 +425,7 @@ class TestPersistenceIntegration:
             await coord._async_on_recoverycalc_hour()
 
             # Vérifier que l'état a été sauvegardé
-            # ADR-041: Le format de stockage utilise __type__ pour les enums
+            # Le format de stockage utilise __type__ pour les enums
             stored_data = await mock_store.async_load()
             if stored_data:
                 state_value = stored_data.get("current_state")

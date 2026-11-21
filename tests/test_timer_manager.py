@@ -1,13 +1,9 @@
 """Tests pour le TimerManager et la gestion des triggers.
 
-ADR-051: Centralisation de la Gestion des Timers
+Vérifie que:
 - TimerManager.schedule() annule automatiquement l'ancien timer si présent
 - TimerManager.cancel_all() nettoie proprement lors du déchargement
 - Pas de double déclenchement ou de timer orphelin
-
-Ce module consolide les tests de:
-- test_no_double_trigger.py (supprimé)
-- test_integration_log_scenario.py (supprimé)
 """
 
 from datetime import datetime, time as dt_time, timedelta
@@ -29,13 +25,13 @@ def make_mock_now(year=2026, month=2, day=4, hour=8, minute=0, second=0):
 
 
 class TestTimerManagerBasics:
-    """Tests de base pour le TimerManager (ADR-051)."""
+    """Tests de base pour le TimerManager."""
 
     @pytest.mark.asyncio
     async def test_timer_manager_schedule_replaces_existing(self, create_coordinator):
         """Vérifie que TimerManager.schedule() remplace un timer existant.
 
-        ADR-051: schedule() annule automatiquement l'ancien timer avant
+        schedule() annule automatiquement l'ancien timer avant
         d'en programmer un nouveau pour la même clé.
         """
         with patch("custom_components.SmartHRT.coordinator.dt_util") as mock_dt:
@@ -99,7 +95,7 @@ class TestTimerManagerBasics:
 
 
 class TestTriggerCleanup:
-    """Tests pour le nettoyage des timers (ADR-051)."""
+    """Tests pour le nettoyage des timers."""
 
     @pytest.mark.asyncio
     async def test_cancel_time_triggers_clears_all(self, create_coordinator):
@@ -178,7 +174,7 @@ class TestRecoveryStartRescheduling:
     async def test_trigger_correctly_cancelled_between_reschedules(
         self, create_coordinator
     ):
-        """Vérifie que le TimerManager gère les annulations automatiquement (ADR-051)."""
+        """Vérifie que le TimerManager gère les annulations automatiquement."""
 
         coord = await create_coordinator(
             initial_state=SmartHRTState.MONITORING, smartheating_mode=True
@@ -205,7 +201,7 @@ class TestRecoveryStartRescheduling:
 
     @pytest.mark.asyncio
     async def test_no_trigger_leak_after_multiple_changes(self, create_coordinator):
-        """Vérifie qu'il n'y a pas de fuite de triggers grâce au TimerManager (ADR-051)."""
+        """Vérifie qu'il n'y a pas de fuite de triggers grâce au TimerManager."""
 
         coord = await create_coordinator(
             initial_state=SmartHRTState.MONITORING, smartheating_mode=True
@@ -219,7 +215,7 @@ class TestRecoveryStartRescheduling:
             with patch.object(coord, "calculate_recovery_time"):
                 coord.set_rcth(coeff)
 
-        # ADR-051: TimerManager garantit un seul timer par clé
+        # TimerManager garantit un seul timer par clé
         recovery_start_active = coord._timer_manager.is_active(TimerKey.RECOVERY_START)
 
         # Il doit y avoir au plus 1 timer RECOVERY_START actif
@@ -235,7 +231,7 @@ class TestIntegrationLogScenario:
     2. Les modifications successives des coefficients l'ont fait évoluer à 21h08
     3. Mais le trigger n'était pas reprogrammé, causant un déclenchement à 19h26
 
-    Le test vérifie que le problème est désormais corrigé grâce au TimerManager (ADR-051).
+    Le test vérifie que le problème est désormais corrigé grâce au TimerManager.
     """
 
     @pytest.mark.asyncio

@@ -1,4 +1,4 @@
-"""Tests unitaires pour le module core/thermal.py (ADR-026).
+"""Tests unitaires pour le module core/thermal.py.
 
 Ces tests démontrent que le modèle thermique peut être testé
 sans aucune dépendance à Home Assistant, avec des données synthétiques.
@@ -46,7 +46,7 @@ class TestWindchillCalculation:
 
 
 class TestInterpolation:
-    """Tests pour l'interpolation selon le vent (ADR-007)."""
+    """Tests pour l'interpolation selon le vent."""
 
     def test_interpolation_at_low_wind(self):
         """À vent faible, utilise principalement la valeur low wind."""
@@ -110,7 +110,7 @@ class TestInterpolation:
 
 
 class TestRecoveryDurationCalculation:
-    """Tests pour le calcul du temps de relance (ADR-005, ADR-022)."""
+    """Tests pour le calcul du temps de relance."""
 
     @pytest.fixture
     def solver(self):
@@ -233,7 +233,7 @@ class TestRecoveryUpdateTime:
 
 
 class TestCoefficientUpdate:
-    """Tests pour la mise à jour des coefficients (ADR-006)."""
+    """Tests pour la mise à jour des coefficients."""
 
     def test_update_reduces_error_over_iterations(self):
         """L'apprentissage réduit l'erreur au fil des itérations."""
@@ -377,7 +377,7 @@ class TestCustomConfig:
 
 
 class TestConvergence:
-    """Tests pour la convergence adaptative (ADR-031)."""
+    """Tests pour la convergence adaptative."""
 
     @pytest.fixture
     def solver(self):

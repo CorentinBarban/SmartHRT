@@ -1,4 +1,4 @@
-"""Tests pour la conversion des unités de vitesse du vent (ADR-055).
+"""Tests pour la conversion des unités de vitesse du vent.
 
 Ce module teste l'abstraction du système d'unités pour la vitesse du vent,
 permettant de supporter les utilisateurs avec différentes configurations
@@ -17,7 +17,7 @@ from custom_components.SmartHRT.data_model import SmartHRTData
 
 
 class TestNormalizeToMs:
-    """Tests pour _normalize_to_ms (ADR-055)."""
+    """Tests pour _normalize_to_ms."""
 
     def test_none_returns_none(self, mock_coordinator):
         """None en entrée retourne None."""
@@ -73,7 +73,7 @@ class TestNormalizeToMs:
 
 
 class TestNormalizeToKmh:
-    """Tests pour _normalize_to_kmh (ADR-055)."""
+    """Tests pour _normalize_to_kmh."""
 
     def test_none_returns_none(self, mock_coordinator):
         """None en entrée retourne None."""
@@ -116,7 +116,7 @@ class TestNormalizeToKmh:
 
 
 class TestGetWindSpeedUnit:
-    """Tests pour _get_wind_speed_unit (ADR-055)."""
+    """Tests pour _get_wind_speed_unit."""
 
     def test_kmh_by_default(self, mock_coordinator):
         """Retourne km/h si pas d'unité spécifiée (fallback par défaut)."""

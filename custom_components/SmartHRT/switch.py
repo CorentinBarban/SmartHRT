@@ -1,26 +1,19 @@
-"""Implements the SmartHRT switch entities.
-
-ADR implémentées dans ce module:
-- ADR-003: Activation/désactivation de la machine à états (SmartHeatingSwitch)
-- ADR-006: Mode adaptatif pour l'apprentissage (AdaptiveSwitch)
-- ADR-012: Exposition entités pour Lovelace (switches comme entités HA)
-- ADR-027: Utilisation de CoordinatorEntity pour synchronisation automatique
-"""
+"""Entités switch SmartHRT (chauffage intelligent, mode adaptatif)."""
 
 import logging
 
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.helpers.device_registry import DeviceInfo, DeviceEntryType
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
-    DOMAIN,
-    DEVICE_MANUFACTURER,
     CONF_NAME,
     DATA_COORDINATOR,
+    DEVICE_MANUFACTURER,
+    DOMAIN,
 )
 from .coordinator import SmartHRTCoordinator
 
@@ -46,7 +39,7 @@ async def async_setup_entry(
 
 
 class SmartHRTBaseSwitch(CoordinatorEntity[SmartHRTCoordinator], SwitchEntity):
-    """Classe de base pour les switch SmartHRT (ADR-027: CoordinatorEntity)."""
+    """Classe de base des switch SmartHRT."""
 
     def __init__(
         self, coordinator: SmartHRTCoordinator, config_entry: ConfigEntry
@@ -73,7 +66,7 @@ class SmartHRTBaseSwitch(CoordinatorEntity[SmartHRTCoordinator], SwitchEntity):
 class SmartHRTSmartHeatingSwitch(SmartHRTBaseSwitch):
     """Switch pour activer/désactiver le mode chauffage intelligent.
 
-    ADR-003: Active/désactive la machine à états complète.
+    Active/désactive la machine à états complète.
     Quand désactivé, aucun calcul de relance n'est effectué.
     """
 
@@ -104,7 +97,7 @@ class SmartHRTSmartHeatingSwitch(SmartHRTBaseSwitch):
 class SmartHRTAdaptiveSwitch(SmartHRTBaseSwitch):
     """Switch pour activer/désactiver le mode adaptatif (auto-calibration).
 
-    ADR-006: Active/désactive l'apprentissage continu des coefficients.
+    Active/désactive l'apprentissage continu des coefficients.
     Quand activé, les RCth/RPth sont mis à jour après chaque cycle.
     """
 
