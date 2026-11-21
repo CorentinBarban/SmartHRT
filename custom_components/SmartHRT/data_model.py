@@ -297,7 +297,8 @@ class SmartHRTData(BaseModel):
         # Modes utilisateur
         "smartheating_mode",
         "recovery_adaptive_mode",
-        # Heures configurées
+        # Réglages utilisateur (consigne et heures configurées)
+        "tsp",
         "target_hour",
         "recoverycalc_hour",
         # Snapshots de session

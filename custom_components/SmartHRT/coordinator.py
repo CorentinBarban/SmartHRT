@@ -166,12 +166,15 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
             hass, self.STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}"
         )
 
+        # Les réglages dynamiques (tsp, heures) sont déplacés de entry.data vers
+        # entry.options par l'options flow : options a priorité sur data.
+        config = {**entry.data, **entry.options}
         self.data = SmartHRTData(
-            name=entry.data.get(CONF_NAME, "SmartHRT"),
-            tsp=entry.data.get(CONF_TSP, DEFAULT_TSP),
-            target_hour=self._parse_time(entry.data.get(CONF_TARGET_HOUR, "06:00:00")),
+            name=config.get(CONF_NAME, "SmartHRT"),
+            tsp=config.get(CONF_TSP, DEFAULT_TSP),
+            target_hour=self._parse_time(config.get(CONF_TARGET_HOUR, "06:00:00")),
             recoverycalc_hour=self._parse_time(
-                entry.data.get(CONF_RECOVERYCALC_HOUR, DEFAULT_RECOVERYCALC_HOUR)
+                config.get(CONF_RECOVERYCALC_HOUR, DEFAULT_RECOVERYCALC_HOUR)
             ),
         )
 
@@ -2649,7 +2652,7 @@ class SmartHRTCoordinator(DataUpdateCoordinator[SmartHRTData]):
 
     def set_tsp(self, value: float) -> None:
         """Définit la température de consigne (TSP)."""
-        self._update_and_recalculate("tsp", value)
+        self._update_and_recalculate("tsp", value, persist=True)
 
     def set_target_hour(self, value: dt_time) -> None:
         """Définit l'heure cible (réveil)."""

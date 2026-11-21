@@ -43,6 +43,7 @@ class MockConfigEntry:
             "weather_entity": "weather.home",
         }
     )
+    options: dict = field(default_factory=dict)
 
 
 class MockStore:
